@@ -25,6 +25,7 @@ Selecting boot loader - *BOOT_LOADER=u-boot,uefi*
 
 Examples - 
 `./runme.sh` will generate *images/lx2160acex7_2000_700_3200_8_5_2_sd.img*
+
 `BOOT=xspi ./runme` will generate *images/lx2160acex7_2000_700_3200_8_5_2_xspi.img*
 
 ## Deploying
