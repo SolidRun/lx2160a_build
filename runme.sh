@@ -11,12 +11,10 @@ set -e
 ###############################################################################
 RELEASE=LSDK-19.06
 
-BOOT=sd
 #BOOT=xspi
-#BOOT_LOADER=u-boot
-BOOT_LOADER=uefi
-DDR_SPEED=3200
-SERDES=8_5_2 # 8 10g
+#BOOT_LOADER=uefi
+#DDR_SPEED=3200
+#SERDES=8_5_2 # 8x10g
 #SERDES=13_5_2 # dual 100g
 #SERDES=20_5_2 # dual 40g
 ###############################################################################
@@ -36,6 +34,7 @@ fi
 if [ "x$SERDES" == "x" ]; then
 	SERDES=8_5_2
 fi
+mkdir -p build images
 ROOTDIR=`pwd`
 PARALLEL=32 # Amount of parallel jobs for the builds
 SPEED=2000_700_${DDR_SPEED}
@@ -83,7 +82,6 @@ fi
 
 echo "Building boot loader"
 cd $ROOTDIR
-mkdir -p build
 
 
 ###############################################################################
@@ -96,12 +94,11 @@ for i in $QORIQ_COMPONENTS; do
 		cd $ROOTDIR/build
 		git clone https://source.codeaurora.org/external/qoriq/qoriq-components/$i
 		cd $i
-		if [ "x$i" == "xlinux" && "x$RELEASE" == "xLSDK-19.06" ]; then
+		if [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-19.06" ]; then
 			git checkout -b LSDK-19.06-V4.19 refs/tags/LSDK-19.06-V4.19
 		else
 			git checkout -b $RELEASE refs/tags/$RELEASE
 		fi
-		git am $ROOTDIR/patches/$i/*.patch
 		if [ "x$i" == "xatf" ]; then
 			cd $ROOTDIR/build/atf/tools/fiptool
 			git clone https://github.com/NXP/ddr-phy-binary.git
@@ -113,6 +110,11 @@ for i in $QORIQ_COMPONENTS; do
 			git clone https://source.codeaurora.org/external/qoriq/qoriq-components/edk2-platforms
 			cd edk2-platforms
 			git checkout -b $RELEASE refs/tags/$RELEASE
+			git am $ROOTDIR/patches/edk2-platforms/*.patch
+		fi
+		if [[ -d $ROOTDIR/patches/$i/ ]]; then
+			patch -p1 < $ROOTDIR/patches/$i/*.diff
+			git am $ROOTDIR/patches/$i/*.patch
 		fi
 	fi
 done
@@ -213,7 +215,7 @@ cat > kernel2160cex7.its << EOF
 		};
 		initrd {
 			description = "initrd for arm64";
-			data = /incbin/("ramdisk_rootfs_arm64.ext4.gz");
+			data = /incbin/("../../patches/linux/ramdisk_rootfs_arm64.ext4.gz");
 			type = "ramdisk";
 			arch = "arm64";
 			os = "linux";
@@ -256,7 +258,6 @@ mkimage -f kernel2160cex7.its kernel-lx2160acex7.itb
 ###############################################################################
 echo "Assembling image"
 cd $ROOTDIR/
-mkdir -p images
 IMG=lx2160acex7_${SPEED}_${SERDES}_${BOOT}.img
 #dd if=/dev/zero of=images/${IMG} bs=1M count=101
 dd if=/dev/zero of=images/${IMG} bs=1M count=1
