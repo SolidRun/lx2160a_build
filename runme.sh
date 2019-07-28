@@ -110,10 +110,10 @@ for i in $QORIQ_COMPONENTS; do
 			git clone https://source.codeaurora.org/external/qoriq/qoriq-components/edk2-platforms
 			cd edk2-platforms
 			git checkout -b $RELEASE refs/tags/$RELEASE
+			patch -p1 < $ROOTDIR/patches/edk2-platforms/*.diff
 			git am $ROOTDIR/patches/edk2-platforms/*.patch
 		fi
 		if [[ -d $ROOTDIR/patches/$i/ ]]; then
-			patch -p1 < $ROOTDIR/patches/$i/*.diff
 			git am $ROOTDIR/patches/$i/*.patch
 		fi
 	fi
