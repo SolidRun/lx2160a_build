@@ -11,6 +11,7 @@ set -e
 ###############################################################################
 RELEASE=LSDK-19.06
 
+#UEFI_RELEASE=DEBUG
 #BOOT=xspi
 #BOOT_LOADER=uefi
 #DDR_SPEED=3200
@@ -33,6 +34,9 @@ if [ "x$DDR_SPEED" == "x" ]; then
 fi
 if [ "x$SERDES" == "x" ]; then
 	SERDES=8_5_2
+fi
+if [ "x$UEFI_RELEASE" == "x" ]; then
+	UEFI_RELEASE=RELEASE
 fi
 mkdir -p build images
 ROOTDIR=`pwd`
@@ -164,9 +168,9 @@ if [ "x$BOOT_LOADER" == "xuefi" ]; then
 
 #	build -p "$PACKAGES_PATH/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC49 -b DEBUG clean
 
-#	build -p "$PACKAGES_PATH/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC49 -b RELEASE clean
-	build -p "$PACKAGES_PATH/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC49 -b RELEASE -y build.log
-	export BL33=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/RELEASE_GCC49/FV/LX2160ACEX7_EFI.fd
+#	build -p "$PACKAGES_PATH/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC49 -b $UEFI_RELEASE clean
+	build -p "$PACKAGES_PATH/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC49 -b $UEFI_RELEASE -y build.log
+	export BL33=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC49/FV/LX2160ACEX7_EFI.fd
 
 	# Return to the newer linaro gcc
 	export PATH=$PATH_SAVED
@@ -294,8 +298,8 @@ dd if=$ROOTDIR/build/mc-utils/config/lx2160a/CEX7/${DPC} of=images/${IMG} bs=512
 
 # Device tree (UEFI) at 0x7800
 if [ "x${BOOT_LOADER}" == "xuefi" ]; then
-	dd if=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/RELEASE_GCC49/AARCH64/Platform/NXP/LX2160aCex7Pkg/DeviceTree/DeviceTree/OUTPUT/fsl-lx2160a-cex7.dtb of=images/${IMG} bs=512 seek=30720 conv=notrunc
-	dd if=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/RELEASE_GCC49/FV/LX2160ACEX7NV_EFI.fd of=images/${IMG} bs=512 seek=10240 conv=notrunc
+	dd if=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC49/AARCH64/Platform/NXP/LX2160aCex7Pkg/DeviceTree/DeviceTree/OUTPUT/fsl-lx2160a-cex7.dtb of=images/${IMG} bs=512 seek=30720 conv=notrunc
+	dd if=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC49/FV/LX2160ACEX7NV_EFI.fd of=images/${IMG} bs=512 seek=10240 conv=notrunc
 fi
 # Kernel at 0x8000
 dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=32768 conv=notrunc
