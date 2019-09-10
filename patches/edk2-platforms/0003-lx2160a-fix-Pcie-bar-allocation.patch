@@ -1,0 +1,36 @@
+From 5d96aa8c76a27b68219eb2a162c35c4bd51ec3ed Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Sun, 28 Jul 2019 20:59:37 +0300
+Subject: [PATCH 3/3] lx2160a: fix Pcie bar allocation
+
+1. use UL suffix
+2. for a machine that uses high PCIe controllers the _diff variable will
+overlap with system memory
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ Silicon/NXP/Include/Pcie.h | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/Silicon/NXP/Include/Pcie.h b/Silicon/NXP/Include/Pcie.h
+index b338ed3..ab1f5ca 100755
+--- a/Silicon/NXP/Include/Pcie.h
++++ b/Silicon/NXP/Include/Pcie.h
+@@ -74,10 +74,10 @@
+ #define PCI_SEG_BUSNUM_MIN        0x0
+ #define PCI_SEG_BUSNUM_MAX        0xff
+ #define PCI_SEG_PORTIO_MAX        0xffff
+-#define PCI_SEG_MMIO32_MIN        0x40000000
+-#define PCI_SEG_MMIO32_MAX        0x4fffffff
+-#define PCI_SEG_MMIO32_DIFF       0x10000000
+-#define PCI_SEG_MMIO64_MAX_DIFF   0x3fffffff
++#define PCI_SEG_MMIO32_MIN        0x40000000UL
++#define PCI_SEG_MMIO32_MAX        0x4fffffffUL
++#define PCI_SEG_MMIO32_DIFF       0x08000000UL
++#define PCI_SEG_MMIO64_MAX_DIFF   0x3fffffffUL
+ #define SEG_CFG_SIZE              0x00001000
+ #define SEG_CFG_BUS               0x00000000
+ #define SEG_MEM_SIZE              0x40000000
+-- 
+2.17.1
+
