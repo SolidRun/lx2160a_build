@@ -34,19 +34,6 @@ index 7f0618f99e21..1bccccf5d502 100644
 +
 +# PKTGEN
 +CONFIG_NET_PKTGEN=y
-diff --git a/drivers/hwmon/amc6821.c b/drivers/hwmon/amc6821.c
-index 46b4e35fd555..7d884a610078 100644
---- a/drivers/hwmon/amc6821.c
-+++ b/drivers/hwmon/amc6821.c
-@@ -43,7 +43,7 @@ static const unsigned short normal_i2c[] = {0x18, 0x19, 0x1a, 0x2c, 0x2d, 0x2e,
-  * Insmod parameters
-  */
- 
--static int pwminv;	/*Inverted PWM output. */
-+static int pwminv = 1;	/*Inverted PWM output. */
- module_param(pwminv, int, S_IRUGO);
- 
- static int init = 1; /*Power-on initialization.*/
 -- 
 2.17.1
 
