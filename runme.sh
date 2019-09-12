@@ -115,7 +115,7 @@ for i in $QORIQ_COMPONENTS; do
 			cd edk2-platforms
 			git checkout -b $RELEASE refs/tags/$RELEASE
 			patch -p1 < $ROOTDIR/patches/edk2-platforms/*.diff
-			git am $ROOTDIR/patches/edk2-platforms/*.patch
+			git am --keep-cr $ROOTDIR/patches/edk2-platforms/*.patch
 		fi
 		if [[ -d $ROOTDIR/patches/$i/ ]]; then
 			git am $ROOTDIR/patches/$i/*.patch
