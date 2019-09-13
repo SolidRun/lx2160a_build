@@ -413,7 +413,7 @@ fi
 
 echo "Assembling Boot Image"
 cd $ROOTDIR/
-IMG=lx2160acex7_${SPEED}_${SERDES}.img
+IMG=lx2160acex7_${BOOT_LOADER}_${SPEED}_${SERDES}_${BOOT}.img
 rm -rf $ROOTDIR/images/${IMG}
 if [ "x$BOOTLOADER_ONLY" == "x" ]; then
 truncate -s 528M $ROOTDIR/images/${IMG}
