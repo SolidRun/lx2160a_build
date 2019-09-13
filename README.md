@@ -37,15 +37,15 @@ Selecting boot loader - *BOOT_LOADER=u-boot,uefi*
 
 
 ### Examples:
-generate *images/lx2160acex7_2000_700_3200_8_5_2_sd.img*:
+generate *images/lx2160acex7_u-boot_2000_700_3200_8_5_2_sd.img*:
 - `./runme.sh` **or**
 - `docker run --cap-add SYS_ADMIN --device /dev/loop0 --device /dev/loop-control -i -t -v "$PWD":/work lx2160a_build $(id -u) $(id -g)`
 
-generate *images/lx2160acex7_2000_700_3200_8_5_2_xspi.img*:
+generate *images/lx2160acex7_u-boot_2000_700_3200_8_5_2_xspi.img*:
 - `BOOT=xspi ./runme` **or**
 - `docker run --cap-add SYS_ADMIN --device /dev/loop0 --device /dev/loop-control -i -t -v "$PWD":/work -e BOOT=xspi lx2160a_build $(id -u) $(id -g)`
 
 ## Deploying
 For SD card bootable images, plug in a micro SD into your machine and run the following, where sdX is the location of the SD card got probed into your machine -
 
-`sudo dd if=images/lx2160acex7_2000_700_3200_8_5_2_sd.img of=/dev/sdX`
+`sudo dd if=images/lx2160acex7_u-boot_2000_700_3200_8_5_2_sd.img of=/dev/sdX`

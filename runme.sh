@@ -376,7 +376,7 @@ dd if=$ROOTDIR/images/tmp/ubuntu-core.ext4 of=$ROOTDIR/images/tmp/ubuntu-core.im
 
 echo "Assembling Boot Image"
 cd $ROOTDIR/
-IMG=lx2160acex7_${SPEED}_${SERDES}_${BOOT}.img
+IMG=lx2160acex7_${BOOT_LOADER}_${SPEED}_${SERDES}_${BOOT}.img
 truncate -s 465M $ROOTDIR/images/${IMG}
 #dd if=/dev/zero of=$ROOTDIR/images/${IMG} bs=1M count=1
 parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB 464MiB
