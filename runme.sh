@@ -66,6 +66,7 @@ fi
 
 echo "Checking all required tools are installed"
 
+set +e
 for i in $TOOLS; do
 	TOOL_PATH=`which $i`
 	if [ "x$TOOL_PATH" == "x" ]; then
@@ -73,6 +74,7 @@ for i in $TOOLS; do
 		exit -1
 	fi
 done
+set -e
 
 if [[ ! -d $ROOTDIR/build/toolchain ]]; then
 	mkdir -p $ROOTDIR/build/toolchain
