@@ -10,6 +10,7 @@ set -e
 # General configurations
 ###############################################################################
 RELEASE=LSDK-19.06
+BUILDROOT_VERSION=2019.05.2
 
 #UEFI_RELEASE=DEBUG
 #BOOT=xspi
@@ -42,7 +43,8 @@ mkdir -p build images
 ROOTDIR=`pwd`
 PARALLEL=32 # Amount of parallel jobs for the builds
 SPEED=2000_700_${DDR_SPEED}
-TOOLS="wget tar git make 7z unsquashfs dd vim mkfs.ext4 sudo parted mkdosfs mcopy dtc iasl mkimage fuse-ext2"
+TOOLS="wget tar git make 7z unsquashfs dd vim mkfs.ext4 sudo parted mkdosfs mcopy dtc iasl mkimage e2cp truncate multistrap qemu-aarch64-static"
+
 export PATH=$ROOTDIR/build/toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu/bin:$PATH
 export CROSS_COMPILE=aarch64-linux-gnu-
 export ARCH=arm64
@@ -85,10 +87,8 @@ if [[ ! -d $ROOTDIR/build/toolchain ]]; then
 	tar -xvf gcc-linaro-4.9-2016.02-x86_64_aarch64-linux-gnu.tar.xz
 fi
 
-
 echo "Building boot loader"
 cd $ROOTDIR
-
 
 ###############################################################################
 # source code cloning
@@ -125,6 +125,56 @@ for i in $QORIQ_COMPONENTS; do
 	fi
 done
 
+if [[ ! -f $ROOTDIR/build/ubuntu-core.ext4 ]]; then
+	cd $ROOTDIR/build
+	export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C
+	export PACKAGES="systemd-sysv apt locales less wget procps openssh-server ifupdown net-tools isc-dhcp-client"
+	PACKAGES=$PACKAGES" ntpdate lm-sensors i2c-tools psmisc less sudo htop iproute2 iputils-ping kmod network-manager"
+	# xterm
+	cat > ubuntu.conf << EOF
+[General]
+unpack=true
+bootstrap=Ubuntu
+aptsources=Ubuntu
+cleanup=true
+allowrecommends=false
+addimportant=false
+
+[Ubuntu]
+packages=$PACKAGES
+source=http://ports.ubuntu.com/
+keyring=ubuntu-keyring
+suite=disco
+components=main universe multiverse
+EOF
+	sudo multistrap -a arm64 -d ubuntu -f ubuntu.conf
+
+	sudo sh -c 'echo localhost > ubuntu/etc/hostname'
+	sudo sh -c 'sudo cat > ubuntu/etc/hosts << EOF
+127.0.0.1 localhost
+EOF'
+	sudo sh -c 'echo "nameserver 8.8.8.8" > ubuntu/etc/resolv.conf'
+	QEMU=`which qemu-aarch64-static`
+	sudo cp $QEMU ubuntu/usr/bin/
+	set +e
+	## first configure fails
+	sudo chroot ubuntu/ /usr/bin/qemu-aarch64-static /usr/bin/dpkg --configure -a
+	set -e
+	sudo chroot ubuntu/ /usr/bin/qemu-aarch64-static /usr/bin/dpkg --configure -a
+
+	echo -e "root\nroot" | sudo chroot ubuntu/ /usr/bin/qemu-aarch64-static /usr/bin/passwd
+	# Remove qemu after done
+	sudo rm ubuntu/usr/bin/qemu-aarch64-static
+	truncate -s 350M ubuntu-core.ext4.tmp
+	mkfs.ext4 -b 4096 -F ubuntu-core.ext4.tmp
+	mkdir -p mnt
+	sudo mount -o loop ubuntu-core.ext4.tmp mnt/
+	sudo cp -a ubuntu/* mnt/
+	sudo umount mnt/
+	rmdir mnt/
+	mv ubuntu-core.ext4.tmp ubuntu-core.ext4
+fi
+
 if [[ ! -d $ROOTDIR/build/qoriq-mc-binary ]]; then
 	cd $ROOTDIR/build
 	git clone https://github.com/NXP/qoriq-mc-binary.git
@@ -132,10 +182,24 @@ if [[ ! -d $ROOTDIR/build/qoriq-mc-binary ]]; then
 	git checkout -b $RELEASE refs/tags/$RELEASE
 fi
 
-
+if [[ ! -d $ROOTDIR/build/buildroot ]]; then
+	cd $ROOTDIR/build
+	git clone https://github.com/buildroot/buildroot -b $BUILDROOT_VERSION
+fi
 ###############################################################################
 # building sources
 ###############################################################################
+
+
+echo "Building buildroot"
+cd $ROOTDIR/build/buildroot
+cp $ROOTDIR/configs/buildroot/lx2160acex7_defconfig configs/
+make lx2160acex7_defconfig
+make
+
+echo "Building restool"
+cd $ROOTDIR/build/restool
+CC=${CROSS_COMPILE}gcc DESTDIR=./install prefix=/usr make install
 
 echo "Building RCW"
 cd $ROOTDIR/build/rcw/lx2160acex7
@@ -197,7 +261,7 @@ make -C config/
 
 echo "Building the kernel"
 cd $ROOTDIR/build/linux
-./scripts/kconfig/merge_config.sh arch/arm64/configs/defconfig arch/arm64/configs/lsdk.config 
+./scripts/kconfig/merge_config.sh arch/arm64/configs/defconfig arch/arm64/configs/lsdk.config $ROOTDIR/configs/linux/lx2k_additions.config
 make -j$PARALLEL all #Image dtbs
 
 cat > kernel2160cex7.its << EOF
@@ -257,18 +321,67 @@ cat > kernel2160cex7.its << EOF
 EOF
 
 mkimage -f kernel2160cex7.its kernel-lx2160acex7.itb
-
+\rm -rf $ROOTDIR/images/tmp
+mkdir -p $ROOTDIR/images/tmp/
+mkdir -p $ROOTDIR/images/tmp/boot
+make INSTALL_MOD_PATH=$ROOTDIR/images/tmp/ modules_install
+cp $ROOTDIR/build/linux/arch/arm64/boot/Image $ROOTDIR/images/tmp/boot
+cp $ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtb $ROOTDIR/images/tmp/boot
 
 ###############################################################################
 # assembling images
 ###############################################################################
-echo "Assembling image"
+echo "Assembling kernel and rootfs image"
+cd $ROOTDIR
+mkdir -p $ROOTDIR/images/tmp/extlinux/
+cat > $ROOTDIR/images/tmp/extlinux/extlinux.conf << EOF
+  TIMEOUT 30
+  DEFAULT linux
+  MENU TITLE linux-lx2160a boot options
+  LABEL primary
+    MENU LABEL primary kernel
+    LINUX /boot/Image
+    FDT /boot/fsl-lx2160a-cex7.dtb
+    APPEND console=ttyAMA0,115200 earlycon=pl011,mmio32,0x21c0000 default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf root=PARTUUID=30303030-01 rw rootwait
+EOF
+
+# blkid images/tmp/ubuntu-core.img | cut -f2 -d'"'
+cp $ROOTDIR/build/ubuntu-core.ext4 $ROOTDIR/images/tmp/
+e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.ext4:extlinux
+e2cp -G 0 -O 0 $ROOTDIR/images/tmp/extlinux/extlinux.conf $ROOTDIR/images/tmp/ubuntu-core.ext4:extlinux/
+e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.ext4:boot
+e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/Image $ROOTDIR/images/tmp/ubuntu-core.ext4:boot/
+e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/fsl-lx2160a-cex7.dtb $ROOTDIR/images/tmp/ubuntu-core.ext4:boot/
+
+# install restool
+e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/ls-append-dpl $ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/
+e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/ls-main $ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/
+e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/restool $ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/
+e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-addmux
+e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-addni
+e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-addsw
+e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-listmac
+e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-listni
+
+truncate -s 356M $ROOTDIR/images/tmp/ubuntu-core.img
+parted --script $ROOTDIR/images/tmp/ubuntu-core.img mklabel msdos mkpart primary 1MiB 354MiB
+# Generate the above partuuid 3030303030 which is the 4 characters of '0' in ascii
+echo "0000" | dd of=$ROOTDIR/images/tmp/ubuntu-core.img bs=1 seek=440 conv=notrunc
+dd if=$ROOTDIR/images/tmp/ubuntu-core.ext4 of=$ROOTDIR/images/tmp/ubuntu-core.img bs=1M seek=1 conv=notrunc
+
+### TODO - copy over kernel modules
+### TODO - copy /etc/resolv.conf
+
+echo "Assembling Boot Image"
 cd $ROOTDIR/
 IMG=lx2160acex7_${SPEED}_${SERDES}_${BOOT}.img
-#dd if=/dev/zero of=images/${IMG} bs=1M count=101
-dd if=/dev/zero of=images/${IMG} bs=1M count=1
-#parted --script images/${IMG} mklabel msdos mkpart primary 1MiB 20MiB mkpart primary 20MiB 100MiB
-#dd if=/dev/zero of=images/boot.part bs=1M count=99
+truncate -s 465M $ROOTDIR/images/${IMG}
+#dd if=/dev/zero of=$ROOTDIR/images/${IMG} bs=1M count=1
+parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB 464MiB
+truncate -s 400M $ROOTDIR/images/tmp/boot.part
+mkfs.ext4 -b 4096 -F $ROOTDIR/images/tmp/boot.part
+e2cp -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.img $ROOTDIR/images/tmp/boot.part:/
+dd if=$ROOTDIR/images/tmp/boot.part of=$ROOTDIR/images/${IMG} bs=1M seek=64
 
 # RCW+PBI+BL2 at block 8
 if [ "x${BOOT}" == "xsd" ]; then
