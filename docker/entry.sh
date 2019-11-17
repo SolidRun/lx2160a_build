@@ -25,5 +25,6 @@ useradd -s /bin/bash -m -u $_UID -g $_GID build
 sudo -u build git config --global user.name "LX2160A Toolchain Container"
 sudo -u build git config --global user.email "support@solid-run.com"
 
+cd /work
 # now run the build script as the build user
-sudo -u build -E bash /work/runme.sh
+sudo -u build ./runme.sh
