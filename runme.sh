@@ -41,7 +41,7 @@ if [ "x$UEFI_RELEASE" == "x" ]; then
 fi
 mkdir -p build images
 ROOTDIR=`pwd`
-PARALLEL=32 # Amount of parallel jobs for the builds
+PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
 SPEED=2000_700_${DDR_SPEED}
 TOOLS="wget tar git make 7z unsquashfs dd vim mkfs.ext4 sudo parted mkdosfs mcopy dtc iasl mkimage e2cp truncate multistrap qemu-aarch64-static"
 
@@ -204,14 +204,14 @@ CC=${CROSS_COMPILE}gcc DESTDIR=./install prefix=/usr make install
 echo "Building RCW"
 cd $ROOTDIR/build/rcw/lx2160acex7
 make clean
-make -j32
+make -j${PARALLEL}
 
 if [ "x$BOOT_LOADER" == "xu-boot" ]; then
 	echo "Build u-boot"
 	cd $ROOTDIR/build/u-boot
 	#make distclean
 	make lx2160acex7_tfa_defconfig
-	make -j32
+	make -j${PARALLEL}
 	export BL33=$ROOTDIR/build/u-boot/u-boot.bin
 fi
 
@@ -252,7 +252,7 @@ if [ "x${BOOT}" == "xsd" ]; then
 else
 	ATF_BOOT=flexspi_nor
 fi
-make -j32 PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/XGGFF_PP_HHHH_RR_19_5_2/rcw_${SPEED}_${SERDES}_${BOOT}.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=${ATF_BOOT} SECURE_BOOT=false
+make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/XGGFF_PP_HHHH_RR_19_5_2/rcw_${SPEED}_${SERDES}_${BOOT}.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=${ATF_BOOT} SECURE_BOOT=false
 
 echo "Building mc-utils"
 cd $ROOTDIR/build/mc-utils
@@ -262,7 +262,7 @@ make -C config/
 echo "Building the kernel"
 cd $ROOTDIR/build/linux
 ./scripts/kconfig/merge_config.sh arch/arm64/configs/defconfig arch/arm64/configs/lsdk.config $ROOTDIR/configs/linux/lx2k_additions.config
-make -j$PARALLEL all #Image dtbs
+make -j${PARALLEL} all #Image dtbs
 
 cat > kernel2160cex7.its << EOF
 /dts-v1/;
