@@ -8,7 +8,7 @@ They are used in SolidRun quickly build images for development where those image
 The sources are pulled from NXP's codeaurora repository and patched after being clone using the patches in the patches/ directory
 
 ## Build with Docker
-A docker image providing a consistent build environment can be used:
+A docker image providing a consistent build environment can be used as below. Since some steps require mounting a loopback device, you need to grant permission for the container to do so when launching:
 
 1. build container image (first time only)
    ```
@@ -16,7 +16,7 @@ A docker image providing a consistent build environment can be used:
    ```
 2. invoke build script in working directory
    ```
-   docker run -i -t -v "$PWD":/work lx2160a_build $(id -u) $(id -g)
+   docker run --cap-add SYS_ADMIN --device /dev/loop0 --device /dev/loop-control -i -t -v "$PWD":/work lx2160a_build $(id -u) $(id -g)
    ```
 
 ## Build with host tools
@@ -39,11 +39,11 @@ Selecting boot loader - *BOOT_LOADER=u-boot,uefi*
 ### Examples:
 generate *images/lx2160acex7_2000_700_3200_8_5_2_sd.img*:
 - `./runme.sh` **or**
-- `docker run -i -t -v "$PWD":/work lx2160a_build $(id -u) $(id -g)`
+- `docker run --cap-add SYS_ADMIN --device /dev/loop0 --device /dev/loop-control -i -t -v "$PWD":/work lx2160a_build $(id -u) $(id -g)`
 
 generate *images/lx2160acex7_2000_700_3200_8_5_2_xspi.img*:
 - `BOOT=xspi ./runme` **or**
-- `docker run -i -t -v "$PWD":/work -e BOOT=xspi lx2160a_build $(id -u) $(id -g)`
+- `docker run --cap-add SYS_ADMIN --device /dev/loop0 --device /dev/loop-control -i -t -v "$PWD":/work -e BOOT=xspi lx2160a_build $(id -u) $(id -g)`
 
 ## Deploying
 For SD card bootable images, plug in a micro SD into your machine and run the following, where sdX is the location of the SD card got probed into your machine -
