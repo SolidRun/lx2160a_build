@@ -195,7 +195,8 @@ echo "Building buildroot"
 cd $ROOTDIR/build/buildroot
 cp $ROOTDIR/configs/buildroot/lx2160acex7_defconfig configs/
 make lx2160acex7_defconfig
-make
+make source -j${PARALLEL}
+make -j${PARALLEL}
 
 echo "Building restool"
 cd $ROOTDIR/build/restool
