@@ -96,8 +96,10 @@ cd $ROOTDIR
 ###############################################################################
 # submodule init
 ###############################################################################
-git submodule init
-git submodule update --remote
+if [ "x$MAKE_CLEAN" != "x" ]; then
+	git submodule init
+	git submodule update --remote
+fi
 
 MCBIN=$( ls $ROOTDIR/build/qoriq-mc-binary/lx2160a/ )
 
@@ -178,14 +180,20 @@ fi #BOOTLOADER_ONLY
 
 echo "Building RCW"
 cd $ROOTDIR/build/rcw/lx2160acex7
+if [ "x$MAKE_CLEAN" != "x" ]; then
 make clean
+fi
 make -j${PARALLEL}
 
 if [ "x$BOOT_LOADER" == "xu-boot" ]; then
 	echo "Build u-boot"
 	cd $ROOTDIR/build/u-boot
-	#make distclean
-	make lx2160acex7_tfa_defconfig
+	if [ "x$MAKE_CLEAN" != "x" ]; then
+		make distclean
+	fi
+	if [[ ! -f $ROOTDIR/build/u-boot/.config ]]; then
+		make lx2160acex7_tfa_defconfig
+	fi
 	make -j${PARALLEL}
 	export BL33=$ROOTDIR/build/u-boot/u-boot.bin
 fi
@@ -199,6 +207,9 @@ if [ "x$BOOT_LOADER" == "xuefi" ]; then
 	export WORKSPACE=$ROOTDIR/build/tianocore
 	export PACKAGES_PATH=$WORKSPACE/edk2:$WORKSPACE/edk2-platforms
 	source  edk2/edksetup.sh
+	if [ "x$MAKE_CLEAN" != "x" ]; then
+		build -p "edk2-platforms/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC5 -b $UEFI_RELEASE -y build.log clean
+	fi
 	build -p "edk2-platforms/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC5 -b $UEFI_RELEASE -y build.log
 	export BL33=$ROOTDIR/build/tianocore/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC5/FV/LX2160ACEX7_EFI.fd
 	export ARCH=arm64 # While building UEFI ARCH is unset
@@ -207,7 +218,9 @@ fi
 echo "Building arm-trusted-firmware"
 cd $ROOTDIR/build/arm-trusted-firmware/
 
-make PLAT=lx2160acex7 clean
+if [ "x$MAKE_CLEAN" != "x" ]; then
+	make PLAT=lx2160acex7 clean
+fi
 
 if [ "x${BOOT}" == "xsd" ]; then
 	ATF_BOOT=sd
@@ -225,7 +238,12 @@ make -C config/
 if [ "x$BOOTLOADER_ONLY" == "x" ]; then
 echo "Building the kernel"
 cd $ROOTDIR/build/linux
+if [ "x$MAKE_CLEAN" != "x" ]; then
+make -j${PARALLEL} distclean #Image dtbs
+fi
+if [[ ! -f $ROOTDIR/build/linux/.config ]]; then
 ./scripts/kconfig/merge_config.sh arch/arm64/configs/defconfig arch/arm64/configs/lsdk.config $ROOTDIR/configs/linux/lx2k_additions.config
+fi
 make -j${PARALLEL} all #Image dtbs
 mkimage -f $ROOTDIR/files/kernel2160cex7.its kernel-lx2160acex7.itb
 \rm -rf $ROOTDIR/images/tmp
