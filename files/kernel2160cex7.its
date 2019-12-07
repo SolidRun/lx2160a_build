@@ -1,0 +1,53 @@
+/dts-v1/;
+/ {
+	description = "arm64 kernel, ramdisk and FDT blob";
+	#address-cells = <1>;
+	images {
+		kernel {
+			description = "ARM64 Kernel";
+			data = /incbin/("arch/arm64/boot/Image.gz");
+			type = "kernel";
+			arch = "arm64";
+			os = "linux";
+			compression = "gzip";
+			load = <0x80080000>;
+			entry = <0x80080000>;
+			hash@1 {
+				algo = "crc32";
+			};
+		};
+		initrd {
+			description = "initrd for arm64";
+			data = /incbin/("../../patches/linux/ramdisk_rootfs_arm64.ext4.gz");
+			type = "ramdisk";
+			arch = "arm64";
+			os = "linux";
+			compression = "none";
+			load = <0x00000000>;
+			entry = <0x00000000>;
+			hash@1 {
+				algo = "crc32";
+			};
+		};
+		lx2160acex7-dtb {
+			description = "lx2160acex7-dtb";
+			data = /incbin/("arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtb");
+			type = "flat_dt";
+			arch = "arm64";
+			os = "linux";
+			compression = "none";
+			load = <0x90000000>;
+			hash@1 {
+				algo = "crc32";
+			};
+		};
+	};
+	configurations {
+		lx2160acex7 {
+			description = "config for lx2160acex7";
+			kernel = "kernel";
+			ramdisk = "initrd";
+			fdt = "lx2160acex7-dtb";
+                };
+	};
+};		
