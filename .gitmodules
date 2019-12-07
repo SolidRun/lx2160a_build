@@ -1,23 +1,23 @@
 [submodule "build/linux"]
 	path = build/linux
 	url = https://github.com/SolidRun/linux-stable.git
-	branch = linux-4.19.y-LSDK-19.06-sr
+	branch = linux-4.19.y-LSDK-19.09-sr
 [submodule "build/u-boot"]
 	path = build/u-boot
 	url = https://github.com/SolidRun/u-boot.git
-	branch = v2019.04-LSDK-19.06-sr
+	branch = v2019.04-LSDK-19.09-sr
 [submodule "build/tianocore/edk2"]
 	path = build/tianocore/edk2
 	url = https://github.com/SolidRun/edk2.git
-	branch = vUDK2017-LSDK-19.06-sr
+	branch = vUDK2017-LSDK-19.09-sr
 [submodule "build/tianocore/edk2-platforms"]
 	path = build/tianocore/edk2-platforms
 	url = https://github.com/SolidRun/edk2-platforms.git
-	branch = LSDK-19.06-sr
+	branch = LSDK-19.09-sr
 [submodule "build/rcw"]
 	path = build/rcw
 	url = https://github.com/SolidRun/rcw.git
-	branch = LSDK-19.06-sr
+	branch = LSDK-19.09-sr
 [submodule "build/ddr-phy-binary"]
 	path = build/ddr-phy-binary
 	url = https://github.com/NXP/ddr-phy-binary.git
@@ -25,7 +25,7 @@
 [submodule "build/arm-trusted-firmware"]
 	path = build/arm-trusted-firmware
 	url = https://github.com/SolidRun/arm-trusted-firmware.git
-	branch = v1.5-LSDK-19.06-sr
+	branch = v1.5-LSDK-19.09-sr
 [submodule "build/qoriq-mc-binary"]
 	path = build/qoriq-mc-binary
 	url = https://github.com/NXP/qoriq-mc-binary.git
@@ -33,4 +33,4 @@
 [submodule "build/mc-utils"]
 	path = build/mc-utils
 	url = https://github.com/SolidRun/mc-utils.git
-	branch = LSDK-19.06-sr
+	branch = LSDK-19.09-sr
