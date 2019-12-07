@@ -1,3 +1,5 @@
 build/toolchain/
+build/tianocore/Build/
+build/tianocore/build.log
 images/
 *.swp
