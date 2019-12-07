@@ -98,9 +98,6 @@ cd $ROOTDIR
 ###############################################################################
 git submodule init
 git submodule update --remote
-cd $ROOTDIR/build/qoriq-mc-binary
-git checkout LSDK-19.06
-cd $ROOTDIR
 
 MCBIN=$( ls $ROOTDIR/build/qoriq-mc-binary/lx2160a/ )
 
