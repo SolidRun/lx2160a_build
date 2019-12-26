@@ -43,7 +43,7 @@ mkdir -p build images
 ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
 SPEED=2000_700_${DDR_SPEED}
-TOOLS="wget tar git make 7z unsquashfs dd vim mkfs.ext4 sudo parted mkdosfs mcopy dtc iasl mkimage e2cp truncate multistrap qemu-aarch64-static"
+TOOLS="wget tar git make 7z unsquashfs dd vim mkfs.ext4 sudo parted mkdosfs mcopy dtc iasl mkimage e2cp truncate multistrap qemu-aarch64-static cpio rsync bc bison flex"
 
 export PATH=$ROOTDIR/build/toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu/bin:$PATH
 export CROSS_COMPILE=aarch64-linux-gnu-
@@ -73,6 +73,8 @@ for i in $TOOLS; do
 	TOOL_PATH=`which $i`
 	if [ "x$TOOL_PATH" == "x" ]; then
 		echo "Tool $i is not installed"
+		echo "If running under apt based package management you can run -"
+		echo "sudo apt install build-essential git dosfstools e2fsprogs parted sudo mtools p7zip device-tree-compiler acpica-tools u-boot-tools e2tools multistrap qemu-user-static libssl-dev cpio rsync bc bison flex"
 		exit -1
 	fi
 done
@@ -325,7 +327,7 @@ mkimage -f kernel2160cex7.its kernel-lx2160acex7.itb
 \rm -rf $ROOTDIR/images/tmp
 mkdir -p $ROOTDIR/images/tmp/
 mkdir -p $ROOTDIR/images/tmp/boot
-make INSTALL_MOD_PATH=$ROOTDIR/images/tmp/ modules_install
+make INSTALL_MOD_PATH=$ROOTDIR/images/tmp/ INSTALL_MOD_STRIP=1 modules_install
 cp $ROOTDIR/build/linux/arch/arm64/boot/Image $ROOTDIR/images/tmp/boot
 cp $ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtb $ROOTDIR/images/tmp/boot
 
@@ -354,7 +356,23 @@ e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.ext4:boot
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/Image $ROOTDIR/images/tmp/ubuntu-core.ext4:boot/
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/fsl-lx2160a-cex7.dtb $ROOTDIR/images/tmp/ubuntu-core.ext4:boot/
 
+# Copy over kernel image
+echo "Copying kernel modules"
+cd $ROOTDIR/images/tmp/
+for i in `find lib`; do
+	if [ -d $i ]; then
+		e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.ext4:$i
+	fi
+	if [ -f $i ]; then
+		DIR=`dirname $i`
+		e2cp -G 0 -O 0 -p $ROOTDIR/images/tmp/$i $ROOTDIR/images/tmp/ubuntu-core.ext4:$DIR
+	fi
+done
+cd -
+
 # install restool
+echo "Install restool"
+cd $ROOTDIR/
 e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/ls-append-dpl $ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/
 e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/ls-main $ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/
 e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/restool $ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/
@@ -369,9 +387,6 @@ parted --script $ROOTDIR/images/tmp/ubuntu-core.img mklabel msdos mkpart primary
 # Generate the above partuuid 3030303030 which is the 4 characters of '0' in ascii
 echo "0000" | dd of=$ROOTDIR/images/tmp/ubuntu-core.img bs=1 seek=440 conv=notrunc
 dd if=$ROOTDIR/images/tmp/ubuntu-core.ext4 of=$ROOTDIR/images/tmp/ubuntu-core.img bs=1M seek=1 conv=notrunc
-
-### TODO - copy over kernel modules
-### TODO - copy /etc/resolv.conf
 
 echo "Assembling Boot Image"
 cd $ROOTDIR/
