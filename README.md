@@ -5,7 +5,7 @@ Main intention of this repository is to provide build scripts that are easy to h
 
 They are used in SolidRun quickly build images for development where those images can be SD or SPI booted or network TFTP (kernel) or used for root NFS
 
-The sources are pulled from NXP's codeaurora repository and patched after being clone using the patches in the patches/ directory
+The sources are pinned as sub-modules and **need to downloaded explicitly** e.g. through `git submodule update --init`!
 
 ## Build with Docker
 A docker image providing a consistent build environment can be used as below. Since some steps require mounting a loopback device, you need to grant permission for the container to do so when launching:
@@ -37,13 +37,17 @@ Selecting boot loader - *BOOT_LOADER=u-boot,uefi*
 
 
 ### Examples:
-generate *images/lx2160acex7_2000_700_3200_8_5_2_sd.img*:
+generate sdcard image with U-Boot only - for 2600MHz ddr ram speed: *images/lx2160acex7_2000_700_2600_8_5_2_sd.img*
+- BOOTLOADER_ONLY=yes ./runme.sh` **or**
+- `docker run -i -t -v "$PWD":/work -e BOOTLOADER_ONLY=yes -e DDR_SPEED=2600 -e BOOT=sd -e BOOT_LOADER=u-boot lx2160a_build $(id -u) $(id -g)`
+
+generate spi image with U-Boot only: *images/lx2160acex7_2000_700_3200_8_5_2_xspi.img*:
+- `BOOT=xspi ./runme` **or**
+- `docker run -i -t -v "$PWD":/work -e BOOTLOADER_ONLY=yes -e BOOT=xspi -e BOOT_LOADER=u-boot lx2160a_build $(id -u) $(id -g)`
+
+generate *images/lx2160acex7_2000_700_3200_8_5_2_sd.img* with Ubuntu rootfs:
 - `./runme.sh` **or**
 - `docker run --cap-add SYS_ADMIN --device /dev/loop0 --device /dev/loop-control -i -t -v "$PWD":/work lx2160a_build $(id -u) $(id -g)`
-
-generate *images/lx2160acex7_2000_700_3200_8_5_2_xspi.img*:
-- `BOOT=xspi ./runme` **or**
-- `docker run --cap-add SYS_ADMIN --device /dev/loop0 --device /dev/loop-control -i -t -v "$PWD":/work -e BOOT=xspi lx2160a_build $(id -u) $(id -g)`
 
 ## Deploying
 For SD card bootable images, plug in a micro SD into your machine and run the following, where sdX is the location of the SD card got probed into your machine -
