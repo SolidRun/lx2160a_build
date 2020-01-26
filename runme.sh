@@ -9,7 +9,7 @@ set -e
 ###############################################################################
 # General configurations
 ###############################################################################
-RELEASE=LSDK-19.06
+RELEASE=LSDK-19.09
 BUILDROOT_VERSION=2019.05.2
 
 #UEFI_RELEASE=DEBUG
@@ -104,6 +104,8 @@ for i in $QORIQ_COMPONENTS; do
 		cd $i
 		if [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-19.06" ]; then
 			git checkout -b LSDK-19.06-V4.19 refs/tags/LSDK-19.06-V4.19
+		elif [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-19.09" ]; then
+			git checkout -b LSDK-19.09-V4.19
 		else
 			git checkout -b $RELEASE refs/tags/$RELEASE
 		fi
@@ -123,6 +125,9 @@ for i in $QORIQ_COMPONENTS; do
 		fi
 		if [[ -d $ROOTDIR/patches/$i/ ]]; then
 			git am $ROOTDIR/patches/$i/*.patch
+		fi
+		if [[ -d $ROOTDIR/patches/$i-$RELEASE/ ]]; then
+			git am $ROOTDIR/patches/$i-$RELEASE/*.patch
 		fi
 	fi
 done
@@ -288,7 +293,7 @@ cat > kernel2160cex7.its << EOF
 		};
 		initrd {
 			description = "initrd for arm64";
-			data = /incbin/("../../patches/linux/ramdisk_rootfs_arm64.ext4.gz");
+			data = /incbin/("../../patches/linux-${RELEASE}/ramdisk_rootfs_arm64.ext4.gz");
 			type = "ramdisk";
 			arch = "arm64";
 			os = "linux";

@@ -1,0 +1,39 @@
+From 1107c2ef83700a58ba086376123cc4c4f2a17645 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Sun, 28 Jul 2019 14:25:43 +0300
+Subject: [PATCH 3/3] arm64: dts: lx2160a: misc fixes
+
+those are misc fixes that will be removed in some point.
+the first is build amc6821 support
+the second is setting default amc6821 default poalirty to be active
+high; this modification will not be needed in REV 1.4 of the COM express
+module since the inversion will be on the module.
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ arch/arm64/configs/lsdk.config | 11 +++++++++++
+ drivers/hwmon/amc6821.c        |  2 +-
+ 2 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/configs/lsdk.config b/arch/arm64/configs/lsdk.config
+index 7f0618f99e21..1bccccf5d502 100644
+--- a/arch/arm64/configs/lsdk.config
++++ b/arch/arm64/configs/lsdk.config
+@@ -106,3 +106,14 @@ CONFIG_CGROUP_FREEZER=y
+ 
+ # docker
+ CONFIG_OVERLAY_FS=y
++
++# fan controller and temperature
++CONFIG_SENSORS_AMC6821=y
++
++# GPIO sysfs
++CONFIG_GPIO_SYSFS=y
++CONFIG_GPIO_MPC8XXX=y
++CONFIG_SENSORS_LM90=y
++
++# PKTGEN
++CONFIG_NET_PKTGEN=y
+-- 
+2.17.1
+
