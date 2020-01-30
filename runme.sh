@@ -45,9 +45,9 @@ PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
 SPEED=2000_700_${DDR_SPEED}
 
 if [ "x$BOOTLOADER_ONLY" != "x" ]; then
-TOOLS="wget tar git make dd dtc iasl"
+TOOLS="wget tar git make dd envsubst"
 else
-TOOLS="wget tar git make 7z unsquashfs dd vim mkfs.ext4 sudo parted mkdosfs mcopy dtc iasl mkimage e2cp truncate multistrap qemu-aarch64-static"
+TOOLS="wget tar git make 7z unsquashfs dd envsubst vim mkfs.ext4 sudo parted mkdosfs mcopy dtc iasl mkimage e2cp truncate multistrap qemu-aarch64-static"
 fi
 
 export CROSS_COMPILE=$ROOTDIR/build/toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
@@ -180,9 +180,29 @@ fi #BOOTLOADER_ONLY
 
 echo "Building RCW"
 cd $ROOTDIR/build/rcw/lx2160acex7
-if [ "x$MAKE_CLEAN" != "x" ]; then
-make clean
+export SP1 SP2 SP3
+IFS=_ read SP1 SP2 SP3 <<< $SERDES
+if [ "x$SP1" == "4" ]; then
+	export SRC1="0"
+	export SCL1="0"
+	export SPD1="1"
+else
+	export SRC1="1"
+	export SCL1="2"
+	export SPD1="1"
 fi
+
+envsubst < configs/lx2160a_serdes.def > configs/lx2160a_serdes.rcwi
+
+IFS=_ read CPU SYS MEM <<< $SPEED
+export CPU=${CPU::2}
+export SYS=$(( 2*${SYS::1} ))
+export MEM=${MEM::2}
+
+envsubst < configs/lx2160a_timings.def > configs/lx2160a_timings.rcwi
+
+# Always rebuild the rcws to catch timing changes
+rm -f rcws/*.bin
 make -j${PARALLEL}
 
 if [ "x$BOOT_LOADER" == "xu-boot" ]; then
@@ -228,7 +248,7 @@ else
 	ATF_BOOT=flexspi_nor
 fi
 
-make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/XGGFF_PP_HHHH_RR_19_5_2/rcw_${SPEED}_${SERDES}_${BOOT}.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=${ATF_BOOT} SECURE_BOOT=false
+make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/rcws/rcw_${BOOT}.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=${ATF_BOOT} SECURE_BOOT=false
 
 echo "Building mc-utils"
 cd $ROOTDIR/build/mc-utils
