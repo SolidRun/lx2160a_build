@@ -219,16 +219,16 @@ if [ "x$BOOT_LOADER" == "xuefi" ]; then
 	echo "Build UEFI"
 	cd $ROOTDIR/build/tianocore
 	# set the aarch64-linux-gnu cross compiler to the oldie 4.9 linaro toolchain (UEFI build requirement)
-	make -C $ROOTDIR/build/tianocore/edk2/BaseTools
+	PYTHON_COMMAND=/usr/bin/python3 make -C $ROOTDIR/build/tianocore/edk2/BaseTools
 	export GCC5_AARCH64_PREFIX=$CROSS_COMPILE
 	export WORKSPACE=$ROOTDIR/build/tianocore
-	export PACKAGES_PATH=$WORKSPACE/edk2:$WORKSPACE/edk2-platforms
+	export PACKAGES_PATH=$WORKSPACE/edk2:$WORKSPACE/edk2-platforms:$WORKSPACE/edk2-non-osi
 	source  edk2/edksetup.sh
 	if [ "x$MAKE_CLEAN" != "x" ]; then
-		build -p "edk2-platforms/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC5 -b $UEFI_RELEASE -y build.log clean
+		build -p "edk2-platforms/Platform/SolidRun/LX2160aCex7/LX2160aCex7.dsc" -a AARCH64 -t GCC5 -b $UEFI_RELEASE -y build.log clean
 	fi
-	build -p "edk2-platforms/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC5 -b $UEFI_RELEASE -y build.log
-	export BL33=$ROOTDIR/build/tianocore/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC5/FV/LX2160ACEX7_EFI.fd
+	build -p "edk2-platforms/Platform/SolidRun/LX2160aCex7/LX2160aCex7.dsc" -a AARCH64 -t GCC5 -b $UEFI_RELEASE -y build.log
+	export BL33=$ROOTDIR/build/tianocore/Build/LX2160aCex7/${UEFI_RELEASE}_GCC5/FV/LX2160ACEX7_EFI.fd
 	export ARCH=arm64 # While building UEFI ARCH is unset
 fi
 
