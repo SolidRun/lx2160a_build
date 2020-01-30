@@ -9,15 +9,19 @@
 [submodule "build/tianocore/edk2"]
 	path = build/tianocore/edk2
 	url = https://github.com/SolidRun/edk2.git
-	branch = vUDK2017-LSDK-19.09-sr
+	branch = stable201911-lx2160a
 [submodule "build/tianocore/edk2-platforms"]
 	path = build/tianocore/edk2-platforms
 	url = https://github.com/SolidRun/edk2-platforms.git
-	branch = LSDK-19.09-sr
+	branch = master-lx2160a 
+[submodule "build/tianocore/edk2-non-osi"]
+	path = build/tianocore/edk2-non-osi
+	url = https://github.com/SolidRun/edk2-non-osi.git
+	branch = master
 [submodule "build/rcw"]
 	path = build/rcw
 	url = https://github.com/SolidRun/rcw.git
-	branch = LSDK-19.09-sr
+	branch = LSDK-19.09-templates-sr
 [submodule "build/ddr-phy-binary"]
 	path = build/ddr-phy-binary
 	url = https://github.com/NXP/ddr-phy-binary.git
@@ -25,7 +29,7 @@
 [submodule "build/arm-trusted-firmware"]
 	path = build/arm-trusted-firmware
 	url = https://github.com/SolidRun/arm-trusted-firmware.git
-	branch = v1.5-LSDK-19.09-sr
+	branch = v1.5-LSDK-19.09-acpi-sr
 [submodule "build/qoriq-mc-binary"]
 	path = build/qoriq-mc-binary
 	url = https://github.com/NXP/qoriq-mc-binary.git
