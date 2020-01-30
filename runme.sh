@@ -65,6 +65,10 @@ if [ "x${SERDES:0:2}" == "x8_" ]; then
 	DPC=dpc-8_x_usxgmii.dtb 
 	DPL=dpl-eth.8x10g.19.dtb
 fi
+if [ "x${SERDES:0:2}" == "x4_" ]; then
+	DPC=dpc-8_x_usxgmii.dtb
+	DPL=dpl-eth.8x10g.19.dtb
+fi
 if [ "x${SERDES:0:3}" == "x20_" ]; then
 	DPC=dpc-dual-40g.dtb
 	DPL=dpl-eth.dual-40g.19.dtb
