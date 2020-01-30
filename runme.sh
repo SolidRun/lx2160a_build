@@ -50,7 +50,10 @@ else
 TOOLS="wget tar git make 7z unsquashfs dd envsubst vim mkfs.ext4 sudo parted mkdosfs mcopy dtc iasl mkimage e2cp truncate multistrap qemu-aarch64-static"
 fi
 
+HOST_ARCH=`arch`
+if [ "$HOST_ARCH" == "x86_64" ]; then 
 export CROSS_COMPILE=$ROOTDIR/build/toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
+fi
 export ARCH=arm64
 
 if [ "x$SERDES" == "x" ]; then
