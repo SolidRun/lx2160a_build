@@ -103,9 +103,6 @@ fi
 
 MCBIN=$( ls $ROOTDIR/build/qoriq-mc-binary/lx2160a/ )
 
-make -C $ROOTDIR/build/arm-trusted-firmware/tools/fiptool
-$ROOTDIR/build/arm-trusted-firmware/tools/fiptool/fiptool create --ddr-immem-udimm-1d build/ddr-phy-binary/lx2160a/ddr4_pmu_train_imem.bin --ddr-immem-udimm-2d build/ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_imem.bin --ddr-dmmem-udimm-1d build/ddr-phy-binary/lx2160a/ddr4_pmu_train_dmem.bin --ddr-dmmem-udimm-2d build/ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_dmem.bin --ddr-immem-rdimm-1d build/ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_imem.bin --ddr-immem-rdimm-2d build/ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_imem.bin --ddr-dmmem-rdimm-1d build/ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_dmem.bin --ddr-dmmem-rdimm-2d build/ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_dmem.bin images/tmp/fip_ddr_all.bin
-
 if [ "x$BOOTLOADER_ONLY" == "x" ]; then
 if [[ ! -f $ROOTDIR/build/ubuntu-core.ext4 ]]; then
 	cd $ROOTDIR/build
@@ -343,7 +340,7 @@ fi
 dd if=$ROOTDIR/build/arm-trusted-firmware/build/lx2160acex7/release/fip.bin of=images/${IMG} bs=512 seek=2048 conv=notrunc
 
 # DDR PHY FIP at 0x4000
-dd if=$ROOTDIR/images/tmp/fip_ddr_all.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
+dd if=$ROOTDIR/build/ddr-phy-binary/lx2160a/fip_ddr.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
 # Env variables at 0x2800
 
 # Secureboot headers at 0x3000
