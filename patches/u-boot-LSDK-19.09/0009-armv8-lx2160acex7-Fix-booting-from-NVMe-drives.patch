@@ -1,0 +1,29 @@
+From aaa77bef5143ec037bd31477d482a68e10bfee1d Mon Sep 17 00:00:00 2001
+From: Damjan Marion <dmarion@me.com>
+Date: Thu, 21 Nov 2019 19:45:13 +0100
+Subject: [PATCH] armv8: lx2160acex7: Fix booting from NVMe drives
+
+Currently NVMe is not initialized so u-boot fails to read kernel from
+NVMe drive. This patch modifies default environment so it initializes
+NVMe as part of default startup script...
+
+Signed-off-by: Damjan Marion <dmarion@me.com>
+---
+ include/configs/lx2160a_common.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/include/configs/lx2160a_common.h b/include/configs/lx2160a_common.h
+index 4549be9..f4a4064 100644
+--- a/include/configs/lx2160a_common.h
++++ b/include/configs/lx2160a_common.h
+@@ -250,6 +250,7 @@ int select_i2c_ch_pca9547_sec(unsigned char ch);
+ 	XSPI_MC_INIT_CMD				\
+ 	"boot_scripts=lx2160acex7_boot.scr\0"	\
+ 	"boot_script_hdr=hdr_lx2160acex7_bs.out\0"	\
++	"nvme_need_init=true\0"	\
+ 	"scan_dev_for_boot_part="		\
+ 		"part list ${devtype} ${devnum} devplist; "	\
+ 		"env exists devplist || setenv devplist 1; "	\
+-- 
+2.20.1
+
