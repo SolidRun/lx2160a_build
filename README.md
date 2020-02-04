@@ -12,7 +12,7 @@ A docker image providing a consistent build environment can be used as below. Si
 
 1. build container image (first time only)
    ```
-   docker build -t lx2160a_build docker
+   ./build_container.sh
    ```
 2. invoke build script in working directory
    ```
@@ -35,6 +35,7 @@ Selecting SERDES configuration - *SERDES=SD1_SD2_SD3*
 
 Selecting boot loader - *BOOT_LOADER=u-boot,uefi*
 
+It is easy to set and change the variables in params_for_build.env instead of passing them to the docker call via --env <params>
 
 ### Examples:
 generate *images/lx2160acex7_2000_700_3200_8_5_2_sd.img*:
