@@ -80,63 +80,71 @@ for i in $TOOLS; do
 done
 set -e
 
-if [[ ! -d $ROOTDIR/build/toolchain ]]; then
-	mkdir -p $ROOTDIR/build/toolchain
-	cd $ROOTDIR/build/toolchain
+if [[ ! -f "$ROOTDIR/build/toolchain/preparation-done" ]]; then
+	mkdir -p "$ROOTDIR/build/toolchain"
+	cd "$ROOTDIR/build/toolchain"
 	wget https://releases.linaro.org/components/toolchain/binaries/7.4-2019.02/aarch64-linux-gnu/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu.tar.xz
 	tar -xvf gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu.tar.xz
 	wget https://releases.linaro.org/components/toolchain/binaries/4.9-2016.02/aarch64-linux-gnu/gcc-linaro-4.9-2016.02-x86_64_aarch64-linux-gnu.tar.xz
 	tar -xvf gcc-linaro-4.9-2016.02-x86_64_aarch64-linux-gnu.tar.xz
+	touch preparation-done
 fi
 
 echo "Building boot loader"
-cd $ROOTDIR
+cd "$ROOTDIR"
 
 ###############################################################################
 # source code cloning
 ###############################################################################
 QORIQ_COMPONENTS="u-boot atf rcw uefi restool mc-utils linux"
-for i in $QORIQ_COMPONENTS; do
-	if [[ ! -d $ROOTDIR/build/$i ]]; then
-		echo "Cloing https://source.codeaurora.org/external/qoriq/qoriq-components/$i release $RELEASE"
-		cd $ROOTDIR/build
-		git clone https://source.codeaurora.org/external/qoriq/qoriq-components/$i
-		cd $i
-		if [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-19.06" ]; then
+for QORIQ_COMPONENT in $QORIQ_COMPONENTS; do
+	if [[ ! -f "$ROOTDIR/build/$QORIQ_COMPONENT/preparation-done" ]]; then
+		echo "Cloning https://source.codeaurora.org/external/qoriq/qoriq-components/$QORIQ_COMPONENT release $RELEASE"
+		cd "$ROOTDIR/build"
+		git clone https://source.codeaurora.org/external/qoriq/qoriq-components/$QORIQ_COMPONENT
+		cd $QORIQ_COMPONENT
+		if [ "x$QORIQ_COMPONENT" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-19.06" ]; then
 			git checkout -b LSDK-19.06-V4.19 refs/tags/LSDK-19.06-V4.19
-		elif [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-19.09" ]; then
+		elif [ "x$QORIQ_COMPONENT" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-19.09" ]; then
 			git checkout -b LSDK-19.09-V4.19
 		else
 			git checkout -b $RELEASE refs/tags/$RELEASE
 		fi
-		if [ "x$i" == "xatf" ]; then
-			cd $ROOTDIR/build/atf/tools/fiptool
+		if [ "x$QORIQ_COMPONENT" == "xatf" ]; then
+			cd "$ROOTDIR/build/atf/tools/fiptool"
 			git clone https://github.com/NXP/ddr-phy-binary.git
 			make
 			./fiptool create --ddr-immem-udimm-1d ddr-phy-binary/lx2160a/ddr4_pmu_train_imem.bin --ddr-immem-udimm-2d ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_imem.bin --ddr-dmmem-udimm-1d ddr-phy-binary/lx2160a/ddr4_pmu_train_dmem.bin --ddr-dmmem-udimm-2d ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_dmem.bin --ddr-immem-rdimm-1d ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_imem.bin --ddr-immem-rdimm-2d ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_imem.bin --ddr-dmmem-rdimm-1d ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_dmem.bin --ddr-dmmem-rdimm-2d ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_dmem.bin fip_ddr_all.bin
 		fi
-		if [ "x$i" == "xuefi" ]; then
-			cd $ROOTDIR/build/uefi/
+		if [ "x$QORIQ_COMPONENT" == "xuefi" ]; then
+			cd "$ROOTDIR/build/uefi/"
 			git clone https://source.codeaurora.org/external/qoriq/qoriq-components/edk2-platforms
 			cd edk2-platforms
 			git checkout -b $RELEASE refs/tags/$RELEASE
-			patch -p1 < $ROOTDIR/patches/edk2-platforms/*.diff
-			git am --keep-cr $ROOTDIR/patches/edk2-platforms/*.patch
+			for diff_file in $ROOTDIR/patches/edk2-platforms/*.diff
+			do
+				patch -p1 < $diff_file
+			done
+			for patch_file in $ROOTDIR/patches/edk2-platforms/*.patch
+			do
+				git am --keep-cr "$patch_file"
+			done
 		fi
-		if [[ -d $ROOTDIR/patches/$i/ ]]; then
-			git am $ROOTDIR/patches/$i/*.patch
+		if [[ -d "$ROOTDIR/patches/$QORIQ_COMPONENT/" ]]; then
+			git am "$ROOTDIR/patches/$QORIQ_COMPONENT/"*.patch
 		fi
-		if [[ -d $ROOTDIR/patches/$i-$RELEASE/ ]]; then
-			git am $ROOTDIR/patches/$i-$RELEASE/*.patch
+		if [[ -d "$ROOTDIR/patches/$QORIQ_COMPONENT-$RELEASE/" ]]; then
+			git am "$ROOTDIR/patches/$QORIQ_COMPONENT-$RELEASE/"*.patch
 		fi
+		touch "$ROOTDIR/build/$QORIQ_COMPONENT/preparation-done"
 	fi
 done
 
-if [[ ! -f $ROOTDIR/build/ubuntu-core.ext4 ]]; then
-	cd $ROOTDIR/build
+if [[ ! -f "$ROOTDIR/build/ubuntu-core.ext4" ]]; then
+	cd "$ROOTDIR/build"
 	export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C
 	export PACKAGES="systemd-sysv apt locales less wget procps openssh-server ifupdown net-tools isc-dhcp-client"
-	PACKAGES=$PACKAGES" ntpdate lm-sensors i2c-tools psmisc less sudo htop iproute2 iputils-ping kmod network-manager iptables rng-tools"
+	PACKAGES=$PACKAGES" ntpdate i2c-tools psmisc less sudo htop iproute2 iputils-ping kmod network-manager iptables rng-tools"
 	# xterm
 	cat > ubuntu.conf << EOF
 [General]
@@ -162,36 +170,38 @@ EOF
 EOF'
 	sudo sh -c 'echo "nameserver 8.8.8.8" > ubuntu/etc/resolv.conf'
 	QEMU=`which qemu-aarch64-static`
-	sudo cp $QEMU ubuntu/usr/bin/
+	sudo cp "$QEMU" ubuntu/usr/bin/
 	set +e
 	## first configure fails
 	sudo chroot ubuntu/ /usr/bin/qemu-aarch64-static /usr/bin/dpkg --configure -a
-	set -e
 	sudo chroot ubuntu/ /usr/bin/qemu-aarch64-static /usr/bin/dpkg --configure -a
-
-	echo -e "root\nroot" | sudo chroot ubuntu/ /usr/bin/qemu-aarch64-static /usr/bin/passwd
+	set -e
 	# Remove qemu after done
 	sudo rm ubuntu/usr/bin/qemu-aarch64-static
 	truncate -s 350M ubuntu-core.ext4.tmp
 	mkfs.ext4 -b 4096 -F ubuntu-core.ext4.tmp
 	mkdir -p mnt
-	sudo mount -o loop ubuntu-core.ext4.tmp mnt/
+	sudo mount -o loop ubuntu-core.ext4.tmp mnt
 	sudo cp -a ubuntu/* mnt/
 	sudo umount mnt/
 	rmdir mnt/
 	mv ubuntu-core.ext4.tmp ubuntu-core.ext4
 fi
 
-if [[ ! -d $ROOTDIR/build/qoriq-mc-binary ]]; then
-	cd $ROOTDIR/build
+if [[ ! -f "$ROOTDIR/build/qoriq-mc-binary/checkout-done" ]]; then
+	cd "$ROOTDIR/build"
+	rm -rf qoriq-mc-binary
 	git clone https://github.com/NXP/qoriq-mc-binary.git
 	cd qoriq-mc-binary
 	git checkout -b $RELEASE refs/tags/$RELEASE
+	touch checkout-done
 fi
 
-if [[ ! -d $ROOTDIR/build/buildroot ]]; then
-	cd $ROOTDIR/build
+if [[ ! -f "$ROOTDIR/build/buildroot/clone-done" ]]; then
+	cd "$ROOTDIR/build"
+	rm -rf buildroot
 	git clone https://github.com/buildroot/buildroot -b $BUILDROOT_VERSION
+	touch buildroot/clone-done
 fi
 ###############################################################################
 # building sources
@@ -199,52 +209,52 @@ fi
 
 
 echo "Building buildroot"
-cd $ROOTDIR/build/buildroot
-cp $ROOTDIR/configs/buildroot/lx2160acex7_defconfig configs/
+cd "$ROOTDIR/build/buildroot"
+cp "$ROOTDIR/configs/buildroot/lx2160acex7_defconfig" configs/
 make lx2160acex7_defconfig
 make source -j${PARALLEL}
 make -j${PARALLEL}
 
 echo "Building restool"
-cd $ROOTDIR/build/restool
+cd "$ROOTDIR/build/restool"
 CC=${CROSS_COMPILE}gcc DESTDIR=./install prefix=/usr make install
 
 echo "Building RCW"
-cd $ROOTDIR/build/rcw/lx2160acex7
+cd "$ROOTDIR/build/rcw/lx2160acex7"
 make clean
 make -j${PARALLEL}
 
 if [ "x$BOOT_LOADER" == "xu-boot" ]; then
 	echo "Build u-boot"
-	cd $ROOTDIR/build/u-boot
+	cd "$ROOTDIR/build/u-boot"
 	#make distclean
 	make lx2160acex7_tfa_defconfig
 	make -j${PARALLEL}
-	export BL33=$ROOTDIR/build/u-boot/u-boot.bin
+	export BL33="$ROOTDIR/build/u-boot/u-boot.bin"
 fi
 
 if [ "x$BOOT_LOADER" == "xuefi" ]; then
 	echo "Build UEFI"
-	cd $ROOTDIR/build/uefi
+	cd "$ROOTDIR/build/uefi"
 	# set the aarch64-linux-gnu cross compiler to the oldie 4.9 linaro toolchain (UEFI build requirement)
 	PATH_SAVED=$PATH
-	export PATH=$ROOTDIR/build/toolchain/gcc-linaro-4.9-2016.02-x86_64_aarch64-linux-gnu/bin/:$PATH
+	export PATH="$ROOTDIR/build/toolchain/gcc-linaro-4.9-2016.02-x86_64_aarch64-linux-gnu/bin/:$PATH"
 	source  edksetup.sh
 	cd edk2-platforms/Platform/NXP
 	source Env.cshrc
-	make -C $ROOTDIR/build/uefi/BaseTools/Source/C
+	make -C "$ROOTDIR/build/uefi/BaseTools/Source/C"
 #	./build.sh LX2160 RDB RELEASE clean
 #	./build.sh LX2160 RDB RELEASE
-#	export BL33=$ROOTDIR/build/uefi/Build/LX2160aRdbPkg/RELEASE_GCC49/FV/LX2160ARDB_EFI.fd
+#	export BL33="$ROOTDIR/build/uefi/Build/LX2160aRdbPkg/RELEASE_GCC49/FV/LX2160ARDB_EFI.fd"
 #	build -p "$PACKAGES_PATH/Platform/NXP/LX2160aRdbPkg/LX2160aRdbPkg.dsc" -a AARCH64 -t GCC49 -b DEBUG
-#	export BL33=$ROOTDIR/build/uefi/Build/LX2160aRdbPkg/RELEASE_GCC49/FV/LX2160ARDB_EFI.fd
-#	export BL33=$ROOTDIR/build/uefi/Build/LX2160aRdbPkg/DEBUG_GCC49/FV/LX2160ARDB_EFI.fd
+#	export BL33="$ROOTDIR/build/uefi/Build/LX2160aRdbPkg/RELEASE_GCC49/FV/LX2160ARDB_EFI.fd"
+#	export BL33="$ROOTDIR/build/uefi/Build/LX2160aRdbPkg/DEBUG_GCC49/FV/LX2160ARDB_EFI.fd"
 
 #	build -p "$PACKAGES_PATH/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC49 -b DEBUG clean
 
 #	build -p "$PACKAGES_PATH/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC49 -b $UEFI_RELEASE clean
 	build -p "$PACKAGES_PATH/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC49 -b $UEFI_RELEASE -y build.log
-	export BL33=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC49/FV/LX2160ACEX7_EFI.fd
+	export BL33="$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC49/FV/LX2160ACEX7_EFI.fd"
 
 	# Return to the newer linaro gcc
 	export PATH=$PATH_SAVED
@@ -252,7 +262,7 @@ if [ "x$BOOT_LOADER" == "xuefi" ]; then
 fi
 
 echo "Building atf"
-cd $ROOTDIR/build/atf/
+cd "$ROOTDIR/build/atf/"
 make PLAT=lx2160acex7 clean
 #make -j32 PLAT=lx2160acex7 all fip pbl BL33=$ROOTDIR/build/u-boot/u-boot.bin RCW=$ROOTDIR/build/rcw/lx2160acex7/XGGFF_PP_HHHH_RR_19_5_2/rcw_${SPEED}_8_5_2_${BOOT}.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=sd SECURE_BOOT=false
 if [ "x${BOOT}" == "xsd" ]; then
@@ -260,16 +270,16 @@ if [ "x${BOOT}" == "xsd" ]; then
 else
 	ATF_BOOT=flexspi_nor
 fi
-make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/XGGFF_PP_HHHH_RR_19_5_2/rcw_${SPEED}_${SERDES}_${BOOT}.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=${ATF_BOOT} SECURE_BOOT=false
+make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW="$ROOTDIR/build/rcw/lx2160acex7/XGGFF_PP_HHHH_RR_19_5_2/rcw_${SPEED}_${SERDES}_${BOOT}.bin" TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=${ATF_BOOT} SECURE_BOOT=false
 
 echo "Building mc-utils"
-cd $ROOTDIR/build/mc-utils
+cd "$ROOTDIR/build/mc-utils"
 make -C config/
 
 
 echo "Building the kernel"
-cd $ROOTDIR/build/linux
-./scripts/kconfig/merge_config.sh arch/arm64/configs/defconfig arch/arm64/configs/lsdk.config $ROOTDIR/configs/linux/lx2k_additions.config
+cd "$ROOTDIR/build/linux"
+./scripts/kconfig/merge_config.sh arch/arm64/configs/defconfig arch/arm64/configs/lsdk.config "$ROOTDIR/configs/linux/lx2k_additions.config"
 make -j${PARALLEL} all #Image dtbs
 
 cat > kernel2160cex7.its << EOF
@@ -329,20 +339,20 @@ cat > kernel2160cex7.its << EOF
 EOF
 
 mkimage -f kernel2160cex7.its kernel-lx2160acex7.itb
-\rm -rf $ROOTDIR/images/tmp
-mkdir -p $ROOTDIR/images/tmp/
-mkdir -p $ROOTDIR/images/tmp/boot
-make INSTALL_MOD_PATH=$ROOTDIR/images/tmp/ INSTALL_MOD_STRIP=1 modules_install
-cp $ROOTDIR/build/linux/arch/arm64/boot/Image $ROOTDIR/images/tmp/boot
-cp $ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtb $ROOTDIR/images/tmp/boot
+rm -rf "$ROOTDIR/images/tmp"
+mkdir -p "$ROOTDIR/images/tmp/"
+mkdir -p "$ROOTDIR/images/tmp/boot"
+make INSTALL_MOD_PATH="$ROOTDIR/images/tmp/" INSTALL_MOD_STRIP=1 modules_install
+cp "$ROOTDIR/build/linux/arch/arm64/boot/Image" "$ROOTDIR/images/tmp/boot"
+cp "$ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtb" "$ROOTDIR/images/tmp/boot"
 
 ###############################################################################
 # assembling images
 ###############################################################################
 echo "Assembling kernel and rootfs image"
-cd $ROOTDIR
-mkdir -p $ROOTDIR/images/tmp/extlinux/
-cat > $ROOTDIR/images/tmp/extlinux/extlinux.conf << EOF
+cd "$ROOTDIR"
+mkdir -p "$ROOTDIR/images/tmp/extlinux/"
+cat > "$ROOTDIR/images/tmp/extlinux/extlinux.conf" << EOF
   TIMEOUT 30
   DEFAULT linux
   MENU TITLE linux-lx2160a boot options
@@ -354,69 +364,69 @@ cat > $ROOTDIR/images/tmp/extlinux/extlinux.conf << EOF
 EOF
 
 # blkid images/tmp/ubuntu-core.img | cut -f2 -d'"'
-cp $ROOTDIR/build/ubuntu-core.ext4 $ROOTDIR/images/tmp/
-e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.ext4:extlinux
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/extlinux/extlinux.conf $ROOTDIR/images/tmp/ubuntu-core.ext4:extlinux/
-e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.ext4:boot
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/Image $ROOTDIR/images/tmp/ubuntu-core.ext4:boot/
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/fsl-lx2160a-cex7.dtb $ROOTDIR/images/tmp/ubuntu-core.ext4:boot/
+cp "$ROOTDIR/build/ubuntu-core.ext4" "$ROOTDIR/images/tmp/" 
+e2mkdir -G 0 -O 0 "$ROOTDIR/images/tmp/ubuntu-core.ext4:extlinux"
+e2cp -G 0 -O 0 "$ROOTDIR/images/tmp/extlinux/extlinux.conf" "$ROOTDIR/images/tmp/ubuntu-core.ext4:extlinux/"
+e2mkdir -G 0 -O 0 "$ROOTDIR/images/tmp/ubuntu-core.ext4:boot"
+e2cp -G 0 -O 0 "$ROOTDIR/images/tmp/boot/Image" "$ROOTDIR/images/tmp/ubuntu-core.ext4:boot/"
+e2cp -G 0 -O 0 "$ROOTDIR/images/tmp/boot/fsl-lx2160a-cex7.dtb" "$ROOTDIR/images/tmp/ubuntu-core.ext4:boot/"
 
 # Copy over kernel image
 echo "Copying kernel modules"
-cd $ROOTDIR/images/tmp/
+cd "$ROOTDIR/images/tmp/"
 for i in `find lib`; do
 	if [ -d $i ]; then
-		e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.ext4:$i
+		e2mkdir -G 0 -O 0 "$ROOTDIR/images/tmp/ubuntu-core.ext4:$i"
 	fi
 	if [ -f $i ]; then
 		DIR=`dirname $i`
-		e2cp -G 0 -O 0 -p $ROOTDIR/images/tmp/$i $ROOTDIR/images/tmp/ubuntu-core.ext4:$DIR
+		e2cp -G 0 -O 0 -p "$ROOTDIR/images/tmp/$i" "$ROOTDIR/images/tmp/ubuntu-core.ext4:$DIR"
 	fi
 done
 cd -
 
 # install restool
 echo "Install restool"
-cd $ROOTDIR/
-e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/ls-append-dpl $ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/
-e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/ls-main $ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/
-e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/restool $ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/
-e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-addmux
+cd "$ROOTDIR/"
+e2cp -p -G 0 -O 0 "$ROOTDIR/build/restool/install/usr/bin/ls-append-dpl" "$ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/"
+e2cp -p -G 0 -O 0 "$ROOTDIR/build/restool/install/usr/bin/ls-main" "$ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/"
+e2cp -p -G 0 -O 0 "$ROOTDIR/build/restool/install/usr/bin/restool" "$ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/"
+e2ln "$ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/ls-main" /usr/bin/ls-addmux
 e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-addni
 e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-addsw
 e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-listmac
 e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-listni
 
-truncate -s 356M $ROOTDIR/images/tmp/ubuntu-core.img
-parted --script $ROOTDIR/images/tmp/ubuntu-core.img mklabel msdos mkpart primary 1MiB 354MiB
+truncate -s 356M "$ROOTDIR/images/tmp/ubuntu-core.img"
+parted --script "$ROOTDIR/images/tmp/ubuntu-core.img" mklabel msdos mkpart primary 1MiB 354MiB
 # Generate the above partuuid 3030303030 which is the 4 characters of '0' in ascii
-echo "0000" | dd of=$ROOTDIR/images/tmp/ubuntu-core.img bs=1 seek=440 conv=notrunc
-dd if=$ROOTDIR/images/tmp/ubuntu-core.ext4 of=$ROOTDIR/images/tmp/ubuntu-core.img bs=1M seek=1 conv=notrunc
+echo "0000" | dd "of=$ROOTDIR/images/tmp/ubuntu-core.img" bs=1 seek=440 conv=notrunc
+dd "if=$ROOTDIR/images/tmp/ubuntu-core.ext4" "of=$ROOTDIR/images/tmp/ubuntu-core.img" bs=1M seek=1 conv=notrunc
 
 echo "Assembling Boot Image"
-cd $ROOTDIR/
+cd "$ROOTDIR/"
 IMG=lx2160acex7_${SPEED}_${SERDES}_${BOOT}.img
-truncate -s 465M $ROOTDIR/images/${IMG}
+truncate -s 465M "$ROOTDIR/images/${IMG}"
 #dd if=/dev/zero of=$ROOTDIR/images/${IMG} bs=1M count=1
-parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB 464MiB
-truncate -s 400M $ROOTDIR/images/tmp/boot.part
-mkfs.ext4 -b 4096 -F $ROOTDIR/images/tmp/boot.part
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.img $ROOTDIR/images/tmp/boot.part:/
-dd if=$ROOTDIR/images/tmp/boot.part of=$ROOTDIR/images/${IMG} bs=1M seek=64
+parted --script "$ROOTDIR/images/${IMG}" mklabel msdos mkpart primary 64MiB 464MiB
+truncate -s 400M "$ROOTDIR/images/tmp/boot.part"
+mkfs.ext4 -b 4096 -F "$ROOTDIR/images/tmp/boot.part"
+e2cp -G 0 -O 0 "$ROOTDIR/images/tmp/ubuntu-core.img" "$ROOTDIR/images/tmp/boot.part:/"
+dd "if=$ROOTDIR/images/tmp/boot.part" "of=$ROOTDIR/images/${IMG}" bs=1M seek=64
 
 # RCW+PBI+BL2 at block 8
 if [ "x${BOOT}" == "xsd" ]; then
-	dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_${ATF_BOOT}.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
+	dd "if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_${ATF_BOOT}.pbl" "of=images/${IMG}" bs=512 seek=8 conv=notrunc
 else
-	dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_${ATF_BOOT}.pbl of=images/${IMG} bs=512 conv=notrunc
+	dd "if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_${ATF_BOOT}.pbl" "of=images/${IMG}" bs=512 conv=notrunc
 fi
 # PFE firmware at 0x100
 
 # FIP (BL31+BL32+BL33) at 0x800
-dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/fip.bin of=images/${IMG} bs=512 seek=2048 conv=notrunc
+dd "if=$ROOTDIR/build/atf/build/lx2160acex7/release/fip.bin" "of=images/${IMG}" bs=512 seek=2048 conv=notrunc
 
 # DDR PHY FIP at 0x4000
-dd if=$ROOTDIR/build/atf/tools/fiptool/fip_ddr_all.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
+dd "if=$ROOTDIR/build/atf/tools/fiptool/fip_ddr_all.bin" "of=images/${IMG}" bs=512 seek=16384 conv=notrunc
 # Env variables at 0x2800
 
 # Secureboot headers at 0x3000
@@ -424,21 +434,21 @@ dd if=$ROOTDIR/build/atf/tools/fiptool/fip_ddr_all.bin of=images/${IMG} bs=512 s
 # DPAA1 FMAN ucode at 0x4800
 
 # DPAA2-MC at 0x5000
-dd if=$ROOTDIR/build/qoriq-mc-binary/lx2160a/mc_10.16.2_lx2160a.itb of=images/${IMG} bs=512 seek=20480 conv=notrunc
+dd "if=$ROOTDIR/build/qoriq-mc-binary/lx2160a/mc_10.18.0_lx2160a.itb" "of=images/${IMG}" bs=512 seek=20480 conv=notrunc
 
 # DPAA2 DPL at 0x6800
-dd if=$ROOTDIR/build/mc-utils/config/lx2160a/CEX7/${DPL} of=images/${IMG} bs=512 seek=26624 conv=notrunc
+dd "if=$ROOTDIR/build/mc-utils/config/lx2160a/CEX7/${DPL}" "of=images/${IMG}" bs=512 seek=26624 conv=notrunc
 
 # DPAA2 DPC at 0x7000
-dd if=$ROOTDIR/build/mc-utils/config/lx2160a/CEX7/${DPC} of=images/${IMG} bs=512 seek=28672 conv=notrunc
+dd "if=$ROOTDIR/build/mc-utils/config/lx2160a/CEX7/${DPC}" "of=images/${IMG}" bs=512 seek=28672 conv=notrunc
 
 # Device tree (UEFI) at 0x7800
 if [ "x${BOOT_LOADER}" == "xuefi" ]; then
-	dd if=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC49/AARCH64/Platform/NXP/LX2160aCex7Pkg/DeviceTree/DeviceTree/OUTPUT/fsl-lx2160a-cex7.dtb of=images/${IMG} bs=512 seek=30720 conv=notrunc
-	dd if=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC49/FV/LX2160ACEX7NV_EFI.fd of=images/${IMG} bs=512 seek=10240 conv=notrunc
+	dd "if=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC49/AARCH64/Platform/NXP/LX2160aCex7Pkg/DeviceTree/DeviceTree/OUTPUT/fsl-lx2160a-cex7.dtb" "of=images/${IMG}" bs=512 seek=30720 conv=notrunc
+	dd "if=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC49/FV/LX2160ACEX7NV_EFI.fd" "of=images/${IMG}" bs=512 seek=10240 conv=notrunc
 fi
 # Kernel at 0x8000
-dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=32768 conv=notrunc
+dd "if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb" of=images/${IMG} bs=512 seek=32768 conv=notrunc
 
 # Ramdisk at 0x10000
 
