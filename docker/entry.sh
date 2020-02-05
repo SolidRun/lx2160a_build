@@ -31,4 +31,4 @@ sudo -u build git config --global user.email "support@solid-run.com"
 
 cd /work
 # now run the build script as the build user
-sudo -u build ./runme.sh
+sudo -u build -E ./runme.sh
