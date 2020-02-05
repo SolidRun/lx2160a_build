@@ -106,6 +106,37 @@ cd $ROOTDIR
 if [ "x$MAKE_CLEAN" != "x" ]; then
 	git submodule init
 	git submodule update --remote
+else
+
+	GIT_CONFIG_FLAG=0
+	SUBMODULE_COUNT=0 # Counts the number of definied submodules
+
+	for SUBMODULE_DIR in $(git submodule status|cut -d " " -f2); do
+		((SUBMODULE_COUNT=$SUBMODULE_COUNT+1))
+		if [ -d "$SUBMODULE_DIR" ]; then
+			echo "Submodule '$SUBMODULE_DIR' directory, exists..."
+			if [ -f "$SUBMODULE_DIR/.git/config" ]; then
+				echo "Submodule '$SUBMODULE_DIR' directory, has a 'git .config'..."
+				# Flag increments by one everytime an existing git .config file is met
+				((GIT_CONFIG_FLAG=$GIT_CONFIG_FLAG+1))
+			fi
+		else
+			echo "Missing submodule '$SUBMODULE_DIR', aborting..."
+			exit 1
+		fi	
+	done
+
+	if [ $GIT_CONFIG_FLAG -ne 0 ] && [ $GIT_CONFIG_FLAG -lt $SUBMODULE_COUNT ]; then
+		echo "Partially initialized submodules, aborting..."
+		exit 1
+	elif [ $GIT_CONFIG_FLAG -eq $SUBMODULE_COUNT ]; then
+		echo "Submodules only need updating..."
+		git submodule update --remote
+	elif [ $GIT_CONFIG_FLAG -eq 0 ]; then
+		echo "Submodules need to be initialized and updated..."
+		git submodule init
+		git submodule update --remote
+	fi
 fi
 
 MCBIN=$( ls $ROOTDIR/build/qoriq-mc-binary/lx2160a/ )
