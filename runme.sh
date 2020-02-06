@@ -11,6 +11,8 @@ set -e
 ###############################################################################
 RELEASE=LSDK-19.09
 BUILDROOT_VERSION=2019.05.2
+ROOTDIR=`pwd`
+PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
 
 #UEFI_RELEASE=DEBUG
 #BOOT=xspi
@@ -19,44 +21,177 @@ BUILDROOT_VERSION=2019.05.2
 #SERDES=8_5_2 # 8x10g
 #SERDES=13_5_2 # dual 100g
 #SERDES=20_5_2 # dual 40g
+
+function usage { 
+	echo "Usage: $0 [-d|--debug] 
+		  [-v|--verbose] 
+		  [-c|--cleanup] 
+		  [-b|--boot sd|spi]
+		  [-s|--serdes 8x10G|2x100G|2x40G]
+		  [--uefi-debug]
+		  [--bootloader-only] 
+		  [--bootloader u-boot|uefi] 
+		  [--ddr-speed 2400|2600|2900|3200] " 1>&2; 
+}
+
+function args {
+	local POSITIONAL=()
+	if [ $# -eq 0 ]; then
+		echo "Missing option(s), aborting..."
+		usage
+		exit -1
+	fi
+	while [[ $# -gt 0 ]]; do
+		echo "Parsed option => $1"
+		case "$1" in
+			-v|--verbose)
+				VERBOSE=1
+				shift
+				;;
+			-d|--debug)
+				DEBUG=1
+				shift
+				;;
+			--bootloader-only)
+				BOOTLOADER_ONLY="YES"
+				shift
+				;;
+			--bootloader)
+				if [ "$2" == "u-boot" ]; then	
+					BOOT_LOADER="u-boot"
+				elif [ "$2" == "uefi" ]; then	
+					BOOT_LOADER="uefi"
+				else
+					echo "Incorrect bootloader selected"
+				  usage
+					exit -1
+				fi
+				echo "Parsed value  => $2"
+				shift 2
+				;;
+			--uefi-debug)
+				UEFI_RELEASE=DEBUG
+				if [ ! -z "$MAKE_CLEAN" ]; then
+					echo "Options '--uefi-debug' and '--cleanup' are mutually exclusive, aborting..."
+					usage
+					exit 1
+				fi
+				shift
+				;;	
+			-c|--cleanup)
+				MAKE_CLEAN="YES"
+				if [ $UEFI_RELEASE ] && [ $UEFI_RELEASE==DEBUG ]; then
+					echo "Options '--uefi-debug' and '--cleanup' are mutually exclusive, aborting..."
+					usage
+					exit 1
+				fi
+				shift 
+				;;
+			-b|--boot)
+				if [ "$2" == "sd" ]; then
+					BOOT="sd"
+				elif [ "$2" == "spi" ]; then	
+					BOOT="spi"
+				else
+					echo "Incorrect boot medium selected"
+				  usage
+					exit -1
+				fi
+				echo "Parsed value  => $2"
+				shift 2
+				;;
+			--serdes)
+				#SERDES=8_5_2 is 8x10g
+				#SERDES=13_5_2 is dual 100g
+				#SERDES=20_5_2 is dual 40g
+				if [ "$2" == "8x10G" ]; then
+					SERDES="8_5_2"
+				elif [ "$2" == "2x100G" ]; then
+					SERDES="13_5_2"
+				elif [ "$2" == "2x40G" ]; then
+					SERDES="20_5_2"
+				else
+					echo "Incorrect SerDes configuration selected"
+				  usage
+					exit -1
+				fi
+				echo "Parsed value  => $2"
+				shift 2
+				;;
+			--ddr-speed)
+				if [ "$2" == "2400" ]; then
+					DDR_SPEED=$2
+				elif [ "$2" == "2600" ]; then
+					DDR_SPEED=$2
+				elif [ "$2" == "2900" ]; then
+					DDR_SPEED=$2
+				elif [ "$2" == "3200" ]; then
+					DDR_SPEED=$2
+				else
+					echo "Incorrect DDR SPEED"
+				  usage
+					exit -1
+				fi
+				echo "Parsed value  => $2"
+				shift 2
+				;;
+			*)
+				echo "Unknown option(s): $1"
+				usage
+				exit -1
+		esac
+	done
+	set -- "${POSITIONAL[@]}" # restore positional parameters
+}
+
+args "$@"
+
 ###############################################################################
 # Misc
 ###############################################################################
-if [ "x$BOOT" == "x" ]; then
+
+if [ -z "$BOOT" ]; then
 	BOOT=sd
 fi
 
-if [ "x$BOOT_LOADER" == "x" ]; then
+if [ -z "$BOOT_LOADER" ]; then
 	BOOT_LOADER=u-boot
 fi
 
-if [ "x$DDR_SPEED" == "x" ]; then
+if [ -z "$DDR_SPEED" ]; then
 	DDR_SPEED=3200
 fi
-if [ "x$SERDES" == "x" ]; then
+
+if [ -z "$SERDES" ]; then
 	SERDES=8_5_2
 fi
-if [ "x$UEFI_RELEASE" == "x" ]; then
+
+if [ -z "$UEFI_RELEASE" ]; then
 	UEFI_RELEASE=RELEASE
 fi
+
 mkdir -p images/tmp
-ROOTDIR=`pwd`
-PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
+
 SPEED=2000_700_${DDR_SPEED}
 
-if [ "x$BOOTLOADER_ONLY" != "x" ]; then
-TOOLS="wget tar git make dd envsubst"
+if [ ! -z "$BOOTLOADER_ONLY" ]; then
+	TOOLS="wget tar git make dd envsubst"
+	echo "Bootloader only compilation -> selected tools: $TOOLS" 
 else
-TOOLS="wget tar git make 7z unsquashfs dd envsubst vim mkfs.ext4 sudo parted mkdosfs mcopy dtc iasl mkimage e2cp truncate multistrap qemu-aarch64-static"
+	TOOLS="wget tar git make 7z unsquashfs dd envsubst vim mkfs.ext4 sudo parted" 
+	TOOLS="$TOOLS mkdosfs mcopy dtc iasl mkimage e2cp truncate multistrap qemu-aarch64-static"
+	echo "Full image compilation -> selected tools: $TOOLS" 
 fi
 
 HOST_ARCH=`arch`
+
 if [ "$HOST_ARCH" == "x86_64" ]; then 
-export CROSS_COMPILE=$ROOTDIR/build/toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
+	export CROSS_COMPILE=$ROOTDIR/build/toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
 fi
+
 export ARCH=arm64
 
-if [ "x$SERDES" == "x" ]; then
+if [ -z "$SERDES" ]; then
 	echo "Please define SERDES configuration"
 	exit -1
 fi
