@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 set -e
 
 # BOOT=sd,xspi
@@ -356,7 +356,7 @@ EOF'
 
 	echo "Building buildroot"
 	cd "$ROOTDIR/build/buildroot"
-	cp "$ROOTDIR/configs/buildroot/lx2160acex7_defconfig configs/"
+	cp "$ROOTDIR/configs/buildroot/lx2160acex7_defconfig" configs/
 	make lx2160acex7_defconfig
 	make source -j${PARALLEL}
 	make -j${PARALLEL}
