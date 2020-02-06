@@ -131,7 +131,7 @@ else
 		exit 1
 	elif [ $GIT_CONFIG_FLAG -eq $SUBMODULE_COUNT ]; then
 		echo "Submodules only need updating..."
-		git submodule update --remote
+		git submodule update --recursive
 	elif [ $GIT_CONFIG_FLAG -eq 0 ]; then
 		echo "Submodules need to be initialized and updated..."
 		git submodule init
