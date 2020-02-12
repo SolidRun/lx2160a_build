@@ -35,7 +35,6 @@ function usage {
 }
 
 function args {
-	local POSITIONAL=()
 	if [ $# -eq 0 ]; then
 		echo "Missing option(s), aborting..."
 		usage
@@ -143,6 +142,7 @@ function args {
 	done
 }
 
+POSITIONAL=()
 args "$@"
 set -- "${POSITIONAL[@]}" # restore positional parameters
 
@@ -457,7 +457,7 @@ fi
 make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/rcws/rcw_${BOOT}.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=${ATF_BOOT} SECURE_BOOT=false
 
 echo "Building mc-utils"
-cd $ROOTDIR/build/mc-utils
+cd "$ROOTDIR/build/mc-utils"
 make -C config/
 
 if [ -z "$BOOTLOADER_ONLY" ]; then
@@ -470,7 +470,7 @@ if [ -z "$BOOTLOADER_ONLY" ]; then
 	fi
 
 	if [ ! -f "$ROOTDIR/build/linux/.config" ]; then
-		./scripts/kconfig/merge_config.sh arch/arm64/configs/defconfig arch/arm64/configs/lsdk.config "$ROOTDIR/configs/linux/lx2k_additions.config"
+		./scripts/kconfig/merge_config.sh arch/arm64/configs/defconfig arch/arm64/configs/lsdk.config $ROOTDIR/configs/linux/lx2k_additions.config
 	fi
 
 	make -j${PARALLEL} all #Image dtbs
