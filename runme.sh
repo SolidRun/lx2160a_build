@@ -9,9 +9,9 @@ set -e
 ###############################################################################
 # General configurations
 ###############################################################################
-RELEASE=LSDK-19.09
+#RELEASE=lx2160a-early-access-bsp0.7 # Supports both rev1 and rev2
+#RELEASE=LSDK-19.09 # LSDK-19.09 supports rev1 only
 BUILDROOT_VERSION=2019.05.2
-
 #UEFI_RELEASE=DEBUG
 #BOOT=xspi
 #BOOT_LOADER=uefi
@@ -22,6 +22,9 @@ BUILDROOT_VERSION=2019.05.2
 ###############################################################################
 # Misc
 ###############################################################################
+if [ "x$RELEASE" == "x" ]; then
+	RELEASE=lx2160a-early-access-bsp0.7
+fi
 if [ "x$BOOT" == "x" ]; then
 	BOOT=sd
 fi
@@ -95,7 +98,7 @@ cd $ROOTDIR
 ###############################################################################
 # source code cloning
 ###############################################################################
-QORIQ_COMPONENTS="u-boot atf rcw uefi restool mc-utils linux"
+QORIQ_COMPONENTS="u-boot atf rcw restool mc-utils linux"
 for i in $QORIQ_COMPONENTS; do
 	if [[ ! -d $ROOTDIR/build/$i ]]; then
 		echo "Cloing https://source.codeaurora.org/external/qoriq/qoriq-components/$i release $RELEASE"
@@ -106,6 +109,8 @@ for i in $QORIQ_COMPONENTS; do
 			git checkout -b LSDK-19.06-V4.19 refs/tags/LSDK-19.06-V4.19
 		elif [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-19.09" ]; then
 			git checkout -b LSDK-19.09-V4.19
+		elif [ "x$i" == "xrestool" ]; then
+			git checkout -b LSDK-19.09-update-291119
 		else
 			git checkout -b $RELEASE refs/tags/$RELEASE
 		fi
@@ -424,7 +429,14 @@ dd if=$ROOTDIR/build/atf/tools/fiptool/fip_ddr_all.bin of=images/${IMG} bs=512 s
 # DPAA1 FMAN ucode at 0x4800
 
 # DPAA2-MC at 0x5000
-dd if=$ROOTDIR/build/qoriq-mc-binary/lx2160a/mc_10.16.2_lx2160a.itb of=images/${IMG} bs=512 seek=20480 conv=notrunc
+if [ "x$RELEASE" == "xLSDK-19.09" ]; then
+	MC=mc_10.18.0_lx2160a.itb
+elif [ "x$RELEASE" == "xlx2160a-early-access-bsp0.7" ]; then
+	MC=mc_10.20.1_lx2160a.itb
+else
+	MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx2160a/ | cut -f1`
+fi
+dd if=$ROOTDIR/build/qoriq-mc-binary/lx2160a/${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
 
 # DPAA2 DPL at 0x6800
 dd if=$ROOTDIR/build/mc-utils/config/lx2160a/CEX7/${DPL} of=images/${IMG} bs=512 seek=26624 conv=notrunc
