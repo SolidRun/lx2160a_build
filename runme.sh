@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-# BOOT=sd,xspi
 # BOOT_LOADER=u-boot,uefi
 # DDR_SPEED=2400,2600,2900,3200
 # SERDES=8_5_2, 13_5_2, 20_5_2
@@ -13,7 +12,6 @@ set -e
 #RELEASE=LSDK-19.09 # LSDK-19.09 supports rev1 only
 BUILDROOT_VERSION=2019.05.2
 #UEFI_RELEASE=DEBUG
-#BOOT=xspi
 #BOOT_LOADER=uefi
 #DDR_SPEED=3200
 #SERDES=8_5_2 # 8x10g
@@ -25,10 +23,6 @@ BUILDROOT_VERSION=2019.05.2
 if [ "x$RELEASE" == "x" ]; then
 	RELEASE=lx2160a-early-access-bsp0.7
 fi
-if [ "x$BOOT" == "x" ]; then
-	BOOT=sd
-fi
-
 if [ "x$BOOT_LOADER" == "x" ]; then
 	BOOT_LOADER=u-boot
 fi
@@ -216,6 +210,10 @@ CC=${CROSS_COMPILE}gcc DESTDIR=./install prefix=/usr make install
 
 echo "Building RCW"
 cd $ROOTDIR/build/rcw/lx2160acex7
+mkdir -p RCW
+echo "#include <configs/lx2160a_defaults.rcwi>" > RCW/template.rcw
+echo "#include <configs/lx2160a_${SPEED}.rcwi>" >> RCW/template.rcw
+echo "#include <configs/lx2160a_${SERDES}.rcwi>" >> RCW/template.rcw
 make clean
 make -j${PARALLEL}
 
@@ -259,13 +257,7 @@ fi
 echo "Building atf"
 cd $ROOTDIR/build/atf/
 make PLAT=lx2160acex7 clean
-#make -j32 PLAT=lx2160acex7 all fip pbl BL33=$ROOTDIR/build/u-boot/u-boot.bin RCW=$ROOTDIR/build/rcw/lx2160acex7/XGGFF_PP_HHHH_RR_19_5_2/rcw_${SPEED}_8_5_2_${BOOT}.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=sd SECURE_BOOT=false
-if [ "x${BOOT}" == "xsd" ]; then
-	ATF_BOOT=sd
-else
-	ATF_BOOT=flexspi_nor
-fi
-make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/XGGFF_PP_HHHH_RR_19_5_2/rcw_${SPEED}_${SERDES}_${BOOT}.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=${ATF_BOOT} SECURE_BOOT=false
+make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=auto SECURE_BOOT=false
 
 echo "Building mc-utils"
 cd $ROOTDIR/build/mc-utils
@@ -400,21 +392,20 @@ dd if=$ROOTDIR/images/tmp/ubuntu-core.ext4 of=$ROOTDIR/images/tmp/ubuntu-core.im
 
 echo "Assembling Boot Image"
 cd $ROOTDIR/
-IMG=lx2160acex7_${SPEED}_${SERDES}_${BOOT}.img
+IMG=lx2160acex7_${SPEED}_${SERDES}.img
+rm -rf $ROOTDIR/images/${IMG}
 truncate -s 465M $ROOTDIR/images/${IMG}
 #dd if=/dev/zero of=$ROOTDIR/images/${IMG} bs=1M count=1
 parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB 464MiB
 truncate -s 400M $ROOTDIR/images/tmp/boot.part
 mkfs.ext4 -b 4096 -F $ROOTDIR/images/tmp/boot.part
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.img $ROOTDIR/images/tmp/boot.part:/
+\rm -rf $ROOTDIR/images/xspi_header.img
+truncate -s 128K $ROOTDIR/images/xspi_header.img
+dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=$ROOTDIR/images/xspi_header.img bs=512 conv=notrunc
+e2cp -G 0 -O 0 $ROOTDIR/images/xspi_header.img $ROOTDIR/images/tmp/boot.part:/
 dd if=$ROOTDIR/images/tmp/boot.part of=$ROOTDIR/images/${IMG} bs=1M seek=64
 
-# RCW+PBI+BL2 at block 8
-if [ "x${BOOT}" == "xsd" ]; then
-	dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_${ATF_BOOT}.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
-else
-	dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_${ATF_BOOT}.pbl of=images/${IMG} bs=512 conv=notrunc
-fi
 # PFE firmware at 0x100
 
 # FIP (BL31+BL32+BL33) at 0x800
@@ -453,4 +444,8 @@ fi
 dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=32768 conv=notrunc
 
 # Ramdisk at 0x10000
+# RCW+PBI+BL2 at block 8
+dd if=$ROOTDIR/images/${IMG} of=$ROOTDIR/images/xspi.img bs=1M count=64
+dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=images/xspi.img bs=512 conv=notrunc
+dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
 
