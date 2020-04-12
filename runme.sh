@@ -20,22 +20,13 @@ BUILDROOT_VERSION=2019.05.2
 ###############################################################################
 # Misc
 ###############################################################################
-if [ "x$RELEASE" == "x" ]; then
-	RELEASE=lx2160a-early-access-bsp0.7
-fi
-if [ "x$BOOT_LOADER" == "x" ]; then
-	BOOT_LOADER=u-boot
-fi
+RELEASE=${RELEASE:-lx2160a-early-access-bsp0.7}
+BOOT=${BOOT:-sd}
+BOOT_LOADER=${BOOT_LOADER:-u-boot}
+DDOR_SPEED=${DDR_SPEED:-3200}
+SERDES=${SERDES:-8_5_2}
+UEFI_RELEASE=${UEFI_RELEASE:-RELEASE}
 
-if [ "x$DDR_SPEED" == "x" ]; then
-	DDR_SPEED=3200
-fi
-if [ "x$SERDES" == "x" ]; then
-	SERDES=8_5_2
-fi
-if [ "x$UEFI_RELEASE" == "x" ]; then
-	UEFI_RELEASE=RELEASE
-fi
 mkdir -p build images
 ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
@@ -46,22 +37,24 @@ export PATH=$ROOTDIR/build/toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-lin
 export CROSS_COMPILE=aarch64-linux-gnu-
 export ARCH=arm64
 
-if [ "x$SERDES" == "x" ]; then
-	echo "Please define SERDES configuration"
-	exit -1
-fi
-if [ "x${SERDES:0:3}" == "x13_" ]; then
-	DPC=dpc-dual-100g.dtb
-	DPL=dpl-eth.dual-100g.19.dtb
-fi
-if [ "x${SERDES:0:2}" == "x8_" ]; then
-	DPC=dpc-8_x_usxgmii.dtb 
-	DPL=dpl-eth.8x10g.19.dtb
-fi
-if [ "x${SERDES:0:3}" == "x20_" ]; then
-	DPC=dpc-dual-40g.dtb
-	DPL=dpl-eth.dual-40g.19.dtb
-fi
+case "${SERDES}" in
+	8_*)
+		DPC=dpc-8_x_usxgmii.dtb
+		DPL=dpl-eth.8x10g.19.dtb
+	;;
+	13_*)
+		DPC=dpc-dual-100g.dtb
+		DPL=dpl-eth.dual-100g.19.dtb
+	;;
+	20_*)
+		DPC=dpc-dual-40g.dtb
+		DPL=dpl-eth.dual-40g.19.dtb
+	;;
+	*)
+		echo "Please define SERDES configuration"
+		exit -1
+	;;
+esac
 
 echo "Checking all required tools are installed"
 
