@@ -143,7 +143,7 @@ addimportant=false
 packages=$PACKAGES
 source=http://ports.ubuntu.com/
 keyring=ubuntu-keyring
-suite=disco
+suite=focal
 components=main universe multiverse
 EOF
 	sudo multistrap -a arm64 -d ubuntu -f ubuntu.conf
@@ -393,10 +393,10 @@ parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB 464MiB
 truncate -s 400M $ROOTDIR/images/tmp/boot.part
 mkfs.ext4 -b 4096 -F $ROOTDIR/images/tmp/boot.part
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.img $ROOTDIR/images/tmp/boot.part:/
-\rm -rf $ROOTDIR/images/xspi_header.img
-truncate -s 128K $ROOTDIR/images/xspi_header.img
-dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=$ROOTDIR/images/xspi_header.img bs=512 conv=notrunc
-e2cp -G 0 -O 0 $ROOTDIR/images/xspi_header.img $ROOTDIR/images/tmp/boot.part:/
+\rm -rf $ROOTDIR/images/tmp/xspi_header.img
+truncate -s 128K $ROOTDIR/images/tmp/xspi_header.img
+dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=$ROOTDIR/images/tmp/xspi_header.img bs=512 conv=notrunc
+e2cp -G 0 -O 0 $ROOTDIR/images/tmp/xspi_header.img $ROOTDIR/images/tmp/boot.part:/
 dd if=$ROOTDIR/images/tmp/boot.part of=$ROOTDIR/images/${IMG} bs=1M seek=64
 
 # PFE firmware at 0x100
@@ -438,7 +438,7 @@ dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=3
 
 # Ramdisk at 0x10000
 # RCW+PBI+BL2 at block 8
-dd if=$ROOTDIR/images/${IMG} of=$ROOTDIR/images/xspi.img bs=1M count=64
-dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=images/xspi.img bs=512 conv=notrunc
+dd if=$ROOTDIR/images/${IMG} of=$ROOTDIR/images/lx2160acex7_xspi_${SPEED}_${SERDES}.img bs=1M count=64
+dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=images/lx2160acex7_xspi_${SPEED}_${SERDES}.img bs=512 conv=notrunc
 dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
 
