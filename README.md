@@ -7,6 +7,9 @@ They are used in SolidRun to quickly build images for development where those im
 
 The sources are pulled from NXP's codeaurora repository and patched after being clone using the patches in the patches/ directory
 
+The build script builds the u-boot, atf, rcw and linux components, integrate it with Ubuntu rootfs bootstrapped with multistrap. Buildroot is also built aside for future use.
+
+
 ## Build with Docker
 A docker image providing a consistent build environment can be used as below. Since some steps require mounting a loopback device, you need to grant permission for the container to do so when launching:
 
@@ -51,3 +54,28 @@ For SD card bootable images, plug in a micro SD into your machine and run the fo
 For SPI boot, boot thru SD card and then load the _xspi_ images to system memory and flash it using the `sf probe` and `sf update` commands. An example below loads the image through TFTP prototocl, flashes and then verifies the image -
 
 `sf probe; setenv ipaddr 192.168.15.223; setenv serverip 192.168.15.3; tftp 0xa0000000 lx2160acex7_xspi_2000_700_2600_8_5_2_xspi.img;sf update 0xa0000000 0 $filesize; sf read 0xa4000000 0 $filesize; cmp 0xa0000000 0xa4000000 $filesize`
+
+And then set boot DIP switch on COM to off/off/off/off from numbers 1 to 4 (dip number 5 is not used. Notice the marking 'ON' on the DIP switch)
+
+For eMMC boot (supported only thru LX2160A silicon rev 2 which is LX2160A COM Express type 7 rev 1.5 and newer) -
+
+`load mmc 0:1 0xa4000000 ubuntu-core.img`
+
+`mmc dev 1`
+
+`mmc write 0xa4000000 0 0xd2000`
+
+And then set boot DIP switch on COM to off/on/on/off from numbers 1 to 4 (dip number 5 is not used, notice the marking 'ON' on the DIP switch)
+
+After booting Ubuntu you must resize the boot partition; for instance if booted under eMMC then login as root/root; then fdisk /dev/mmcblk1; delete first partition and then recreate it starting from 131072 (64MByte) to the end of the volume.
+Do not remove the signaute since it indicates for the kernel which partition ID to use.
+
+After resizing the partition; resize the ext4 boot volume by running 'resize2fs /dev/mmcblk1p1'
+
+Afterwards run update the RTC and update the repository -
+
+`dhclient -i eth0; ntpdate pool.ntp.org; apt update`
+
+If using a GPU then install the linux-firmware package that contains GPU firmwares -
+
+`apt install linux-firmware`

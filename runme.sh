@@ -20,8 +20,7 @@ BUILDROOT_VERSION=2019.05.2
 ###############################################################################
 # Misc
 ###############################################################################
-RELEASE=${RELEASE:-lx2160a-early-access-bsp0.7}
-BOOT=${BOOT:-sd}
+RELEASE=${RELEASE:-LSDK-20.04}
 BOOT_LOADER=${BOOT_LOADER:-u-boot}
 DDR_SPEED=${DDR_SPEED:-3200}
 SERDES=${SERDES:-8_5_2}
@@ -96,7 +95,9 @@ for i in $QORIQ_COMPONENTS; do
 			git checkout -b LSDK-19.06-V4.19 refs/tags/LSDK-19.06-V4.19
 		elif [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-19.09" ]; then
 			git checkout -b LSDK-19.09-V4.19
-		elif [ "x$i" == "xrestool" ]; then
+		elif [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
+			git checkout -b LSDK-20.04-V5.4 refs/tags/LSDK-20.04-V5.4
+		elif [ "x$i" == "xrestool" && [ "x$RELEASE" == "xLSDK-19.06" ]; then
 			git checkout -b LSDK-19.09-update-291119
 		else
 			git checkout -b $RELEASE refs/tags/$RELEASE
@@ -377,27 +378,25 @@ e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-addsw
 e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-listmac
 e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-listni
 
-truncate -s 356M $ROOTDIR/images/tmp/ubuntu-core.img
-parted --script $ROOTDIR/images/tmp/ubuntu-core.img mklabel msdos mkpart primary 1MiB 354MiB
+truncate -s 420M $ROOTDIR/images/tmp/ubuntu-core.img
+parted --script $ROOTDIR/images/tmp/ubuntu-core.img mklabel msdos mkpart primary 64MiB 417MiB
 # Generate the above partuuid 3030303030 which is the 4 characters of '0' in ascii
 echo "0000" | dd of=$ROOTDIR/images/tmp/ubuntu-core.img bs=1 seek=440 conv=notrunc
-dd if=$ROOTDIR/images/tmp/ubuntu-core.ext4 of=$ROOTDIR/images/tmp/ubuntu-core.img bs=1M seek=1 conv=notrunc
+dd if=$ROOTDIR/images/tmp/ubuntu-core.ext4 of=$ROOTDIR/images/tmp/ubuntu-core.img bs=1M seek=64 conv=notrunc
 
 echo "Assembling Boot Image"
 cd $ROOTDIR/
 IMG=lx2160acex7_${SPEED}_${SERDES}.img
 rm -rf $ROOTDIR/images/${IMG}
-truncate -s 465M $ROOTDIR/images/${IMG}
+truncate -s 528M $ROOTDIR/images/${IMG}
 #dd if=/dev/zero of=$ROOTDIR/images/${IMG} bs=1M count=1
-parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB 464MiB
-truncate -s 400M $ROOTDIR/images/tmp/boot.part
+parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB 527MiB
+truncate -s 463M $ROOTDIR/images/tmp/boot.part
 mkfs.ext4 -b 4096 -F $ROOTDIR/images/tmp/boot.part
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.img $ROOTDIR/images/tmp/boot.part:/
 \rm -rf $ROOTDIR/images/tmp/xspi_header.img
 truncate -s 128K $ROOTDIR/images/tmp/xspi_header.img
 dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=$ROOTDIR/images/tmp/xspi_header.img bs=512 conv=notrunc
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/xspi_header.img $ROOTDIR/images/tmp/boot.part:/
-dd if=$ROOTDIR/images/tmp/boot.part of=$ROOTDIR/images/${IMG} bs=1M seek=64
 
 # PFE firmware at 0x100
 
@@ -442,3 +441,7 @@ dd if=$ROOTDIR/images/${IMG} of=$ROOTDIR/images/lx2160acex7_xspi_${SPEED}_${SERD
 dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=images/lx2160acex7_xspi_${SPEED}_${SERDES}.img bs=512 conv=notrunc
 dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
 
+# Copy first 64MByte from image excluding MBR to ubuntu-core.img for eMMC boot
+dd if=images/${IMG} of=$ROOTDIR/images/tmp/ubuntu-core.img bs=512 seek=1 skip=1 count=131071 conv=notrunc
+e2cp -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.img $ROOTDIR/images/tmp/boot.part:/
+dd if=$ROOTDIR/images/tmp/boot.part of=$ROOTDIR/images/${IMG} bs=1M seek=64
