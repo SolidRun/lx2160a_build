@@ -10,7 +10,7 @@ set -e
 ###############################################################################
 #RELEASE=lx2160a-early-access-bsp0.7 # Supports both rev1 and rev2
 #RELEASE=LSDK-19.09 # LSDK-19.09 supports rev1 only
-BUILDROOT_VERSION=2019.05.2
+BUILDROOT_VERSION=2020.02.1
 #UEFI_RELEASE=DEBUG
 #BOOT_LOADER=uefi
 #DDR_SPEED=3200
@@ -30,7 +30,7 @@ mkdir -p build images
 ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
 SPEED=2000_700_${DDR_SPEED}
-TOOLS="wget tar git make 7z unsquashfs dd vim mkfs.ext4 sudo parted mkdosfs mcopy dtc iasl mkimage e2cp truncate multistrap qemu-aarch64-static cpio rsync bc bison flex"
+TOOLS="wget tar git make 7z unsquashfs dd vim mkfs.ext4 parted mkdosfs mcopy dtc iasl mkimage e2cp truncate qemu-system-aarch64 cpio rsync bc bison flex python unzip"
 
 export PATH=$ROOTDIR/build/toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu/bin:$PATH
 export CROSS_COMPILE=aarch64-linux-gnu-
@@ -63,11 +63,18 @@ for i in $TOOLS; do
 	if [ "x$TOOL_PATH" == "x" ]; then
 		echo "Tool $i is not installed"
 		echo "If running under apt based package management you can run -"
-		echo "sudo apt install build-essential git dosfstools e2fsprogs parted sudo mtools p7zip device-tree-compiler acpica-tools u-boot-tools e2tools multistrap qemu-user-static libssl-dev cpio rsync bc bison flex"
+		echo "sudo apt install build-essential git dosfstools e2fsprogs parted sudo mtools p7zip p7zip-full device-tree-compiler acpica-tools u-boot-tools e2tools qemu-system-arm libssl-dev cpio rsync bc bison flex python unzip"
 		exit -1
 	fi
 done
 set -e
+
+# Check if git is configured
+GIT_CONF=`git config user.name`
+if [ "x$GIT_CONF" == "x" ]; then
+	echo "git is not configured. please configure git username and email first"
+	exit -1
+fi
 
 if [[ ! -d $ROOTDIR/build/toolchain ]]; then
 	mkdir -p $ROOTDIR/build/toolchain
@@ -84,7 +91,7 @@ cd $ROOTDIR
 ###############################################################################
 # source code cloning
 ###############################################################################
-QORIQ_COMPONENTS="u-boot atf rcw restool mc-utils linux"
+QORIQ_COMPONENTS="u-boot atf rcw restool mc-utils linux dpdk"
 for i in $QORIQ_COMPONENTS; do
 	if [[ ! -d $ROOTDIR/build/$i ]]; then
 		echo "Cloing https://source.codeaurora.org/external/qoriq/qoriq-components/$i release $RELEASE"
@@ -97,7 +104,9 @@ for i in $QORIQ_COMPONENTS; do
 			git checkout -b LSDK-19.09-V4.19
 		elif [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
 			git checkout -b LSDK-20.04-V5.4 refs/tags/LSDK-20.04-V5.4
-		elif [ "x$i" == "xrestool" && [ "x$RELEASE" == "xLSDK-19.06" ]; then
+		elif [ "x$i" == "xdpdk" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
+			git checkout -b LSDK-19.09
+		elif [ "x$i" == "xrestool" ] && [ "x$RELEASE" == "xLSDK-19.06" ]; then
 			git checkout -b LSDK-19.09-update-291119
 		else
 			git checkout -b $RELEASE refs/tags/$RELEASE
@@ -125,54 +134,57 @@ for i in $QORIQ_COMPONENTS; do
 	fi
 done
 
+
 if [[ ! -f $ROOTDIR/build/ubuntu-core.ext4 ]]; then
 	cd $ROOTDIR/build
-	export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C
-	export PACKAGES="systemd-sysv apt locales less wget procps openssh-server ifupdown net-tools isc-dhcp-client"
-	PACKAGES=$PACKAGES" ntpdate lm-sensors i2c-tools psmisc less sudo htop iproute2 iputils-ping kmod network-manager iptables rng-tools"
-	# xterm
-	cat > ubuntu.conf << EOF
-[General]
-unpack=true
-bootstrap=Ubuntu
-aptsources=Ubuntu
-cleanup=true
-allowrecommends=false
-addimportant=false
+	mkdir -p ubuntu
+	cd ubuntu
+	if [ ! -d buildroot ]; then
+		git clone https://github.com/buildroot/buildroot -b $BUILDROOT_VERSION
+	fi
+	cd buildroot
+	cp $ROOTDIR/configs/buildroot/lx2160acex7_defconfig configs/
+	make lx2160acex7_defconfig
+	mkdir -p overlay/etc/init.d/
+	cat > overlay/etc/init.d/S99bootstrap-ubuntu.sh << EOF
+#!/bin/sh
 
-[Ubuntu]
-packages=$PACKAGES
-source=http://ports.ubuntu.com/
-keyring=ubuntu-keyring
-suite=focal
-components=main universe multiverse
+case "\$1" in
+	start)
+		resize
+		mkfs.ext4 -F /dev/vda -b 4096
+		mount /dev/vda /mnt
+		cd /mnt/
+		udhcpc -i eth0
+		wget -c -P /tmp/ http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04-base-arm64.tar.gz
+		tar zxf /tmp/ubuntu-base-20.04-base-arm64.tar.gz -C /mnt
+		mount -o bind /proc /mnt/proc/
+		mount -o bind /sys/ /mnt/sys/
+		mount -o bind /dev/ /mnt/dev/
+		mount -o bind /dev/pts /mnt/dev/pts
+		mount -t tmpfs tmpfs /mnt/var/lib/apt/
+		mount -t tmpfs tmpfs /mnt/var/cache/apt/
+		echo "nameserver 8.8.8.8" > /mnt/etc/resolv.conf
+		echo "localhost" > /mnt/etc/hostname
+		echo "127.0.0.1 localhost" > /mnt/etc/hosts
+		export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C
+		chroot /mnt apt update
+		chroot /mnt apt install --no-install-recommends -y systemd-sysv apt locales less wget procps openssh-server ifupdown net-tools isc-dhcp-client ntpdate lm-sensors i2c-tools psmisc less sudo htop iproute2 iputils-ping kmod network-manager iptables rng-tools apt-utils
+		echo -e "root\nroot" | chroot /mnt passwd
+		umount /mnt/var/lib/apt/
+		umount /mnt/var/cache/apt
+		chroot /mnt apt clean
+		chroot /mnt apt autoclean
+		reboot
+		;;
+esac
 EOF
-	sudo multistrap -a arm64 -d ubuntu -f ubuntu.conf
-
-	sudo sh -c 'echo localhost > ubuntu/etc/hostname'
-	sudo sh -c 'sudo cat > ubuntu/etc/hosts << EOF
-127.0.0.1 localhost
-EOF'
-	sudo sh -c 'echo "nameserver 8.8.8.8" > ubuntu/etc/resolv.conf'
-	QEMU=`which qemu-aarch64-static`
-	sudo cp $QEMU ubuntu/usr/bin/
-	set +e
-	## first configure fails
-	sudo chroot ubuntu/ /usr/bin/qemu-aarch64-static /usr/bin/dpkg --configure -a
-	set -e
-	sudo chroot ubuntu/ /usr/bin/qemu-aarch64-static /usr/bin/dpkg --configure -a
-
-	echo -e "root\nroot" | sudo chroot ubuntu/ /usr/bin/qemu-aarch64-static /usr/bin/passwd
-	# Remove qemu after done
-	sudo rm ubuntu/usr/bin/qemu-aarch64-static
-	truncate -s 350M ubuntu-core.ext4.tmp
-	mkfs.ext4 -b 4096 -F ubuntu-core.ext4.tmp
-	mkdir -p mnt
-	sudo mount -o loop ubuntu-core.ext4.tmp mnt/
-	sudo cp -a ubuntu/* mnt/
-	sudo umount mnt/
-	rmdir mnt/
-	mv ubuntu-core.ext4.tmp ubuntu-core.ext4
+	chmod +x overlay/etc/init.d/S99bootstrap-ubuntu.sh
+	make
+	IMG=ubuntu-core.ext4.tmp
+	truncate -s 350M $IMG
+	qemu-system-aarch64 -m 1G -M virt -cpu cortex-a57 -nographic -smp 1 -kernel output/images/Image -append "console=ttyAMA0" -netdev user,id=eth0 -device virtio-net-device,netdev=eth0 -initrd output/images/rootfs.cpio.gz -drive file=$IMG,if=none,format=raw,id=hd0 -device virtio-blk-device,drive=hd0 -no-reboot
+	mv $IMG $ROOTDIR/build/ubuntu-core.ext4
 fi
 
 if [[ ! -d $ROOTDIR/build/qoriq-mc-binary ]]; then
@@ -182,22 +194,9 @@ if [[ ! -d $ROOTDIR/build/qoriq-mc-binary ]]; then
 	git checkout -b $RELEASE refs/tags/$RELEASE
 fi
 
-if [[ ! -d $ROOTDIR/build/buildroot ]]; then
-	cd $ROOTDIR/build
-	git clone https://github.com/buildroot/buildroot -b $BUILDROOT_VERSION
-fi
 ###############################################################################
 # building sources
 ###############################################################################
-
-
-echo "Building buildroot"
-cd $ROOTDIR/build/buildroot
-cp $ROOTDIR/configs/buildroot/lx2160acex7_defconfig configs/
-make lx2160acex7_defconfig
-make source -j${PARALLEL}
-make -j${PARALLEL}
-
 echo "Building restool"
 cd $ROOTDIR/build/restool
 CC=${CROSS_COMPILE}gcc DESTDIR=./install prefix=/usr make install
@@ -327,6 +326,20 @@ make INSTALL_MOD_PATH=$ROOTDIR/images/tmp/ INSTALL_MOD_STRIP=1 modules_install
 cp $ROOTDIR/build/linux/arch/arm64/boot/Image $ROOTDIR/images/tmp/boot
 cp $ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtb $ROOTDIR/images/tmp/boot
 
+
+
+echo "Building DPDK"
+cd $ROOTDIR/build/dpdk
+export CROSS=$CROSS_COMPILE
+export RTE_SDK=$ROOTDIR/build/dpdk
+export DESTDIR=$ROOTDIR/build/dpdk/install
+export RTE_TARGET=arm64-dpaa2-linuxapp-gcc
+#make -j32 T=arm64-dpaa2-linuxapp-gcc CONFIG_RTE_KNI_KMOD=n CONFIG_RTE_LIBRTE_PMD_OPENSSL=n clean
+make -j32 T=arm64-dpaa2-linuxapp-gcc CONFIG_RTE_KNI_KMOD=n CONFIG_RTE_LIBRTE_PMD_OPENSSL=n install
+make -j32 T=arm64-dpaa2-linuxapp-gcc CONFIG_RTE_KNI_KMOD=n CONFIG_RTE_LIBRTE_PMD_OPENSSL=n -C examples/l2fwd install
+make -j32 T=arm64-dpaa2-linuxapp-gcc CONFIG_RTE_KNI_KMOD=n CONFIG_RTE_LIBRTE_PMD_OPENSSL=n -C examples/l3fwd install
+
+
 ###############################################################################
 # assembling images
 ###############################################################################
@@ -357,11 +370,11 @@ echo "Copying kernel modules"
 cd $ROOTDIR/images/tmp/
 for i in `find lib`; do
 	if [ -d $i ]; then
-		e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.ext4:$i
+		e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.ext4:usr/$i
 	fi
 	if [ -f $i ]; then
 		DIR=`dirname $i`
-		e2cp -G 0 -O 0 -p $ROOTDIR/images/tmp/$i $ROOTDIR/images/tmp/ubuntu-core.ext4:$DIR
+		e2cp -G 0 -O 0 -p $ROOTDIR/images/tmp/$i $ROOTDIR/images/tmp/ubuntu-core.ext4:usr/$DIR
 	fi
 done
 cd -

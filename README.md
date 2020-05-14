@@ -11,7 +11,7 @@ The build script builds the u-boot, atf, rcw and linux components, integrate it 
 
 
 ## Build with Docker
-A docker image providing a consistent build environment can be used as below. Since some steps require mounting a loopback device, you need to grant permission for the container to do so when launching:
+A docker image providing a consistent build environment can be used as below:
 
 1. build container image (first time only)
    ```
@@ -19,7 +19,7 @@ A docker image providing a consistent build environment can be used as below. Si
    ```
 2. invoke build script in working directory
    ```
-   docker run --cap-add SYS_ADMIN --device /dev/loop0 --device /dev/loop-control -i -t -v "$PWD":/work lx2160a_build $(id -u) $(id -g)
+   docker run -i -t -v "$PWD":/work lx2160a_build $(id -u) $(id -g)
    ```
 
 ## Build with host tools
@@ -41,7 +41,7 @@ Selecting boot loader - *BOOT_LOADER=u-boot,uefi*
 
 ### Examples:
 - `./runme.sh` **or**
-- `docker run --cap-add SYS_ADMIN --device /dev/loop0 --device /dev/loop-control -i -t -v "$PWD":/work lx2160a_build $(id -u) $(id -g)`
+- `docker run -i -t -v "$PWD":/work lx2160a_build $(id -u) $(id -g)`
 
 generates *images/lx2160acex7_2000_700_3200_8_5_2.img* which is an image ready to be deployed on micro SD card and *images/lx2160acex7_xspi_2000_700_3200_8_5_2.img* which is an image ready to be deployed on the COM SPI flash.
 
