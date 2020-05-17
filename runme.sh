@@ -103,7 +103,7 @@ QORIQ_COMPONENTS="${BOOT_LOADER} atf rcw mc-utils dpdk"
 fi
 for i in $QORIQ_COMPONENTS; do
 	if [[ ! -d $ROOTDIR/build/$i ]]; then
-		echo "Cloing https://source.codeaurora.org/external/qoriq/qoriq-components/$i release $RELEASE"
+		echo "Cloning https://source.codeaurora.org/external/qoriq/qoriq-components/$i release $RELEASE"
 		cd $ROOTDIR/build
 		git clone https://source.codeaurora.org/external/qoriq/qoriq-components/$i
 		cd $i
@@ -120,25 +120,26 @@ for i in $QORIQ_COMPONENTS; do
 		else
 			git checkout -b $RELEASE refs/tags/$RELEASE
 		fi
+
+		cd $ROOTDIR/build/$i/
+		if [[ -d $ROOTDIR/patches/$i/ ]]; then
+			git am --keep-cr $ROOTDIR/patches/$i/*.patch
+		fi
+		if [[ -d $ROOTDIR/patches/$i-$RELEASE/ ]]; then
+			git am --keep-cr $ROOTDIR/patches/$i-$RELEASE/*.patch
+		fi
 		if [ "x$i" == "xatf" ]; then
-			cd $ROOTDIR/build/atf/tools/fiptool
+			cd tools/fiptool
 			git clone https://github.com/NXP/ddr-phy-binary.git
 			make
 			./fiptool create --ddr-immem-udimm-1d ddr-phy-binary/lx2160a/ddr4_pmu_train_imem.bin --ddr-immem-udimm-2d ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_imem.bin --ddr-dmmem-udimm-1d ddr-phy-binary/lx2160a/ddr4_pmu_train_dmem.bin --ddr-dmmem-udimm-2d ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_dmem.bin --ddr-immem-rdimm-1d ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_imem.bin --ddr-immem-rdimm-2d ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_imem.bin --ddr-dmmem-rdimm-1d ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_dmem.bin --ddr-dmmem-rdimm-2d ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_dmem.bin fip_ddr_all.bin
 		fi
 		if [ "x$i" == "xuefi" ]; then
-			cd $ROOTDIR/build/uefi/
 			git clone https://source.codeaurora.org/external/qoriq/qoriq-components/edk2-platforms
 			cd edk2-platforms
 			git checkout -b $RELEASE refs/tags/$RELEASE
 			patch -p1 < $ROOTDIR/patches/edk2-platforms/*.diff
 			git am --keep-cr $ROOTDIR/patches/edk2-platforms/*.patch
-		fi
-		if [[ -d $ROOTDIR/patches/$i/ ]]; then
-			git am $ROOTDIR/patches/$i/*.patch
-		fi
-		if [[ -d $ROOTDIR/patches/$i-$RELEASE/ ]]; then
-			git am $ROOTDIR/patches/$i-$RELEASE/*.patch
 		fi
 	fi
 done
