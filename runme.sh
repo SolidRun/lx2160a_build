@@ -13,6 +13,7 @@ set -e
 BUILDROOT_VERSION=2020.02.1
 #UEFI_RELEASE=DEBUG
 #BOOT_LOADER=uefi
+#BOOTLOADER_ONLY=yes
 #DDR_SPEED=3200
 #SERDES=8_5_2 # 8x10g
 #SERDES=13_5_2 # dual 100g
@@ -30,7 +31,11 @@ mkdir -p build images
 ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
 SPEED=2000_700_${DDR_SPEED}
+if [ "x$BOOTLOADER_ONLY" != "x" ]; then
+TOOLS="wget tar git make dd dtc iasl"
+else
 TOOLS="wget tar git make 7z unsquashfs dd vim mkfs.ext4 parted mkdosfs mcopy dtc iasl mkimage e2cp truncate qemu-system-aarch64 cpio rsync bc bison flex python unzip"
+fi
 
 export PATH=$ROOTDIR/build/toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu/bin:$PATH
 export CROSS_COMPILE=aarch64-linux-gnu-
@@ -91,7 +96,11 @@ cd $ROOTDIR
 ###############################################################################
 # source code cloning
 ###############################################################################
-QORIQ_COMPONENTS="u-boot atf rcw restool mc-utils linux dpdk"
+if [ "x$BOOTLOADER_ONLY" == "x" ]; then
+QORIQ_COMPONENTS="${BOOT_LOADER} atf rcw restool mc-utils linux dpdk"
+else
+QORIQ_COMPONENTS="${BOOT_LOADER} atf rcw mc-utils dpdk"
+fi
 for i in $QORIQ_COMPONENTS; do
 	if [[ ! -d $ROOTDIR/build/$i ]]; then
 		echo "Cloing https://source.codeaurora.org/external/qoriq/qoriq-components/$i release $RELEASE"
@@ -134,7 +143,7 @@ for i in $QORIQ_COMPONENTS; do
 	fi
 done
 
-
+if [ "x$BOOTLOADER_ONLY" == "x" ]; then
 if [[ ! -f $ROOTDIR/build/ubuntu-core.ext4 ]]; then
 	cd $ROOTDIR/build
 	mkdir -p ubuntu
@@ -186,6 +195,7 @@ EOF
 	qemu-system-aarch64 -m 1G -M virt -cpu cortex-a57 -nographic -smp 1 -kernel output/images/Image -append "console=ttyAMA0" -netdev user,id=eth0 -device virtio-net-device,netdev=eth0 -initrd output/images/rootfs.cpio.gz -drive file=$IMG,if=none,format=raw,id=hd0 -device virtio-blk-device,drive=hd0 -no-reboot
 	mv $IMG $ROOTDIR/build/ubuntu-core.ext4
 fi
+fi
 
 if [[ ! -d $ROOTDIR/build/qoriq-mc-binary ]]; then
 	cd $ROOTDIR/build
@@ -197,9 +207,11 @@ fi
 ###############################################################################
 # building sources
 ###############################################################################
+if [ "x$BOOTLOADER_ONLY" == "x" ]; then
 echo "Building restool"
 cd $ROOTDIR/build/restool
 CC=${CROSS_COMPILE}gcc DESTDIR=./install prefix=/usr make install
+fi
 
 echo "Building RCW"
 cd $ROOTDIR/build/rcw/lx2160acex7
@@ -256,7 +268,7 @@ echo "Building mc-utils"
 cd $ROOTDIR/build/mc-utils
 make -C config/
 
-
+if [ "x$BOOTLOADER_ONLY" == "x" ]; then
 echo "Building the kernel"
 cd $ROOTDIR/build/linux
 ./scripts/kconfig/merge_config.sh arch/arm64/configs/defconfig arch/arm64/configs/lsdk.config $ROOTDIR/configs/linux/lx2k_additions.config
@@ -396,11 +408,13 @@ parted --script $ROOTDIR/images/tmp/ubuntu-core.img mklabel msdos mkpart primary
 # Generate the above partuuid 3030303030 which is the 4 characters of '0' in ascii
 echo "0000" | dd of=$ROOTDIR/images/tmp/ubuntu-core.img bs=1 seek=440 conv=notrunc
 dd if=$ROOTDIR/images/tmp/ubuntu-core.ext4 of=$ROOTDIR/images/tmp/ubuntu-core.img bs=1M seek=64 conv=notrunc
+fi
 
 echo "Assembling Boot Image"
 cd $ROOTDIR/
 IMG=lx2160acex7_${SPEED}_${SERDES}.img
 rm -rf $ROOTDIR/images/${IMG}
+if [ "x$BOOTLOADER_ONLY" == "x" ]; then
 truncate -s 528M $ROOTDIR/images/${IMG}
 #dd if=/dev/zero of=$ROOTDIR/images/${IMG} bs=1M count=1
 parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB 527MiB
@@ -410,6 +424,9 @@ mkfs.ext4 -b 4096 -F $ROOTDIR/images/tmp/boot.part
 truncate -s 128K $ROOTDIR/images/tmp/xspi_header.img
 dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=$ROOTDIR/images/tmp/xspi_header.img bs=512 conv=notrunc
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/xspi_header.img $ROOTDIR/images/tmp/boot.part:/
+else
+dd if=/dev/zero of=$ROOTDIR/images/${IMG} bs=1M count=16
+fi
 
 # PFE firmware at 0x100
 
@@ -445,8 +462,11 @@ if [ "x${BOOT_LOADER}" == "xuefi" ]; then
 	dd if=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC49/AARCH64/Platform/NXP/LX2160aCex7Pkg/DeviceTree/DeviceTree/OUTPUT/fsl-lx2160a-cex7.dtb of=images/${IMG} bs=512 seek=30720 conv=notrunc
 	dd if=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC49/FV/LX2160ACEX7NV_EFI.fd of=images/${IMG} bs=512 seek=10240 conv=notrunc
 fi
+
+if [ "x$BOOTLOADER_ONLY" == "x" ]; then
 # Kernel at 0x8000
 dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=32768 conv=notrunc
+fi
 
 # Ramdisk at 0x10000
 # RCW+PBI+BL2 at block 8
@@ -454,7 +474,9 @@ dd if=$ROOTDIR/images/${IMG} of=$ROOTDIR/images/lx2160acex7_xspi_${SPEED}_${SERD
 dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=images/lx2160acex7_xspi_${SPEED}_${SERDES}.img bs=512 conv=notrunc
 dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
 
+if [ "x$BOOTLOADER_ONLY" == "x" ]; then
 # Copy first 64MByte from image excluding MBR to ubuntu-core.img for eMMC boot
 dd if=images/${IMG} of=$ROOTDIR/images/tmp/ubuntu-core.img bs=512 seek=1 skip=1 count=131071 conv=notrunc
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.img $ROOTDIR/images/tmp/boot.part:/
 dd if=$ROOTDIR/images/tmp/boot.part of=$ROOTDIR/images/${IMG} bs=1M seek=64
+fi
