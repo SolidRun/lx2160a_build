@@ -1,0 +1,25 @@
+From c92ef11bca61927d1ed6d49d2e36bebdb84a5302 Mon Sep 17 00:00:00 2001
+From: Oliver Scott <oscott@cismobile.com>
+Date: Sun, 17 May 2020 03:23:01 -0400
+Subject: [PATCH] lx2160a: fix duplicate label inphi_phy
+
+---
+ Platform/NXP/LX2160aCex7Pkg/DeviceTree/fsl-lx2160a-cex7.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Platform/NXP/LX2160aCex7Pkg/DeviceTree/fsl-lx2160a-cex7.dts b/Platform/NXP/LX2160aCex7Pkg/DeviceTree/fsl-lx2160a-cex7.dts
+index 0be8b1b..4187f43 100644
+--- a/Platform/NXP/LX2160aCex7Pkg/DeviceTree/fsl-lx2160a-cex7.dts
++++ b/Platform/NXP/LX2160aCex7Pkg/DeviceTree/fsl-lx2160a-cex7.dts
+@@ -236,7 +236,7 @@
+ };
+ 
+ &emdio2 {
+-  inphi_phy: emdio2_phy@0 {
++  inphi_phy: ethernet-phy@0 {
+     compatible = "ethernet-phy-ieee802.3-c45";
+     reg = <0x0>;
+     dev-addr = <0x1e>;
+-- 
+2.25.1
+

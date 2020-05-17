@@ -1,0 +1,29 @@
+From dbfbe8dc9f381afc2dbcd0e853a29e579a003d67 Mon Sep 17 00:00:00 2001
+From: Oliver Scott <oscott@cismobile.com>
+Date: Sun, 17 May 2020 03:18:50 -0400
+Subject: [PATCH] BaseTools/header.makefile: add "-Wno-stringop-truncation" and
+ "-Wno-stringop-overflow"
+
+---
+ BaseTools/Source/C/Makefiles/header.makefile | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/BaseTools/Source/C/Makefiles/header.makefile b/BaseTools/Source/C/Makefiles/header.makefile
+index 27aa28b2fa..e5e8c68384 100644
+--- a/BaseTools/Source/C/Makefiles/header.makefile
++++ b/BaseTools/Source/C/Makefiles/header.makefile
+@@ -47,9 +47,9 @@ INCLUDE = $(TOOL_INCLUDE) -I $(MAKEROOT) -I $(MAKEROOT)/Include/Common -I $(MAKE
+ BUILD_CPPFLAGS = $(INCLUDE) -O2
+ ifeq ($(DARWIN),Darwin)
+ # assume clang or clang compatible flags on OS X
+-BUILD_CFLAGS = -MD -fshort-wchar -fno-strict-aliasing -Wall -Werror -Wno-deprecated-declarations -Wno-self-assign -Wno-unused-result -nostdlib -c -g
++BUILD_CFLAGS = -MD -fshort-wchar -fno-strict-aliasing -Wall -Werror -Wno-deprecated-declarations -Wno-stringop-truncation -Wno-stringop-overflow -Wno-self-assign -Wno-unused-result -nostdlib -c -g
+ else
+-BUILD_CFLAGS = -MD -fshort-wchar -fno-strict-aliasing -Wall -Werror -Wno-deprecated-declarations -Wno-unused-result -nostdlib -c -g
++BUILD_CFLAGS = -MD -fshort-wchar -fno-strict-aliasing -Wall -Werror -Wno-deprecated-declarations -Wno-stringop-truncation -Wno-stringop-overflow -Wno-unused-result -nostdlib -c -g
+ endif
+ BUILD_LFLAGS =
+ BUILD_CXXFLAGS = -Wno-unused-result
+-- 
+2.25.1
+
