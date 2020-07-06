@@ -1,0 +1,84 @@
+From 1adcdbbe9eb3995e909d1925370163bf5a017e0d Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Mon, 6 Jul 2020 16:45:43 +0300
+Subject: [PATCH] lx2160acex7: add poweroff and disable fan full speed
+
+1. Add poweroff command; when using Clearfog CX or HoneyComb carrier
+boards, the S5# signal is connected to the power button controller that
+cuts off the '12v' supply from the COM module.
+
+2. In board_fix_fdt, just before booting the kernel the fan full speed
+signal becomes inactive so that the kernel AMC6821 driver would take
+over and enable the auto thermal and pwm adjustments.
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ .../asm/arch-fsl-layerscape/immap_lsch3.h     |  3 +++
+ board/solidrun/lx2160a/lx2160a.c              | 21 +++++++++++++++++++
+ configs/lx2160acex7_tfa_defconfig             |  2 +-
+ 3 files changed, 25 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/include/asm/arch-fsl-layerscape/immap_lsch3.h b/arch/arm/include/asm/arch-fsl-layerscape/immap_lsch3.h
+index 299201b157..32cc5ebd35 100644
+--- a/arch/arm/include/asm/arch-fsl-layerscape/immap_lsch3.h
++++ b/arch/arm/include/asm/arch-fsl-layerscape/immap_lsch3.h
+@@ -65,6 +65,9 @@
+ #define I2C7_BASE_ADDR				(CONFIG_SYS_IMMR + 0x01060000)
+ #define I2C8_BASE_ADDR				(CONFIG_SYS_IMMR + 0x01070000)
+ #endif
++#define GPIO3_BASE_ADDR				(CONFIG_SYS_IMMR + 0x01320000)
++#define GPIO3_GPDIR_ADDR			(GPIO3_BASE_ADDR + 0x0)
++#define GPIO3_GPDAT_ADDR			(GPIO3_BASE_ADDR + 0x8)
+ #define GPIO4_BASE_ADDR				(CONFIG_SYS_IMMR + 0x01330000)
+ #define GPIO4_GPDIR_ADDR			(GPIO4_BASE_ADDR + 0x0)
+ #define GPIO4_GPDAT_ADDR			(GPIO4_BASE_ADDR + 0x8)
+diff --git a/board/solidrun/lx2160a/lx2160a.c b/board/solidrun/lx2160a/lx2160a.c
+index 975431fd53..8c42d63acc 100644
+--- a/board/solidrun/lx2160a/lx2160a.c
++++ b/board/solidrun/lx2160a/lx2160a.c
+@@ -357,8 +357,29 @@ int ft_board_setup(void *blob, bd_t *bd)
+ #ifdef CONFIG_FSL_MC_ENET
+ 	fdt_fsl_mc_fixup_iommu_map_entry(blob);
+ 	fdt_fixup_board_enet(blob);
++#endif
++	printf ("Releasing fan controller full speed gpio\n");
++	/*
++	 * Set the GPIO to be input; the on-COM pullup will disable the full speed
++	 * signal.
++	 */
++	out_le32(GPIO3_GPDIR_ADDR, (~(1 << 29) &
++		in_le32(GPIO3_GPDIR_ADDR)));
++	return 0;
++}
+ #endif
+ 
++#ifdef CONFIG_CMD_POWEROFF
++int do_poweroff(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
++{
++	printf ("Powering off by setting S5# to low\n");
++	out_le32(GPIO3_GPDAT_ADDR, (~(1 << 24) &
++		in_le32(GPIO3_GPDAT_ADDR)));
++	out_le32(GPIO3_GPDIR_ADDR, (1 << 24 |
++		in_le32(GPIO3_GPDIR_ADDR)));
++	while (1) {}
++
++	/* not reached */
+ 	return 0;
+ }
+ #endif
+diff --git a/configs/lx2160acex7_tfa_defconfig b/configs/lx2160acex7_tfa_defconfig
+index 8e96265843..837d6070dd 100644
+--- a/configs/lx2160acex7_tfa_defconfig
++++ b/configs/lx2160acex7_tfa_defconfig
+@@ -68,7 +68,7 @@ CONFIG_PHY_ATHEROS=y
+ CONFIG_PCIE_LAYERSCAPE=y
+ CONFIG_DM_RTC=y
+ CONFIG_RTC_PCF2127=y
+-
++CONFIG_CMD_POWEROFF=y
+ CONFIG_DM_SCSI=y
+ CONFIG_DM_SERIAL=y
+ CONFIG_SPI=y
+-- 
+2.17.1
+
