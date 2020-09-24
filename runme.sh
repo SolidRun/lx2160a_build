@@ -1,18 +1,10 @@
 #!/bin/bash
 set -e
 
-# BOOT_LOADER=u-boot,uefi
-# DDR_SPEED=2400,2600,2900,3200
-# SERDES=8_5_2, 13_5_2, 20_5_2
-
 ###############################################################################
 # General configurations
 ###############################################################################
-#RELEASE=lx2160a-early-access-bsp0.7 # Supports both rev1 and rev2
-#RELEASE=LSDK-19.09 # LSDK-19.09 supports rev1 only
 BUILDROOT_VERSION=2020.02.1
-#UEFI_RELEASE=DEBUG
-#BOOT_LOADER=uefi
 #DDR_SPEED=3200
 #SERDES=8_5_2 # 8x10g
 #SERDES=13_5_2 # dual 100g
@@ -21,10 +13,10 @@ BUILDROOT_VERSION=2020.02.1
 # Misc
 ###############################################################################
 RELEASE=${RELEASE:-LSDK-20.04}
-BOOT_LOADER=${BOOT_LOADER:-u-boot}
 DDR_SPEED=${DDR_SPEED:-3200}
 SERDES=${SERDES:-8_5_2}
 UEFI_RELEASE=${UEFI_RELEASE:-RELEASE}
+SHALLOW=${SHALLOW:false}
 
 mkdir -p build images
 ROOTDIR=`pwd`
@@ -44,6 +36,10 @@ case "${SERDES}" in
 	13_*)
 		DPC=dpc-dual-100g.dtb
 		DPL=dpl-eth.dual-100g.19.dtb
+	;;
+	17_*)
+		DPC=dpc-quad-25g.dtb
+		DPL=dpl-eth.quad-25g.19.dtb
 	;;
 	20_*)
 		DPC=dpc-dual-40g.dtb
@@ -81,8 +77,6 @@ if [[ ! -d $ROOTDIR/build/toolchain ]]; then
 	cd $ROOTDIR/build/toolchain
 	wget https://releases.linaro.org/components/toolchain/binaries/7.4-2019.02/aarch64-linux-gnu/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu.tar.xz
 	tar -xvf gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu.tar.xz
-	wget https://releases.linaro.org/components/toolchain/binaries/4.9-2016.02/aarch64-linux-gnu/gcc-linaro-4.9-2016.02-x86_64_aarch64-linux-gnu.tar.xz
-	tar -xvf gcc-linaro-4.9-2016.02-x86_64_aarch64-linux-gnu.tar.xz
 fi
 
 echo "Building boot loader"
@@ -96,21 +90,28 @@ for i in $QORIQ_COMPONENTS; do
 	if [[ ! -d $ROOTDIR/build/$i ]]; then
 		echo "Cloing https://source.codeaurora.org/external/qoriq/qoriq-components/$i release $RELEASE"
 		cd $ROOTDIR/build
-		git clone https://source.codeaurora.org/external/qoriq/qoriq-components/$i
-		cd $i
-		if [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-19.06" ]; then
-			git checkout -b LSDK-19.06-V4.19 refs/tags/LSDK-19.06-V4.19
-		elif [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-19.09" ]; then
-			git checkout -b LSDK-19.09-V4.19
-		elif [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
-			git checkout -b LSDK-20.04-V5.4 refs/tags/LSDK-20.04-V5.4
-		elif [ "x$i" == "xdpdk" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
-			git checkout -b LSDK-19.09
-		elif [ "x$i" == "xrestool" ] && [ "x$RELEASE" == "xLSDK-19.06" ]; then
-			git checkout -b LSDK-19.09-update-291119
-		else
-			git checkout -b $RELEASE refs/tags/$RELEASE
+		CHECKOUT=$RELEASE
+		if [ "x$i" == "xu-boot" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
+			CHECKOUT=LSDK-20.04-update-290520
 		fi
+		if [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
+			CHECKOUT=LSDK-20.04-V5.4-update-290520
+		fi
+		if [ "x$i" == "xatf" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
+			CHECKOUT=LSDK-20.04-update-290520
+		fi
+		if [ "x$i" == "xrcw" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
+			CHECKOUT=LSDK-20.04-update-290520
+		fi
+		if [ "x$i" == "xdpdk" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
+			CHECKOUT=LSDK-19.09
+		fi
+		if [ "x$SHALLOW" == "xtrue" ]; then
+			git clone --depth=1 https://source.codeaurora.org/external/qoriq/qoriq-components/$i -b $CHECKOUT
+		else
+			git clone https://source.codeaurora.org/external/qoriq/qoriq-components/$i -b $CHECKOUT
+		fi
+		cd $i
 		if [ "x$i" == "xatf" ]; then
 			cd $ROOTDIR/build/atf/tools/fiptool
 			git clone https://github.com/NXP/ddr-phy-binary.git
@@ -130,6 +131,13 @@ for i in $QORIQ_COMPONENTS; do
 		fi
 		if [[ -d $ROOTDIR/patches/$i-$RELEASE/ ]]; then
 			git am $ROOTDIR/patches/$i-$RELEASE/*.patch
+		fi
+		if [[ $RELEASE == *"-update"* ]]; then
+			# Check extract the LSDK name up to the '-update-...'
+			SUB_RELEASE=`echo $RELEASE | cut -f-2 -d'-'`
+			if [[ -d $ROOTDIR/patches/$i-$RELEASE/ ]]; then
+				git am $ROOTDIR/patches/$i-$RELEASE/*.patch
+			fi
 		fi
 	fi
 done
@@ -440,11 +448,6 @@ dd if=$ROOTDIR/build/mc-utils/config/lx2160a/CEX7/${DPL} of=images/${IMG} bs=512
 # DPAA2 DPC at 0x7000
 dd if=$ROOTDIR/build/mc-utils/config/lx2160a/CEX7/${DPC} of=images/${IMG} bs=512 seek=28672 conv=notrunc
 
-# Device tree (UEFI) at 0x7800
-if [ "x${BOOT_LOADER}" == "xuefi" ]; then
-	dd if=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC49/AARCH64/Platform/NXP/LX2160aCex7Pkg/DeviceTree/DeviceTree/OUTPUT/fsl-lx2160a-cex7.dtb of=images/${IMG} bs=512 seek=30720 conv=notrunc
-	dd if=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC49/FV/LX2160ACEX7NV_EFI.fd of=images/${IMG} bs=512 seek=10240 conv=notrunc
-fi
 # Kernel at 0x8000
 dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=32768 conv=notrunc
 
