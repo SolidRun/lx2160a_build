@@ -164,8 +164,8 @@ case "\$1" in
 		mount /dev/vda /mnt
 		cd /mnt/
 		udhcpc -i eth0
-		wget -c -P /tmp/ http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04-base-arm64.tar.gz
-		tar zxf /tmp/ubuntu-base-20.04-base-arm64.tar.gz -C /mnt
+		wget -c -P /tmp/ http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.1-base-arm64.tar.gz
+		tar zxf /tmp/ubuntu-base-20.04.1-base-arm64.tar.gz -C /mnt
 		mount -o bind /proc /mnt/proc/
 		mount -o bind /sys/ /mnt/sys/
 		mount -o bind /dev/ /mnt/dev/
