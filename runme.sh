@@ -29,6 +29,10 @@ export CROSS_COMPILE=aarch64-linux-gnu-
 export ARCH=arm64
 
 case "${SERDES}" in
+	2_*)
+		DPC=dpc-8_x_usxgmii.dtb
+		DPL=dpl-eth.8x10g.19.dtb
+	;;
 	8_*)
 		DPC=dpc-8_x_usxgmii.dtb
 		DPL=dpl-eth.8x10g.19.dtb
@@ -36,6 +40,10 @@ case "${SERDES}" in
 	13_*)
 		DPC=dpc-dual-100g.dtb
 		DPL=dpl-eth.dual-100g.19.dtb
+	;;
+	14_*)
+		DPC=dpc-single-100g.dtb
+		DPL=dpl-eth.single-100g.19.dtb
 	;;
 	17_*)
 		DPC=dpc-quad-25g.dtb
@@ -118,14 +126,6 @@ for i in $QORIQ_COMPONENTS; do
 			make
 			./fiptool create --ddr-immem-udimm-1d ddr-phy-binary/lx2160a/ddr4_pmu_train_imem.bin --ddr-immem-udimm-2d ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_imem.bin --ddr-dmmem-udimm-1d ddr-phy-binary/lx2160a/ddr4_pmu_train_dmem.bin --ddr-dmmem-udimm-2d ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_dmem.bin --ddr-immem-rdimm-1d ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_imem.bin --ddr-immem-rdimm-2d ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_imem.bin --ddr-dmmem-rdimm-1d ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_dmem.bin --ddr-dmmem-rdimm-2d ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_dmem.bin fip_ddr_all.bin
 		fi
-		if [ "x$i" == "xuefi" ]; then
-			cd $ROOTDIR/build/uefi/
-			git clone https://source.codeaurora.org/external/qoriq/qoriq-components/edk2-platforms
-			cd edk2-platforms
-			git checkout -b $RELEASE refs/tags/$RELEASE
-			patch -p1 < $ROOTDIR/patches/edk2-platforms/*.diff
-			git am --keep-cr $ROOTDIR/patches/edk2-platforms/*.patch
-		fi
 		if [[ -d $ROOTDIR/patches/$i/ ]]; then
 			git am $ROOTDIR/patches/$i/*.patch
 		fi
@@ -164,8 +164,8 @@ case "\$1" in
 		mount /dev/vda /mnt
 		cd /mnt/
 		udhcpc -i eth0
-		wget -c -P /tmp/ http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04-base-arm64.tar.gz
-		tar zxf /tmp/ubuntu-base-20.04-base-arm64.tar.gz -C /mnt
+		wget -c -P /tmp/ http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.1-base-arm64.tar.gz
+		tar zxf /tmp/ubuntu-base-20.04.1-base-arm64.tar.gz -C /mnt
 		mount -o bind /proc /mnt/proc/
 		mount -o bind /sys/ /mnt/sys/
 		mount -o bind /dev/ /mnt/dev/
@@ -212,48 +212,23 @@ CC=${CROSS_COMPILE}gcc DESTDIR=./install prefix=/usr make install
 echo "Building RCW"
 cd $ROOTDIR/build/rcw/lx2160acex7
 mkdir -p RCW
+OLDIFS=$IFS
+IFS="_" arr=($SERDES)
 echo "#include <configs/lx2160a_defaults.rcwi>" > RCW/template.rcw
 echo "#include <configs/lx2160a_${SPEED}.rcwi>" >> RCW/template.rcw
-echo "#include <configs/lx2160a_${SERDES}.rcwi>" >> RCW/template.rcw
+echo "#include <configs/lx2160a_SD1_${arr[0]}.rcwi>" >> RCW/template.rcw
+echo "#include <configs/lx2160a_SD2_${arr[1]}.rcwi>" >> RCW/template.rcw
+echo "#include <configs/lx2160a_SD3_${arr[2]}.rcwi>" >> RCW/template.rcw
+IFS=$OLDIFS
 make clean
 make -j${PARALLEL}
 
-if [ "x$BOOT_LOADER" == "xu-boot" ]; then
-	echo "Build u-boot"
-	cd $ROOTDIR/build/u-boot
-	#make distclean
-	make lx2160acex7_tfa_defconfig
-	make -j${PARALLEL}
-	export BL33=$ROOTDIR/build/u-boot/u-boot.bin
-fi
-
-if [ "x$BOOT_LOADER" == "xuefi" ]; then
-	echo "Build UEFI"
-	cd $ROOTDIR/build/uefi
-	# set the aarch64-linux-gnu cross compiler to the oldie 4.9 linaro toolchain (UEFI build requirement)
-	PATH_SAVED=$PATH
-	export PATH=$ROOTDIR/build/toolchain/gcc-linaro-4.9-2016.02-x86_64_aarch64-linux-gnu/bin/:$PATH
-	source  edksetup.sh
-	cd edk2-platforms/Platform/NXP
-	source Env.cshrc
-	make -C $ROOTDIR/build/uefi/BaseTools/Source/C
-#	./build.sh LX2160 RDB RELEASE clean
-#	./build.sh LX2160 RDB RELEASE
-#	export BL33=$ROOTDIR/build/uefi/Build/LX2160aRdbPkg/RELEASE_GCC49/FV/LX2160ARDB_EFI.fd
-#	build -p "$PACKAGES_PATH/Platform/NXP/LX2160aRdbPkg/LX2160aRdbPkg.dsc" -a AARCH64 -t GCC49 -b DEBUG
-#	export BL33=$ROOTDIR/build/uefi/Build/LX2160aRdbPkg/RELEASE_GCC49/FV/LX2160ARDB_EFI.fd
-#	export BL33=$ROOTDIR/build/uefi/Build/LX2160aRdbPkg/DEBUG_GCC49/FV/LX2160ARDB_EFI.fd
-
-#	build -p "$PACKAGES_PATH/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC49 -b DEBUG clean
-
-#	build -p "$PACKAGES_PATH/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC49 -b $UEFI_RELEASE clean
-	build -p "$PACKAGES_PATH/Platform/NXP/LX2160aCex7Pkg/LX2160aCex7Pkg.dsc" -a AARCH64 -t GCC49 -b $UEFI_RELEASE -y build.log
-	export BL33=$ROOTDIR/build/uefi/Build/LX2160aCex7Pkg/${UEFI_RELEASE}_GCC49/FV/LX2160ACEX7_EFI.fd
-
-	# Return to the newer linaro gcc
-	export PATH=$PATH_SAVED
-	export ARCH=arm64 # While building UEFI ARCH is unset
-fi
+echo "Build u-boot"
+cd $ROOTDIR/build/u-boot
+#make distclean
+make lx2160acex7_tfa_defconfig
+make -j${PARALLEL}
+export BL33=$ROOTDIR/build/u-boot/u-boot.bin
 
 echo "Building atf"
 cd $ROOTDIR/build/atf/
