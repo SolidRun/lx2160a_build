@@ -1,0 +1,35 @@
+From 08fedde7e5422756a898dd389250aa1a30c97c7d Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Thu, 29 Oct 2020 17:42:50 +0200
+Subject: [PATCH] lx2160acex7: adjust lanes e and f for 25g links
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ lx2160acex7/configs/lx2160a_cex7_hc_sd1_lanes_e_f.rcwi | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/lx2160acex7/configs/lx2160a_cex7_hc_sd1_lanes_e_f.rcwi b/lx2160acex7/configs/lx2160a_cex7_hc_sd1_lanes_e_f.rcwi
+index d870a4b..bd35bdc 100644
+--- a/lx2160acex7/configs/lx2160a_cex7_hc_sd1_lanes_e_f.rcwi
++++ b/lx2160acex7/configs/lx2160a_cex7_hc_sd1_lanes_e_f.rcwi
+@@ -7,7 +7,7 @@
+ .pbi
+ /* Lane E (SD1 TX/RX 3) */
+ write 0x01EA0C28,0x00000000
+-write 0x01EA0C30,0x20868120
++write 0x01EA0C30,0x20818120
+ write 0x01EA0C34,0x23000000
+ write 0x01EA0C68,0x80000000
+ write 0x01EA0C74,0x00002020
+@@ -15,7 +15,7 @@ write 0x01EA0C80,0x00008000
+ 
+ /* Lane F (SD1 TX/RX 2)*/
+ write 0x01EA0D28,0x00000000
+-write 0x01EA0D30,0x20868120
++write 0x01EA0D30,0x20818120
+ write 0x01EA0D34,0x23000000
+ write 0x01EA0D68,0x80000000
+ write 0x01EA0D74,0x00002020
+-- 
+2.25.1
+
