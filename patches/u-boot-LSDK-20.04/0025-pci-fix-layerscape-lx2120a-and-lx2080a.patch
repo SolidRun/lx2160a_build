@@ -1,0 +1,61 @@
+From a1af848f43f00aa325cbb159104c68988cea9f02 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Sun, 8 Nov 2020 22:25:06 +0200
+Subject: [PATCH] pci: fix layerscape lx2120a and lx2080a
+
+While detecting CPU signature via SVR, disregard bit12 which indicates
+CAN-FD availablity.
+
+Modifying SVR_WO_E value most probably breaks other layerscape
+platforms, but fixes LX2 variants.
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ arch/arm/include/asm/arch-fsl-layerscape/soc.h | 2 +-
+ drivers/pci/pcie_layerscape.c                  | 2 +-
+ drivers/pci/pcie_layerscape_fixup_common.c     | 3 ++-
+ 3 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-fsl-layerscape/soc.h b/arch/arm/include/asm/arch-fsl-layerscape/soc.h
+index d167735d..a73d6a49 100644
+--- a/arch/arm/include/asm/arch-fsl-layerscape/soc.h
++++ b/arch/arm/include/asm/arch-fsl-layerscape/soc.h
+@@ -76,7 +76,7 @@ enum boot_src {
+ enum boot_src get_boot_src(void);
+ #endif
+ #endif
+-#define SVR_WO_E		0xFFFFFE
++#define SVR_WO_E		0xFFFFEE
+ #define SVR_LS1012A		0x870400
+ #define SVR_LS1043A		0x879200
+ #define SVR_LS1023A		0x879208
+diff --git a/drivers/pci/pcie_layerscape.c b/drivers/pci/pcie_layerscape.c
+index 9ab3a55a..9329ff0f 100644
+--- a/drivers/pci/pcie_layerscape.c
++++ b/drivers/pci/pcie_layerscape.c
+@@ -597,7 +597,7 @@ static int ls_pcie_probe(struct udevice *dev)
+ 		pcie->ctrl = pcie->lut + 0x40000;
+ 	}
+ 
+-	if (svr == SVR_LX2160A)
++	if ((svr == SVR_LX2160A) || (svr == SVR_LX2120A) || (svr == SVR_LX2080A))
+ 		pcie->pf1_offset = LX2160_PCIE_PF1_OFFSET;
+ 	else
+ 		pcie->pf1_offset = LS_PCIE_PF1_OFFSET;
+diff --git a/drivers/pci/pcie_layerscape_fixup_common.c b/drivers/pci/pcie_layerscape_fixup_common.c
+index 0327930d..abf9b4f3 100644
+--- a/drivers/pci/pcie_layerscape_fixup_common.c
++++ b/drivers/pci/pcie_layerscape_fixup_common.c
+@@ -98,7 +98,8 @@ int pcie_board_fix_fdt(void *fdt)
+ 
+ 	svr = SVR_SOC_VER(get_svr());
+ 
+-	if (svr == SVR_LX2160A && IS_SVR_REV(get_svr(), 2, 0))
++	if (((svr == SVR_LX2160A) || (svr == SVR_LX2120A) || (svr == SVR_LX2080A))
++	       && IS_SVR_REV(get_svr(), 2, 0))
+ 		return lx2_board_fix_fdt(fdt);
+ 
+ 	return 0;
+-- 
+2.25.1
+
