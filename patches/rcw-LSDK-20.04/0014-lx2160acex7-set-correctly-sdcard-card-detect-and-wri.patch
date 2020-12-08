@@ -1,0 +1,27 @@
+From ec8c382532d01a3e26491dbcfe2ad854a164006f Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Thu, 3 Dec 2020 19:55:07 +0200
+Subject: [PATCH] lx2160acex7: set correctly sdcard card detect and write
+ protect pmux
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ lx2160acex7/configs/lx2160a_defaults.rcwi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lx2160acex7/configs/lx2160a_defaults.rcwi b/lx2160acex7/configs/lx2160a_defaults.rcwi
+index 359e86c..30e0399 100644
+--- a/lx2160acex7/configs/lx2160a_defaults.rcwi
++++ b/lx2160acex7/configs/lx2160a_defaults.rcwi
+@@ -5,7 +5,7 @@ HWA_CGA_M1_CLK_SEL=1
+ HWA_CGB_M1_CLK_SEL=7
+ BOOT_LOC=26
+ SYSCLK_FREQ=600
+-IIC2_PMUX=1
++IIC2_PMUX=6
+ IIC3_PMUX=0
+ IIC4_PMUX=2
+ USB3_CLK_FSEL=39
+-- 
+2.25.1
+
