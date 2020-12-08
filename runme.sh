@@ -22,11 +22,14 @@ mkdir -p build images
 ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
 SPEED=2000_700_${DDR_SPEED}
-TOOLS="wget tar git make 7z unsquashfs dd vim mkfs.ext4 parted mkdosfs mcopy dtc iasl mkimage e2cp truncate qemu-system-aarch64 cpio rsync bc bison flex python unzip"
+TOOLS="tar git make 7z dd mkfs.ext4 parted mkdosfs mcopy dtc iasl mkimage e2cp truncate qemu-system-aarch64 cpio rsync bc bison flex python unzip"
 
 export PATH=$ROOTDIR/build/toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu/bin:$PATH
 export CROSS_COMPILE=aarch64-linux-gnu-
 export ARCH=arm64
+
+REPO_PREFIX=`git log -1 --pretty=format:%h`
+echo "Repository prefix for images is $REPO_PREFIX"
 
 case "${SERDES}" in
 	2_*)
@@ -382,7 +385,7 @@ dd if=$ROOTDIR/images/tmp/ubuntu-core.ext4 of=$ROOTDIR/images/tmp/ubuntu-core.im
 
 echo "Assembling Boot Image"
 cd $ROOTDIR/
-IMG=lx2160acex7_${SPEED}_${SERDES}.img
+IMG=lx2160acex7_${SPEED}_${SERDES}-${REPO_PREFIX}.img
 rm -rf $ROOTDIR/images/${IMG}
 truncate -s 528M $ROOTDIR/images/${IMG}
 #dd if=/dev/zero of=$ROOTDIR/images/${IMG} bs=1M count=1
@@ -428,8 +431,8 @@ dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=3
 
 # Ramdisk at 0x10000
 # RCW+PBI+BL2 at block 8
-dd if=$ROOTDIR/images/${IMG} of=$ROOTDIR/images/lx2160acex7_xspi_${SPEED}_${SERDES}.img bs=1M count=64
-dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=images/lx2160acex7_xspi_${SPEED}_${SERDES}.img bs=512 conv=notrunc
+dd if=$ROOTDIR/images/${IMG} of=$ROOTDIR/images/lx2160acex7_xspi_${SPEED}_${SERDES}-${REPO_PREFIX}.img bs=1M count=64
+dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=images/lx2160acex7_xspi_${SPEED}_${SERDES}-${REPO_PREFIX}.img bs=512 conv=notrunc
 dd if=$ROOTDIR/build/atf/build/lx2160acex7/release/bl2_auto.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
 
 # Copy first 64MByte from image excluding MBR to ubuntu-core.img for eMMC boot
