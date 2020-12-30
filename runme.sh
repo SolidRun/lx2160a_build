@@ -18,6 +18,11 @@ SERDES=${SERDES:-8_5_2}
 UEFI_RELEASE=${UEFI_RELEASE:-RELEASE}
 SHALLOW=${SHALLOW:false}
 
+
+if [ "x$SHALLOW" == "xtrue" ]; then
+	SHALLOW_FLAG="--depth 1"
+fi
+
 mkdir -p build images
 ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
@@ -117,15 +122,11 @@ for i in $QORIQ_COMPONENTS; do
 		if [ "x$i" == "xdpdk" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
 			CHECKOUT=LSDK-19.09
 		fi
-		if [ "x$SHALLOW" == "xtrue" ]; then
-			git clone --depth=1 https://source.codeaurora.org/external/qoriq/qoriq-components/$i -b $CHECKOUT
-		else
-			git clone https://source.codeaurora.org/external/qoriq/qoriq-components/$i -b $CHECKOUT
-		fi
+		git clone $SHALLOW_FLAG https://source.codeaurora.org/external/qoriq/qoriq-components/$i -b $CHECKOUT
 		cd $i
 		if [ "x$i" == "xatf" ]; then
 			cd $ROOTDIR/build/atf/tools/fiptool
-			git clone https://github.com/NXP/ddr-phy-binary.git
+			git clone $SHALLOW_FLAG https://github.com/NXP/ddr-phy-binary.git
 			make
 			./fiptool create --ddr-immem-udimm-1d ddr-phy-binary/lx2160a/ddr4_pmu_train_imem.bin --ddr-immem-udimm-2d ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_imem.bin --ddr-dmmem-udimm-1d ddr-phy-binary/lx2160a/ddr4_pmu_train_dmem.bin --ddr-dmmem-udimm-2d ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_dmem.bin --ddr-immem-rdimm-1d ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_imem.bin --ddr-immem-rdimm-2d ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_imem.bin --ddr-dmmem-rdimm-1d ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_dmem.bin --ddr-dmmem-rdimm-2d ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_dmem.bin fip_ddr_all.bin
 		fi
@@ -151,7 +152,7 @@ if [[ ! -f $ROOTDIR/build/ubuntu-core.ext4 ]]; then
 	mkdir -p ubuntu
 	cd ubuntu
 	if [ ! -d buildroot ]; then
-		git clone https://github.com/buildroot/buildroot -b $BUILDROOT_VERSION
+		git clone $SHALLOW_FLAG https://github.com/buildroot/buildroot -b $BUILDROOT_VERSION
 	fi
 	cd buildroot
 	cp $ROOTDIR/configs/buildroot/lx2160acex7_defconfig configs/
@@ -200,7 +201,7 @@ fi
 
 if [[ ! -d $ROOTDIR/build/qoriq-mc-binary ]]; then
 	cd $ROOTDIR/build
-	git clone https://github.com/NXP/qoriq-mc-binary.git
+	git clone $SHALLOW_FLAG https://github.com/NXP/qoriq-mc-binary.git
 	cd qoriq-mc-binary
 	git checkout -b $RELEASE refs/tags/$RELEASE
 fi
