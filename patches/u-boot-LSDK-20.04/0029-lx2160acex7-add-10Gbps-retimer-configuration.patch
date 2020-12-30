@@ -1,0 +1,85 @@
+From abc79c9532750adfc37f3869bf0c17a2e665df41 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Wed, 30 Dec 2020 19:52:00 +0200
+Subject: [PATCH 29/29] lx2160acex7: add 10Gbps retimer configuration
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ board/solidrun/lx2160a/eth_lx2160acex7.c | 47 ++++++++++++++++++++++--
+ 1 file changed, 44 insertions(+), 3 deletions(-)
+
+diff --git a/board/solidrun/lx2160a/eth_lx2160acex7.c b/board/solidrun/lx2160a/eth_lx2160acex7.c
+index f286f72e..a754d3fd 100644
+--- a/board/solidrun/lx2160a/eth_lx2160acex7.c
++++ b/board/solidrun/lx2160a/eth_lx2160acex7.c
+@@ -53,7 +53,11 @@ void setup_retimer_25g(int chnum)
+ 		printf ("ERROR : DS250DF410 retimer not found\n");
+ 		return;
+ 	}
+-	printf ("Found retimer... Setting up channels 0..%d as 25Gbps\n",chnum - 1);
++	if (chnum > 0)
++		printf ("Setting up retimer channels 1..%d as 25Gbps\n",chnum);
++	if (chnum < 4)
++		printf ("Setting up retimer channels %d..4 as 10Gbps\n",chnum+1);
++
+ 	dm_i2c_reg_write(dev, 0xff, 0x1); /* Enable channel specific access */
+ 	/*
+ 	 * Setup 25Gbps channel on 0..chnum.
+@@ -71,8 +75,42 @@ void setup_retimer_25g(int chnum)
+ 		dm_i2c_reg_write(dev, 0x3f, 0x44);
+ 		dm_i2c_reg_write(dev, 0x0a, 0x00); /* Release CDR */
+ 	}
+-
+-	/* TODO: Setup other channels as 10Gbps */
++	if (chnum < 4) {
++		/* Setup the rest of the channels as 10g */
++		for (i = chnum ; i < 4; i++) {
++			dm_i2c_reg_write(dev, 0xfc, 1 << i);
++			dm_i2c_reg_write(dev, 0x00, 0x4); /* Reset channel registers */
++			dm_i2c_reg_write(dev, 0x0a, 0xc); /* Assert CDR reset */
++			dm_i2c_reg_write(dev, 0x3d, 0x8f); /* Enable pre/post and set main cursor to 0xf */
++			dm_i2c_reg_write(dev, 0x3e, 0x44); /* Set pre-cursor to -4 */
++			/* Set post-cursor of channel #0 to -4 */
++			dm_i2c_reg_write(dev, 0x3f, 0x44);
++			dm_i2c_reg_write(dev, 0x2f, 0x04); /* Set rate to 10.3125 Gbps */
++			dm_i2c_reg_write(dev, 0x0a, 0x00); /* Release CDR */
++		}
++		ret = i2c_get_chip_for_busnum(0, 0x22, 1, &dev);
++		if (ret) {
++			printf ("ERROR: Retimer at address 0x22 not found\n");
++			return;
++		}
++		ret = dm_i2c_read(dev, 0xf1, &reg, 1); /* Get full device ID */
++		if (ret) {
++			printf ("ERROR: Could not get retimer device ID\n");
++			return;
++		}
++		if (reg != 0x10) {
++			printf ("ERROR : DS250DF410 retimer not found\n");
++			return;
++		}
++		dm_i2c_reg_write(dev, 0xff, 0x1); /* Enable channel specific access */
++		for (i = chnum ; i < 4; i++) {
++			dm_i2c_reg_write(dev, 0xfc, 1 << i);
++			dm_i2c_reg_write(dev, 0x00, 0x4); /* Reset channel registers */
++			dm_i2c_reg_write(dev, 0x0a, 0xc); /* Assert CDR reset */
++			dm_i2c_reg_write(dev, 0x2f, 0x04); /* Set rate to 10.3125 Gbps */
++			dm_i2c_reg_write(dev, 0x0a, 0x00); /* Release CDR */
++		}
++	}
+ }
+ 
+ int board_eth_init(bd_t *bis)
+@@ -100,6 +138,9 @@ int board_eth_init(bd_t *bis)
+ 			      RGMII_PHY_ADDR1);
+ 	reg = (struct memac_mdio_controller *)CONFIG_SYS_FSL_WRIOP1_MDIO2;
+ 	switch (srds_s1) {
++		case 8:
++			setup_retimer_25g(0);
++			break;
+ 		case 13:
+ 		case 14:
+ 		case 15:
+-- 
+2.25.1
+
