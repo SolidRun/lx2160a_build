@@ -201,9 +201,7 @@ fi
 
 if [[ ! -d $ROOTDIR/build/qoriq-mc-binary ]]; then
 	cd $ROOTDIR/build
-	git clone $SHALLOW_FLAG https://github.com/NXP/qoriq-mc-binary.git
-	cd qoriq-mc-binary
-	git checkout -b $RELEASE refs/tags/$RELEASE
+	git clone $SHALLOW_FLAG https://github.com/NXP/qoriq-mc-binary.git -b $RELEASE
 fi
 
 ###############################################################################
