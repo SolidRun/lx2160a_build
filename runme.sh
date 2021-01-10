@@ -41,6 +41,10 @@ case "${SERDES}" in
 		DPC=dpc-8_x_usxgmii.dtb
 		DPL=dpl-eth.8x10g.19.dtb
 	;;
+	4_*)
+		DPC=dpc-backplane.dtb
+		DPL=dpl-eth.8x10g.19.dtb
+	;;
 	8_*)
 		DPC=dpc-8_x_usxgmii.dtb
 		DPL=dpl-eth.8x10g.19.dtb
