@@ -1,0 +1,186 @@
+From 05f7b0ddb485d587ee3638105a2b0536abc1eff0 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Thu, 17 Dec 2020 17:55:19 +0200
+Subject: [PATCH] lx2160acex7: add sys_eeprom support and read MAC addresses
+ from it
+
+1. Add eeprom on I2C0 - MUX (0x77) - I2C0 - EEPROM at 0x57 (2Kbit
+eeprom)
+2. After storing first TLV formatted data sys_eeprom will use that
+eeprom
+3. For now the DPMAC17 (1Gbps from the COM) is set as last DPMAC for
+registration, which means it will get the MAC register in sys_eeprom + 8
+in the case of SD1 protocol=8. We will modify that in the future the
+DPMAC17 will be registered first so it would get the sys_eeprom base MAC
+first.
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ arch/arm/dts/fsl-lx2160a-cex7.dts        | 61 ++++++++++++++++++++++++
+ board/solidrun/lx2160a/eth_lx2160acex7.c |  6 +--
+ configs/lx2160acex7_tfa_defconfig        |  7 +++
+ include/configs/lx2160acex7.h            |  8 +---
+ 4 files changed, 72 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/dts/fsl-lx2160a-cex7.dts b/arch/arm/dts/fsl-lx2160a-cex7.dts
+index 4ca67df2..04adbcf6 100644
+--- a/arch/arm/dts/fsl-lx2160a-cex7.dts
++++ b/arch/arm/dts/fsl-lx2160a-cex7.dts
+@@ -49,6 +49,67 @@
+ &i2c0 {
+ 	status = "okay";
+ 	u-boot,dm-pre-reloc;
++	i2c-mux@77 {
++		compatible = "nxp,pca9547";
++		reg = <0x77>;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		i2c@0 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <0x0>;
++/* The following eeprin is reserved so that the 2Kb eeprom at address 0x57
++   would be used as TLV eeprom.
++			24aa512@50 {
++				compatible = "atmel,24c512";
++				reg = <0x50>;
++			};
++*/
++			spd1@51 {
++				compatible = "atmel,spd";
++				reg = <0x51>;
++			};
++			spd2@53 {
++				compatible = "atmel,spd";
++				reg = <0x53>;
++			};
++			m24c02@57 {
++				compatible = "atmel,24c02";
++				reg = <0x57>;
++			};
++		};
++		i2c@1 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <0x1>;
++			fan-temperature-ctrlr@18 {
++				compatible = "ti,amc6821";
++				reg = <0x18>;
++				cooling-min-state = <0>;
++				cooling-max-state = <9>;
++				#cooling-cells = <2>;
++			};
++		};
++		i2c@2 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <0x2>;
++			ltc3882@5c {
++				compatible = "ltc3882";
++				reg = <0x5c>;
++			};
++		};
++		i2c@3 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <0x3>;
++
++			temperature-sensor@48 {
++				compatible = "nxp,sa56004";
++				reg = <0x48>;
++			};
++		};
++	};
+ };
+ 
+ &i2c4 {
+diff --git a/board/solidrun/lx2160a/eth_lx2160acex7.c b/board/solidrun/lx2160a/eth_lx2160acex7.c
+index 968190f1..f286f72e 100644
+--- a/board/solidrun/lx2160a/eth_lx2160acex7.c
++++ b/board/solidrun/lx2160a/eth_lx2160acex7.c
+@@ -13,11 +13,13 @@
+ #include <phy.h>
+ #include <fm_eth.h>
+ #include <i2c.h>
++#include <sys_eeprom.h>
+ #include <asm/io.h>
+ #include <exports.h>
+ #include <asm/arch/fsl_serdes.h>
+ #include <fsl-mc/fsl_mc.h>
+ #include <fsl-mc/ldpaa_wriop.h>
++#include <fsl-mc/fsl_mc_private.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -127,7 +129,7 @@ int board_eth_init(bd_t *bis)
+ 		wriop_set_mdio(WRIOP1_DPMAC17, dev);
+ 	}
+ 
+-next:
++	mac_read_from_eeprom();
+ 	cpu_eth_init(bis);
+ #endif /* CONFIG_FSL_MC_ENET */
+ 
+@@ -145,9 +147,7 @@ void reset_phy(void)
+ 
+ int fdt_fixup_board_phy(void *fdt)
+ {
+-	int mdio_offset;
+ 	int ret;
+-	struct mii_dev *dev;
+ 
+ 	ret = 0;
+ 
+diff --git a/configs/lx2160acex7_tfa_defconfig b/configs/lx2160acex7_tfa_defconfig
+index 97d38770..62ff236e 100644
+--- a/configs/lx2160acex7_tfa_defconfig
++++ b/configs/lx2160acex7_tfa_defconfig
+@@ -38,8 +38,12 @@ CONFIG_SATA_CEVA=y
+ CONFIG_FSL_CAAM=y
+ CONFIG_DM_GPIO=y
+ CONFIG_DM_I2C=y
++CONFIG_MISC=y
+ CONFIG_I2C_SET_DEFAULT_BUS_NUM=y
+ CONFIG_I2C_DEFAULT_BUS_NUMBER=0
++CONFIG_I2C_EEPROM=y
++CONFIG_I2C_MUX=y
++CONFIG_I2C_MUX_PCA954x=y
+ CONFIG_DM_MMC=y
+ CONFIG_FSL_ESDHC=y
+ CONFIG_DM_SPI_FLASH=y
+@@ -59,6 +63,7 @@ CONFIG_CMD_MII=y
+ CONFIG_CMD_DHCP=y
+ CONFIG_CMD_FAT=y
+ CONFIG_CMD_EXT2=y
++CONFIG_CMD_SYS_EEPROM=y
+ CONFIG_E1000=y
+ CONFIG_PCI=y
+ CONFIG_DM_PCI=y
+@@ -81,3 +86,5 @@ CONFIG_USB_XHCI_DWC3=y
+ CONFIG_EFI_LOADER_BOUNCE_BUFFER=y
+ CONFIG_CMD_DATE=y
+ CONFIG_RTC_PCF2127=y
++CONFIG_CMD_MEMORY=y
++CONFIG_CMD_MEMTEST=y
+diff --git a/include/configs/lx2160acex7.h b/include/configs/lx2160acex7.h
+index de075eae..9ba73fc0 100644
+--- a/include/configs/lx2160acex7.h
++++ b/include/configs/lx2160acex7.h
+@@ -48,13 +48,7 @@
+ 
+ 
+ /* EEPROM */
+-#undef CONFIG_ID_EEPROM /* Fixme */
+-#define CONFIG_SYS_I2C_EEPROM_NXID
+-#define CONFIG_SYS_EEPROM_BUS_NUM	           0
+-#define CONFIG_SYS_I2C_EEPROM_ADDR	           0x57
+-#define CONFIG_SYS_I2C_EEPROM_ADDR_LEN	    1
+-#define CONFIG_SYS_EEPROM_PAGE_WRITE_BITS     3
+-#define CONFIG_SYS_EEPROM_PAGE_WRITE_DELAY_MS 5
++#undef CONFIG_ID_EEPROM /* We use TLV with I2C DM */
+ 
+ /* Initial environment variables */
+ #define CONFIG_EXTRA_ENV_SETTINGS		\
+-- 
+2.25.1
+

@@ -1,0 +1,95 @@
+From 1dee00c3e75cd6ca9060b526ab5cd3eb376363a6 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Mon, 3 Feb 2020 14:26:55 +0200
+Subject: [PATCH] lx2160a-cex7 : move from lsdk-19.06 to lsdk-19.09
+
+Following is a list of changes -
+1. I2C moved to DM model
+2. removed emc2301 support
+3. synchronized vid.c with NXP's driver. But it is still not functional
+in u-boot
+4. Added eMMC to distroboot target list
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ arch/arm/dts/fsl-lx2160a-cex7.dts |  14 +
+ board/solidrun/common/Makefile    |   1 -
+ board/solidrun/common/emc2301.c   |  31 --
+ board/solidrun/common/vid.c       | 638 +++++++++++++++++++++++++++++-
+ board/solidrun/lx2160a/lx2160a.c  |   8 +
+ configs/lx2160acex7_tfa_defconfig |   8 +-
+ include/configs/lx2160a_common.h  |   1 +
+ 7 files changed, 666 insertions(+), 35 deletions(-)
+ delete mode 100644 board/solidrun/common/emc2301.c
+
+diff --git a/arch/arm/dts/fsl-lx2160a-cex7.dts b/arch/arm/dts/fsl-lx2160a-cex7.dts
+index 4fbcaafb0e..4ca67df25a 100644
+--- a/arch/arm/dts/fsl-lx2160a-cex7.dts
++++ b/arch/arm/dts/fsl-lx2160a-cex7.dts
+@@ -46,6 +46,20 @@
+ 	status = "okay";
+ };
+ 
++&i2c0 {
++	status = "okay";
++	u-boot,dm-pre-reloc;
++};
++
++&i2c4 {
++	status = "okay";
++
++	rtc@51 {
++		compatible = "pcf2127-rtc";
++		reg = <0x51>;
++	};
++};
++
+ &sata0 {
+ 	status = "okay";
+ };
+diff --git a/board/solidrun/lx2160a/lx2160a.c b/board/solidrun/lx2160a/lx2160a.c
+index b0d9f1012e..3713e91351 100644
+--- a/board/solidrun/lx2160a/lx2160a.c
++++ b/board/solidrun/lx2160a/lx2160a.c
+@@ -62,7 +62,15 @@ int select_i2c_ch_pca9547(u8 ch)
+ {
+ 	int ret;
+ 
++#ifndef CONFIG_DM_I2C
+ 	ret = i2c_write(I2C_MUX_PCA_ADDR_PRI, 0, 1, &ch, 1);
++#else
++	struct udevice *dev;
++
++	ret = i2c_get_chip_for_busnum(0, I2C_MUX_PCA_ADDR_PRI, 1, &dev);
++	if (!ret)
++		ret = dm_i2c_write(dev, 0, &ch, 1);
++#endif
+ 	if (ret) {
+ 		puts("PCA: failed to select proper channel\n");
+ 		return ret;
+diff --git a/configs/lx2160acex7_tfa_defconfig b/configs/lx2160acex7_tfa_defconfig
+index 3891d2a7c4..89a47adb23 100644
+--- a/configs/lx2160acex7_tfa_defconfig
++++ b/configs/lx2160acex7_tfa_defconfig
+@@ -2,7 +2,6 @@ CONFIG_ARM=y
+ CONFIG_TARGET_LX2160ACEX7=y
+ CONFIG_SYS_TEXT_BASE=0x82000000
+ CONFIG_SYS_MALLOC_F_LEN=0x6000
+-CONFIG_EMC2301=y
+ CONFIG_TFABOOT=y
+ CONFIG_ARMV8_SEC_FIRMWARE_SUPPORT=y
+ CONFIG_SEC_FIRMWARE_ARMV8_PSCI=y
+@@ -73,3 +72,10 @@ CONFIG_DM_USB=y
+ CONFIG_USB_XHCI_HCD=y
+ CONFIG_USB_XHCI_DWC3=y
+ CONFIG_EFI_LOADER_BOUNCE_BUFFER=y
++CONFIG_DM_I2C=y
++CONFIG_I2C_SET_DEFAULT_BUS_NUM=y
++CONFIG_I2C_DEFAULT_BUS_NUMBER=0
++CONFIG_DM_RTC=y
++CONFIG_DM_GPIO=y
++CONFIG_CMD_DATE=y
++CONFIG_RTC_PCF2127=y
+-- 
+2.17.1
+

@@ -1,0 +1,274 @@
+From d4a721d712d8fd9f03be2965e0b37bcd33148bdc Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Wed, 28 Oct 2020 16:44:35 +0200
+Subject: [PATCH] lx210acex7: 25Gbps retimer and restructure config
+
+1. Split SERDES configuration files that each SERDES block from the
+available 3 can be separately configured.
+2. Added SD1 lanes e,f,g,h include files that configures the SERDES
+lanes to suppoer 25Gbps rate with external retimer (using ClearFog CX
+revision 1.3 and newer).
+3. Added bus speeds 750 and 800MHz which are required to get wire speed
+DPDK performance on a 100Gbps link.
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ lx2160acex7/configs/lx2160a_13_5_2.rcwi       |  3 ---
+ lx2160acex7/configs/lx2160a_17_4_2.rcwi       |  7 ------
+ .../configs/lx2160a_2000_750_3200.rcwi        |  9 +++++++
+ .../configs/lx2160a_2000_800_3200.rcwi        |  9 +++++++
+ lx2160acex7/configs/lx2160a_8_5_0.rcwi        |  7 ------
+ lx2160acex7/configs/lx2160a_SD1_13.rcwi       |  3 +++
+ lx2160acex7/configs/lx2160a_SD1_14.rcwi       |  3 +++
+ lx2160acex7/configs/lx2160a_SD1_17.rcwi       |  3 +++
+ lx2160acex7/configs/lx2160a_SD1_2.rcwi        |  4 +++
+ ...x2160a_20_5_2.rcwi => lx2160a_SD1_20.rcwi} |  2 --
+ ...{lx2160a_8_5_2.rcwi => lx2160a_SD1_8.rcwi} |  3 ---
+ lx2160acex7/configs/lx2160a_SD2_5.rcwi        |  1 +
+ lx2160acex7/configs/lx2160a_SD3_0.rcwi        |  1 +
+ lx2160acex7/configs/lx2160a_SD3_2.rcwi        |  1 +
+ lx2160acex7/configs/lx2160a_SD3_3.rcwi        |  1 +
+ .../lx2160a_cex7_hc_sd1_lanes_e_f.rcwi        | 24 ++++++++++++++++++
+ .../lx2160a_cex7_hc_sd1_lanes_g_h.rcwi        | 25 +++++++++++++++++++
+ 17 files changed, 84 insertions(+), 22 deletions(-)
+ delete mode 100644 lx2160acex7/configs/lx2160a_13_5_2.rcwi
+ delete mode 100644 lx2160acex7/configs/lx2160a_17_4_2.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160a_2000_750_3200.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160a_2000_800_3200.rcwi
+ delete mode 100644 lx2160acex7/configs/lx2160a_8_5_0.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160a_SD1_13.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160a_SD1_14.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160a_SD1_17.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160a_SD1_2.rcwi
+ rename lx2160acex7/configs/{lx2160a_20_5_2.rcwi => lx2160a_SD1_20.rcwi} (78%)
+ rename lx2160acex7/configs/{lx2160a_8_5_2.rcwi => lx2160a_SD1_8.rcwi} (79%)
+ create mode 100644 lx2160acex7/configs/lx2160a_SD2_5.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160a_SD3_0.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160a_SD3_2.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160a_SD3_3.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160a_cex7_hc_sd1_lanes_e_f.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160a_cex7_hc_sd1_lanes_g_h.rcwi
+
+diff --git a/lx2160acex7/configs/lx2160a_13_5_2.rcwi b/lx2160acex7/configs/lx2160a_13_5_2.rcwi
+deleted file mode 100644
+index 76f44bc..0000000
+--- a/lx2160acex7/configs/lx2160a_13_5_2.rcwi
++++ /dev/null
+@@ -1,3 +0,0 @@
+-SRDS_PRTCL_S1=13
+-SRDS_PRTCL_S2=5
+-SRDS_PRTCL_S3=2
+diff --git a/lx2160acex7/configs/lx2160a_17_4_2.rcwi b/lx2160acex7/configs/lx2160a_17_4_2.rcwi
+deleted file mode 100644
+index 358972d..0000000
+--- a/lx2160acex7/configs/lx2160a_17_4_2.rcwi
++++ /dev/null
+@@ -1,7 +0,0 @@
+-SRDS_PRTCL_S1=17
+-SRDS_PRTCL_S2=4
+-SRDS_PRTCL_S3=2
+-
+-/*SRDS_INTRA_REF_CLK_S1 = 1*/ /* PLLF used for PLLS */
+-/*SRDS_PLL_REF_CLK_SEL_S1=2*/
+-
+diff --git a/lx2160acex7/configs/lx2160a_2000_750_3200.rcwi b/lx2160acex7/configs/lx2160a_2000_750_3200.rcwi
+new file mode 100644
+index 0000000..84d544d
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_2000_750_3200.rcwi
+@@ -0,0 +1,9 @@
++CGA_PLL1_RAT=20
++CGA_PLL2_RAT=20
++CGB_PLL1_RAT=20
++CGB_PLL2_RAT=9
++
++SYS_PLL_RAT=15
++
++MEM_PLL_RAT=32
++MEM2_PLL_RAT=32
+diff --git a/lx2160acex7/configs/lx2160a_2000_800_3200.rcwi b/lx2160acex7/configs/lx2160a_2000_800_3200.rcwi
+new file mode 100644
+index 0000000..31d7cfd
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_2000_800_3200.rcwi
+@@ -0,0 +1,9 @@
++CGA_PLL1_RAT=20
++CGA_PLL2_RAT=20
++CGB_PLL1_RAT=20
++CGB_PLL2_RAT=9
++
++SYS_PLL_RAT=16
++
++MEM_PLL_RAT=32
++MEM2_PLL_RAT=32
+diff --git a/lx2160acex7/configs/lx2160a_8_5_0.rcwi b/lx2160acex7/configs/lx2160a_8_5_0.rcwi
+deleted file mode 100644
+index 62ff153..0000000
+--- a/lx2160acex7/configs/lx2160a_8_5_0.rcwi
++++ /dev/null
+@@ -1,7 +0,0 @@
+-SRDS_PRTCL_S1=8 /* should be 8 */
+-SRDS_PRTCL_S2=5
+-SRDS_PRTCL_S3=0
+-
+-SRDS_INTRA_REF_CLK_S1 = 1 /* PLLF used for PLLS */
+-SRDS_PLL_REF_CLK_SEL_S1=2
+-SRDS_PLL_PD_PLL1=1
+diff --git a/lx2160acex7/configs/lx2160a_SD1_13.rcwi b/lx2160acex7/configs/lx2160a_SD1_13.rcwi
+new file mode 100644
+index 0000000..61b1eea
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_SD1_13.rcwi
+@@ -0,0 +1,3 @@
++SRDS_PRTCL_S1=13
++#include <configs/lx2160a_cex7_hc_sd1_lanes_e_f.rcwi>
++#include <configs/lx2160a_cex7_hc_sd1_lanes_g_h.rcwi>
+diff --git a/lx2160acex7/configs/lx2160a_SD1_14.rcwi b/lx2160acex7/configs/lx2160a_SD1_14.rcwi
+new file mode 100644
+index 0000000..75e3fab
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_SD1_14.rcwi
+@@ -0,0 +1,3 @@
++SRDS_PRTCL_S1=14
++#include <configs/lx2160a_cex7_hc_sd1_lanes_e_f.rcwi>
++#include <configs/lx2160a_cex7_hc_sd1_lanes_g_h.rcwi>
+diff --git a/lx2160acex7/configs/lx2160a_SD1_17.rcwi b/lx2160acex7/configs/lx2160a_SD1_17.rcwi
+new file mode 100644
+index 0000000..5504271
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_SD1_17.rcwi
+@@ -0,0 +1,3 @@
++SRDS_PRTCL_S1=17
++#include <configs/lx2160a_cex7_hc_sd1_lanes_e_f.rcwi>
++#include <configs/lx2160a_cex7_hc_sd1_lanes_g_h.rcwi>
+diff --git a/lx2160acex7/configs/lx2160a_SD1_2.rcwi b/lx2160acex7/configs/lx2160a_SD1_2.rcwi
+new file mode 100644
+index 0000000..0f013e6
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_SD1_2.rcwi
+@@ -0,0 +1,4 @@
++SRDS_PRTCL_S1=2
++
++SRDS_PLL_REF_CLK_SEL_S1=0
++SRDS_PLL_PD_PLL1=1
+diff --git a/lx2160acex7/configs/lx2160a_20_5_2.rcwi b/lx2160acex7/configs/lx2160a_SD1_20.rcwi
+similarity index 78%
+rename from lx2160acex7/configs/lx2160a_20_5_2.rcwi
+rename to lx2160acex7/configs/lx2160a_SD1_20.rcwi
+index c2c7bea..053aee7 100644
+--- a/lx2160acex7/configs/lx2160a_20_5_2.rcwi
++++ b/lx2160acex7/configs/lx2160a_SD1_20.rcwi
+@@ -1,6 +1,4 @@
+ SRDS_PRTCL_S1=20
+-SRDS_PRTCL_S2=5
+-SRDS_PRTCL_S3=2
+ 
+ SRDS_INTRA_REF_CLK_S1 = 1 /* PLLF used for PLLS */
+ SRDS_PLL_REF_CLK_SEL_S1=2
+diff --git a/lx2160acex7/configs/lx2160a_8_5_2.rcwi b/lx2160acex7/configs/lx2160a_SD1_8.rcwi
+similarity index 79%
+rename from lx2160acex7/configs/lx2160a_8_5_2.rcwi
+rename to lx2160acex7/configs/lx2160a_SD1_8.rcwi
+index d7d707a..abd6dfd 100644
+--- a/lx2160acex7/configs/lx2160a_8_5_2.rcwi
++++ b/lx2160acex7/configs/lx2160a_SD1_8.rcwi
+@@ -1,7 +1,4 @@
+ SRDS_PRTCL_S1=8 /* should be 8 */
+-SRDS_PRTCL_S2=5
+-SRDS_PRTCL_S3=2
+-
+ SRDS_INTRA_REF_CLK_S1 = 1 /* PLLF used for PLLS */
+ SRDS_PLL_REF_CLK_SEL_S1=2
+ SRDS_PLL_PD_PLL1=1
+diff --git a/lx2160acex7/configs/lx2160a_SD2_5.rcwi b/lx2160acex7/configs/lx2160a_SD2_5.rcwi
+new file mode 100644
+index 0000000..559a90c
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_SD2_5.rcwi
+@@ -0,0 +1 @@
++SRDS_PRTCL_S2=5
+diff --git a/lx2160acex7/configs/lx2160a_SD3_0.rcwi b/lx2160acex7/configs/lx2160a_SD3_0.rcwi
+new file mode 100644
+index 0000000..1904856
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_SD3_0.rcwi
+@@ -0,0 +1 @@
++SRDS_PRTCL_S3=0
+diff --git a/lx2160acex7/configs/lx2160a_SD3_2.rcwi b/lx2160acex7/configs/lx2160a_SD3_2.rcwi
+new file mode 100644
+index 0000000..b9c3e6f
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_SD3_2.rcwi
+@@ -0,0 +1 @@
++SRDS_PRTCL_S3=2
+diff --git a/lx2160acex7/configs/lx2160a_SD3_3.rcwi b/lx2160acex7/configs/lx2160a_SD3_3.rcwi
+new file mode 100644
+index 0000000..4695755
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_SD3_3.rcwi
+@@ -0,0 +1 @@
++SRDS_PRTCL_S3=3
+diff --git a/lx2160acex7/configs/lx2160a_cex7_hc_sd1_lanes_e_f.rcwi b/lx2160acex7/configs/lx2160a_cex7_hc_sd1_lanes_e_f.rcwi
+new file mode 100644
+index 0000000..d870a4b
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_cex7_hc_sd1_lanes_e_f.rcwi
+@@ -0,0 +1,24 @@
++/*
++ * SERDES tuning based on the following hardware -
++ * - SolidRun COM express type 7 revision 1.7 and newer
++ * - SolidRun ClearFog CX revision 1.3 with TI retimers and EPT COM express headers
++ */
++
++.pbi
++/* Lane E (SD1 TX/RX 3) */
++write 0x01EA0C28,0x00000000
++write 0x01EA0C30,0x20868120
++write 0x01EA0C34,0x23000000
++write 0x01EA0C68,0x80000000
++write 0x01EA0C74,0x00002020
++write 0x01EA0C80,0x00008000
++
++/* Lane F (SD1 TX/RX 2)*/
++write 0x01EA0D28,0x00000000
++write 0x01EA0D30,0x20868120
++write 0x01EA0D34,0x23000000
++write 0x01EA0D68,0x80000000
++write 0x01EA0D74,0x00002020
++write 0x01EA0D80,0x00008000
++.end
++
+diff --git a/lx2160acex7/configs/lx2160a_cex7_hc_sd1_lanes_g_h.rcwi b/lx2160acex7/configs/lx2160a_cex7_hc_sd1_lanes_g_h.rcwi
+new file mode 100644
+index 0000000..4097b77
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_cex7_hc_sd1_lanes_g_h.rcwi
+@@ -0,0 +1,25 @@
++/*
++ * SERDES tuning based on the following hardware -
++ * - SolidRun COM express type 7 revision 1.7 and newer
++ * - SolidRun ClearFog CX revision 1.3 with TI retimers and EPT COM express headers
++ */
++
++.pbi
++/* Lane G (SD1 TX/RX 1)*/
++write 0x01EA0E28,0x00000000
++write 0x01EA0E30,0x20818120
++write 0x01EA0E34,0x23000000
++write 0x01EA0E68,0x80000000
++write 0x01EA0E74,0x00002020
++write 0x01EA0E80,0x00008000
++
++/* Lane H (SD1 TX/RX 0)*/
++write 0x01EA0F28,0x00000000
++write 0x01EA0F30,0x20818120
++write 0x01EA0F34,0x23000000
++write 0x01EA0F68,0x80000000
++write 0x01EA0F74,0x00002020
++write 0x01EA0F80,0x00008000
++
++.end
++
+-- 
+2.25.1
+

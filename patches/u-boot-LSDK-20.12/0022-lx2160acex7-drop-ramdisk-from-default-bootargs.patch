@@ -1,0 +1,30 @@
+From b145ea98fe987b7955d11e7f2352b657ed14498f Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 22 Jul 2020 15:35:30 +0200
+Subject: [PATCH] lx2160acex7: drop ramdisk from default bootargs
+
+root=/dev/ram0 along with ramdisk_size are deployment-specific and
+actually prevent booting a generic distro-boot enabled system that only
+extends rather than override firmware-defined bootargs.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ configs/lx2160acex7_tfa_defconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configs/lx2160acex7_tfa_defconfig b/configs/lx2160acex7_tfa_defconfig
+index 837d6070dd..97d3877047 100644
+--- a/configs/lx2160acex7_tfa_defconfig
++++ b/configs/lx2160acex7_tfa_defconfig
+@@ -13,7 +13,7 @@ CONFIG_OF_BOARD_SETUP=y
+ CONFIG_OF_STDOUT_VIA_ALIAS=y
+ CONFIG_BOOTDELAY=10
+ CONFIG_USE_BOOTARGS=y
+-CONFIG_BOOTARGS="console=ttyAMA0,115200 root=/dev/ram0 earlycon=pl011,mmio32,0x21c0000 ramdisk_size=0x2000000 default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf"
++CONFIG_BOOTARGS="console=ttyAMA0,115200 earlycon=pl011,mmio32,0x21c0000 default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf"
+ # CONFIG_USE_BOOTCOMMAND is not set
+ CONFIG_CMD_GREPENV=y
+ CONFIG_CMD_EEPROM=y
+-- 
+2.27.0
+
