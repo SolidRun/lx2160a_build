@@ -1,0 +1,54 @@
+From 66b3579e26dacafe343ea03eec6d6722ddb601af Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Sun, 24 Jan 2021 13:02:50 +0200
+Subject: [PATCH] lx2160a: clear secmon PGD bit on every power on
+
+PGD (power glitch detected) will be set to '1' on every power on when
+there is no battery to the SecMon_LP state machine.
+
+This patch is developed and added as precatuion for a secmon boot
+failure due to this; but it has no effect at all.
+This patch will be marked as not-needed in the lx2160a_build project,
+but will be kept there for documentation purposes.
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ plat/nxp/common/include/lsch3.h      | 3 +++
+ plat/nxp/soc-lx2160/aarch64/lx2160.S | 7 +++++++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/plat/nxp/common/include/lsch3.h b/plat/nxp/common/include/lsch3.h
+index 000499fe8..7b5a13cfc 100644
+--- a/plat/nxp/common/include/lsch3.h
++++ b/plat/nxp/common/include/lsch3.h
+@@ -88,6 +88,9 @@
+ #define SECMON_HPCOMR_OFFSET		0x4
+ #define SECMON_HPCOMR_NPSWAEN		0x80000000
+ 
++#define SECMON_LPSR_OFFSET		0x4c
++#define SECMON_LPSR_PGD_MASK		0x8
++
+  /* System Counter Offset and Bit Mask */
+ #define SYS_COUNTER_CNTCR_OFFSET	0x0
+ #define SYS_COUNTER_CNTCR_EN		0x00000001
+diff --git a/plat/nxp/soc-lx2160/aarch64/lx2160.S b/plat/nxp/soc-lx2160/aarch64/lx2160.S
+index 83f58897c..3e3c446b4 100644
+--- a/plat/nxp/soc-lx2160/aarch64/lx2160.S
++++ b/plat/nxp/soc-lx2160/aarch64/lx2160.S
+@@ -1769,6 +1769,13 @@ initSecMon:
+      // write back
+     str  w0, [x1, #SECMON_HPCOMR_OFFSET]
+ 
++     // read the register lpsr and clear pgd (triggered on every PORESET#)
++    ldr  x1, =NXP_SNVS_ADDR
++    ldr  w0, [x1, #SECMON_LPSR_OFFSET]
++     // turn off pgd
++    orr  w0, w0, #SECMON_LPSR_PGD_MASK
++     // write back
++    str  w0, [x1, #SECMON_LPSR_OFFSET]
+     ret
+ 
+ /*---------------------------------------------------------------------------*/
+-- 
+2.25.1
+

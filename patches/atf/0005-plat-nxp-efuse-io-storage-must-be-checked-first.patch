@@ -1,0 +1,50 @@
+From 0c8cc68d022a3edf8dba5d168916f94a7110b4c6 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Sun, 24 Jan 2021 12:45:26 +0200
+Subject: [PATCH] plat: nxp: efuse io storage must be checked first
+
+This patch comes to fix an assertion bug when searching for the fuse provisioning
+FIP.
+The assert occurs when calling plat_get_alt_image_source() that asserts
+in plat/nxp/common/ddr_io_storage.c
+
+assert(image_id < ARRAY_SIZE(ddr_policies));
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ plat/nxp/common/ls_io_storage.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/plat/nxp/common/ls_io_storage.c b/plat/nxp/common/ls_io_storage.c
+index af661e956..2bc81f5b3 100644
+--- a/plat/nxp/common/ls_io_storage.c
++++ b/plat/nxp/common/ls_io_storage.c
+@@ -450,6 +450,12 @@ int plat_get_image_source(unsigned int image_id, uintptr_t *dev_handle,
+ 	int result;
+ 	const struct plat_io_policy *policy;
+ 
++	if ((image_id >= FUSE_FIP_IMAGE_ID) && (image_id <= FUSE_UP_IMAGE_ID)) {
++		NOTICE("Trying FUSE IO FIRST\n");
++		result = plat_get_fuse_image_source(image_id, dev_handle,
++						       image_spec);
++		return result;
++	}
+ 	if (image_id < ARRAY_SIZE(policies)) {
+ 
+ 		policy = &policies[image_id];
+@@ -464,12 +470,6 @@ int plat_get_image_source(unsigned int image_id, uintptr_t *dev_handle,
+ 						       image_spec);
+ 	}
+ 
+-	if (result != 0) {
+-		VERBOSE("Trying FUSE IO\n");
+-		result = plat_get_fuse_image_source(image_id, dev_handle,
+-						       image_spec);
+-	}
+-
+ 	return result;
+ }
+ 
+-- 
+2.25.1
+

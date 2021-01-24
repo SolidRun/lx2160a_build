@@ -37,6 +37,7 @@ ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
 SPEED=2000_700_${DDR_SPEED}
 TOOLS="tar git make 7z dd mkfs.ext4 parted mkdosfs mcopy dtc iasl mkimage e2cp truncate qemu-system-aarch64 cpio rsync bc bison flex python unzip"
+BL2=bl2_auto
 
 export PATH=$ROOTDIR/build/toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu/bin:$PATH
 export CROSS_COMPILE=aarch64-linux-gnu-
@@ -263,15 +264,18 @@ export BL33=$ROOTDIR/build/u-boot/u-boot.bin
 
 echo "Building atf"
 cd $ROOTDIR/build/atf/
-make PLAT=lx2160acex7 clean
+make PLAT=lx2160acex7 distclean
 if [ "x$SECURE" == "xtrue" ]; then
 	if [ ! -f "srk.pub" ] || [ ! -f "srk.pri" ]; then
 		echo "Create srk.pub and srk.pri pair via ./gen_keys 4096 under $ROOTDIR/build/cst and place them under $ROOTDIR/build/atf"
 		exit -1
 	fi
 	# Following is without COT
+	# With secure boot auto mode is not supported... yet.. only flexspi_nor or sd
+	# that are needed to be stated explicitly
+	BL2=bl2_flexspi_nor_sec; BOOT_MODE_VAR=flexspi_nor
 	cp tools/fiptool/ddr-phy-binary/lx2160a/*.bin .
-	make -j1 PLAT=lx2160acex7 all fip fip_ddr_sec fip_fuse pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin TRUSTED_BOARD_BOOT=1 CST_DIR=$ROOTDIR/build/cst/ GENERATE_COT=0 BOOT_MODE=auto SECURE_BOOT=true FUSE_PROG=1 FUSE_PROV_FILE=$ROOTDIR/build/cst/fuse_scr.bin $ATF_DEBUG
+	make -j${PARALLEL} PLAT=lx2160acex7 all fip fip_ddr_sec fip_fuse pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin TRUSTED_BOARD_BOOT=1 CST_DIR=$ROOTDIR/build/cst/ GENERATE_COT=0 BOOT_MODE=${BOOT_MODE_VAR} SECURE_BOOT=yes FUSE_PROG=1 FUSE_PROV_FILE=$ROOTDIR/build/cst/fuse_scr.bin $ATF_DEBUG
 else
 	make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=auto SECURE_BOOT=false
 fi
@@ -431,7 +435,7 @@ truncate -s 463M $ROOTDIR/images/tmp/boot.part
 mkfs.ext4 -b 4096 -F $ROOTDIR/images/tmp/boot.part
 \rm -rf $ROOTDIR/images/tmp/xspi_header.img
 truncate -s 128K $ROOTDIR/images/tmp/xspi_header.img
-dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/bl2_auto.pbl of=$ROOTDIR/images/tmp/xspi_header.img bs=512 conv=notrunc
+dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/${BL2}.pbl of=$ROOTDIR/images/tmp/xspi_header.img bs=512 conv=notrunc
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/xspi_header.img $ROOTDIR/images/tmp/boot.part:/
 
 # PFE firmware at 0x100
@@ -478,8 +482,8 @@ dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=3
 # Ramdisk at 0x10000
 # RCW+PBI+BL2 at block 8
 dd if=$ROOTDIR/images/${IMG} of=$ROOTDIR/images/lx2160acex7_xspi_${SPEED}_${SERDES}-${REPO_PREFIX}.img bs=1M count=64
-dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/bl2_auto.pbl of=images/lx2160acex7_xspi_${SPEED}_${SERDES}-${REPO_PREFIX}.img bs=512 conv=notrunc
-dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/bl2_auto.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
+dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/${BL2}.pbl of=images/lx2160acex7_xspi_${SPEED}_${SERDES}-${REPO_PREFIX}.img bs=512 conv=notrunc
+dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/${BL2}.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
 
 # Copy first 64MByte from image excluding MBR to ubuntu-core.img for eMMC boot
 dd if=images/${IMG} of=$ROOTDIR/images/tmp/ubuntu-core.img bs=512 seek=1 skip=1 count=131071 conv=notrunc
