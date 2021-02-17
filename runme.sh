@@ -81,6 +81,15 @@ case "${SERDES}" in
 	;;
 esac
 
+case "${DDR_SPEED}" in
+	2400|2600|2900|3200)
+	;;
+	*)
+		echo "Please use one of allowed DDR speeds: 2400, 2600, 2900, 3200"
+		exit -1
+	;;
+esac
+
 echo "Checking all required tools are installed"
 
 set +e
