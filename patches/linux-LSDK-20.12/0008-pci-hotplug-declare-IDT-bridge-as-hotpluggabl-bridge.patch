@@ -1,0 +1,24 @@
+From d3ac6797985d3e29538129af5a1c17c81c727b90 Mon Sep 17 00:00:00 2001
+From: Noel Kuntze <noel.kuntze@thermi.consulting>
+Date: Thu, 4 Mar 2021 23:22:44 +0100
+Subject: [PATCH 8/8] pci: hotplug: declare IDT bridge as hotpluggabl bridge
+
+---
+ drivers/pci/quirks.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/pci/quirks.c b/drivers/pci/quirks.c
+index a606e28aef27..24813940b413 100644
+--- a/drivers/pci/quirks.c
++++ b/drivers/pci/quirks.c
+@@ -3018,6 +3018,7 @@ static void quirk_hotplug_bridge(struct pci_dev *dev)
+ 	dev->is_hotplug_bridge = 1;
+ }
+ DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_HINT, 0x0020, quirk_hotplug_bridge);
++DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_IDT, 0x808c, quirk_hotplug_bridge);
+ 
+ /*
+  * This is a quirk for the Ricoh MMC controller found as a part of some
+-- 
+2.30.1
+
