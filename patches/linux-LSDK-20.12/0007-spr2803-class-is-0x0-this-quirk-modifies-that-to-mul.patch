@@ -1,0 +1,37 @@
+From f931a45e103f813788c6bdb6d001d2be87eeda95 Mon Sep 17 00:00:00 2001
+From: Noel Kuntze <noel.kuntze@thermi.consulting>
+Date: Thu, 4 Mar 2021 23:21:25 +0100
+Subject: [PATCH 7/8] spr2803 class is 0x0, this quirk modifies that to
+ multimedia class in order to allocate memory to it's bars.
+
+---
+ drivers/pci/quirks.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/drivers/pci/quirks.c b/drivers/pci/quirks.c
+index 901310dea8d7..a606e28aef27 100644
+--- a/drivers/pci/quirks.c
++++ b/drivers/pci/quirks.c
+@@ -3171,6 +3171,19 @@ static void fixup_ti816x_class(struct pci_dev *dev)
+ DECLARE_PCI_FIXUP_CLASS_EARLY(PCI_VENDOR_ID_TI, 0xb800,
+ 			      PCI_CLASS_NOT_DEFINED, 8, fixup_ti816x_class);
+ 
++
++static void fixup_spr2803_class(struct pci_dev *dev)
++{
++	u32 class = dev->class;
++
++	/* spr2803 does not have class code */
++	dev->class = PCI_CLASS_MULTIMEDIA_VIDEO << 8;
++	pci_info(dev, "PCI class overridden (%#08x -> %#08x)\n",
++		 class, dev->class);
++}
++DECLARE_PCI_FIXUP_CLASS_EARLY(0x1e00, 0x2803,
++			      PCI_CLASS_NOT_DEFINED, 8, fixup_spr2803_class);
++
+ /*
+  * Some PCIe devices do not work reliably with the claimed maximum
+  * payload size supported.
+-- 
+2.30.1
+
