@@ -5,19 +5,19 @@ Subject: [PATCH] armv8: add lx2160acex7 build inclusion
 
 Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
 ---
- arch/arm/Kconfig           | 13 +++++++++++++
- arch/arm/cpu/armv8/Kconfig |  1 +
+ arch/arm/Kconfig           | 12 ++++++++++++
+ arch/arm/cpu/armv8/Kconfig |  3 ++-
  arch/arm/dts/Makefile      |  3 ++-
- 3 files changed, 16 insertions(+), 1 deletion(-)
+ 3 files changed, 16 insertions(+), 2 deletions(-)
 
 diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index 01fb4089dc..9005935dd9 100644
+index 01fb4089dc..31577775d5 100644
 --- a/arch/arm/Kconfig
 +++ b/arch/arm/Kconfig
-@@ -1231,6 +1231,18 @@ config TARGET_LX2160ARDB
+@@ -1230,6 +1230,17 @@ config TARGET_LX2160ARDB
+ 	  The lx2160ardb (LX2160A Reference design board (RDB)
  	  is a high-performance development platform that supports the
  	  QorIQ LX2160A/LX2120A/LX2080A Layerscape Architecture processor.
- 
 +config TARGET_LX2160ACEX7
 +	bool "Support lx2160acex7"
 +	select ARCH_LX2160A
@@ -29,11 +29,10 @@ index 01fb4089dc..9005935dd9 100644
 +	  Support for SolidRun LX2160A based com express type 7 module and
 +	  platform. The lx2160acex7 high-performance platform that supports the
 +	  QorIQ LX2160A/LX2120A/LX2080A Layerscape Architecture processor.
-+
+ 
  config TARGET_LX2160AQDS
  	bool "Support lx2160aqds"
- 	select ARCH_LX2160A
-@@ -1863,6 +1875,7 @@ source "board/freescale/ls1012aqds/Kconfig"
+@@ -1863,6 +1874,7 @@ source "board/freescale/ls1012aqds/Kconfig"
  source "board/freescale/ls1012ardb/Kconfig"
  source "board/freescale/ls1012afrdm/Kconfig"
  source "board/freescale/lx2160a/Kconfig"
@@ -42,14 +41,16 @@ index 01fb4089dc..9005935dd9 100644
  source "board/freescale/s32v234evb/Kconfig"
  source "board/grinn/chiliboard/Kconfig"
 diff --git a/arch/arm/cpu/armv8/Kconfig b/arch/arm/cpu/armv8/Kconfig
-index a4fec595fa..7fffca107f 100644
+index a4fec595fa..794124c41a 100644
 --- a/arch/arm/cpu/armv8/Kconfig
 +++ b/arch/arm/cpu/armv8/Kconfig
-@@ -110,6 +110,7 @@ config PSCI_RESET
+@@ -109,7 +109,8 @@ config PSCI_RESET
+ 		   !TARGET_LS1046ARDB && !TARGET_LS1046AQDS && \
  		   !TARGET_LS1046AFRWY && \
  		   !TARGET_LS2081ARDB && !TARGET_LX2160ARDB && \
- 		   !TARGET_LX2160AQDS && !TARGET_LX2162AQDS && \
-+		   !TARGET_LX2160ACEX7 && \
+-		   !TARGET_LX2160AQDS && !TARGET_LX2162AQDS && \
++		   !TARGET_LX2160AQDS && !TARGET_LX2160ACEX7 && \
++		   !TARGET_LX2162AQDS && \
  		   !ARCH_UNIPHIER && !TARGET_S32V234EVB
  	help
  	  Most armv8 systems have PSCI support enabled in EL3, either through
@@ -68,5 +69,5 @@ index 72466c73f3..2dda738e59 100644
  	fsl-ls1043a-qds-lpuart.dtb \
  	fsl-ls1043a-rdb.dtb \
 -- 
-2.25.1
+2.30.1
 
