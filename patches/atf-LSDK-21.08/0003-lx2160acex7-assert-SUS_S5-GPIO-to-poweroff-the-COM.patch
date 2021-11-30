@@ -1,0 +1,28 @@
+From 1b9476295392acce9acdf3b34915d2da7abe5931 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Sun, 28 Nov 2021 13:33:10 +0200
+Subject: [PATCH 3/4] lx2160acex7: assert SUS_S5# GPIO to poweroff the COM
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ plat/nxp/soc-lx2160a/aarch64/lx2160a.S | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/plat/nxp/soc-lx2160a/aarch64/lx2160a.S b/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
+index 8bd06e765..8853e6e00 100644
+--- a/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
++++ b/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
+@@ -545,6 +545,10 @@ func _soc_sys_off
+ 	 * spurious timeout reset request
+ 	 * workaround: MASK RESET REQ RPTOE
+ 	 */
++	mov x3, #NXP_GPIO3_ADDR
++	mov w1, #0x01000000
++	str w1, [x3]
++
+ 	ldr  x0, =NXP_RESET_ADDR
+ 	ldr  w1, =RSTRQMR_RPTOE_MASK
+ 	str  w1, [x0, #RST_RSTRQMR1_OFFSET]
+-- 
+2.25.1
+

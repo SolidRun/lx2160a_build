@@ -1,0 +1,37 @@
+From 0d832fe197168612c6c150e220b85fd907049cb4 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Tue, 3 Nov 2020 15:37:45 +0200
+Subject: [PATCH 24/24] lx2160acex7: refine pre-cursor of all channels to -4
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ board/solidrun/lx2160a/eth_lx2160acex7.c | 11 ++---------
+ 1 file changed, 2 insertions(+), 9 deletions(-)
+
+diff --git a/board/solidrun/lx2160a/eth_lx2160acex7.c b/board/solidrun/lx2160a/eth_lx2160acex7.c
+index f335b420..968190f1 100644
+--- a/board/solidrun/lx2160a/eth_lx2160acex7.c
++++ b/board/solidrun/lx2160a/eth_lx2160acex7.c
+@@ -63,17 +63,10 @@ void setup_retimer_25g(int chnum)
+ 		dm_i2c_reg_write(dev, 0xfc, 1 << i);
+ 		dm_i2c_reg_write(dev, 0x00, 0x4); /* Reset channel registers */
+ 		dm_i2c_reg_write(dev, 0x0a, 0xc); /* Assert CDR reset */
+-
+-		printf ("Setting main cursor to 0xf\n");
+ 		dm_i2c_reg_write(dev, 0x3d, 0x8f); /* Enable pre/post and set main cursor to 0xf */
+ 		dm_i2c_reg_write(dev, 0x3e, 0x44); /* Set pre-cursor to -4 */
+-		if (i == 0)
+-			/* Set post-cursor of channel #0 to -4 */
+-			dm_i2c_reg_write(dev, 0x3f, 0x44);
+-		else
+-			/* Set all other channels pre-cursor to -1 */
+-			dm_i2c_reg_write(dev, 0x3f, 0x41);
+-		printf ("Releasing CDR\n");
++		/* Set post-cursor of channel #0 to -4 */
++		dm_i2c_reg_write(dev, 0x3f, 0x44);
+ 		dm_i2c_reg_write(dev, 0x0a, 0x00); /* Release CDR */
+ 	}
+ 
+-- 
+2.25.1
+

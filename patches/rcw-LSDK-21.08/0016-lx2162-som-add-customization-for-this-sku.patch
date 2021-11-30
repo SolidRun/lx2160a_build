@@ -1,0 +1,44 @@
+From a6db2cc5af8ff2353c4821402d5a9c3ee1263bef Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Sun, 28 Nov 2021 15:12:16 +0200
+Subject: [PATCH 16/16] lx2162-som: add customization for this sku
+
+LX2162A has the following disabled -
+1. PCIe 2,5,6
+2. Second USB controller
+3. MAC7 to MAC10
+4. Second DDR controller
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ lx2160acex7/configs/lx2160a_defaults.rcwi | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/lx2160acex7/configs/lx2160a_defaults.rcwi b/lx2160acex7/configs/lx2160a_defaults.rcwi
+index 30e0399..e22fbef 100644
+--- a/lx2160acex7/configs/lx2160a_defaults.rcwi
++++ b/lx2160acex7/configs/lx2160a_defaults.rcwi
+@@ -53,3 +53,20 @@ write 0x2320000,0x20000000
+  * clock.
+  */
+ /*#include <../lx2160asi/flexspi_divisor_28.rcw>*/
++
++.pbi
++/* Load condition SVR register and mask LX2162A 23x23 package */
++loadc 0x01e000a4, 0x00000800
++/* If LX2160A jump forward */
++jumpc 0x14, 0x00000800
++jump 0x28
++/* Following is LX2162A specific code */
++/* Disable clock of PEX2, PEX5 and PEX6 by using DEVDISR register */
++write 0x1e00078,0x00000032
++/* Disabled second USB controller */
++write 0x1e00070,0x00002000
++/* MAC7 to MAC10 clock disable*/
++write 0x1e00074,0x00007c0
++/* Disable second DDR controller */
++write 0x1e00080,0x00000002
++.end
+-- 
+2.25.1
+

@@ -12,7 +12,7 @@ BUILDROOT_VERSION=2020.02.1
 ###############################################################################
 # Misc
 ###############################################################################
-RELEASE=${RELEASE:-LSDK-20.12}
+RELEASE=${RELEASE:-LSDK-21.08}
 DDR_SPEED=${DDR_SPEED:-3200}
 SERDES=${SERDES:-8_5_2}
 UEFI_RELEASE=${UEFI_RELEASE:-RELEASE}
@@ -36,7 +36,7 @@ mkdir -p build images
 ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
 SPEED=2000_700_${DDR_SPEED}
-TOOLS="tar git make 7z dd mkfs.ext4 parted mkdosfs mcopy dtc iasl mkimage e2cp truncate qemu-system-aarch64 cpio rsync bc bison flex python unzip"
+TOOLS="tar git make 7z dd mkfs.ext4 parted mkdosfs mcopy dtc iasl mkimage e2cp truncate qemu-system-aarch64 cpio rsync bc bison flex python unzip pandoc meson ninja"
 BL2=bl2_auto
 
 export PATH=$ROOTDIR/build/toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu/bin:$PATH
@@ -47,6 +47,14 @@ REPO_PREFIX=`git log -1 --pretty=format:%h`
 echo "Repository prefix for images is $REPO_PREFIX"
 
 case "${SERDES}" in
+	0_*)
+		DPC=dpc-8_x_usxgmii.dtb
+		DPL=dpl-eth.8x10g.19.dtb
+	;;
+	8_9_*)
+		DPC=dpc-8_x_usxgmii_8_x_sgmii.dtb
+		DPL=dpl-eth.8x10g.8x1g.19.dtb
+	;;
 	2_*)
 		DPC=dpc-8_x_usxgmii.dtb
 		DPL=dpl-eth.8x10g.19.dtb
@@ -68,6 +76,14 @@ case "${SERDES}" in
 		DPL=dpl-eth.single-100g.19.dtb
 	;;
 	17_*)
+		DPC=dpc-quad-25g.dtb
+		DPL=dpl-eth.quad-25g.19.dtb
+	;;
+	18_*)
+		DPC=dpc-sd1-18.dtb
+		DPL=dpl-sd1-18.dtb
+	;;
+	19_*)
 		DPC=dpc-quad-25g.dtb
 		DPL=dpl-eth.quad-25g.19.dtb
 	;;
@@ -98,7 +114,7 @@ for i in $TOOLS; do
 	if [ "x$TOOL_PATH" == "x" ]; then
 		echo "Tool $i is not installed"
 		echo "If running under apt based package management you can run -"
-		echo "sudo apt install build-essential git dosfstools e2fsprogs parted sudo mtools p7zip p7zip-full device-tree-compiler acpica-tools u-boot-tools e2tools qemu-system-arm libssl-dev cpio rsync bc bison flex python unzip"
+		echo "sudo apt install build-essential git dosfstools e2fsprogs parted sudo mtools p7zip p7zip-full device-tree-compiler acpica-tools u-boot-tools e2tools qemu-system-arm libssl-dev cpio rsync bc bison flex python unzip pandoc meson ninja-build"
 		exit -1
 	fi
 done
@@ -155,11 +171,10 @@ for i in $QORIQ_COMPONENTS; do
 			make
 			./fiptool create --ddr-immem-udimm-1d ddr-phy-binary/lx2160a/ddr4_pmu_train_imem.bin --ddr-immem-udimm-2d ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_imem.bin --ddr-dmmem-udimm-1d ddr-phy-binary/lx2160a/ddr4_pmu_train_dmem.bin --ddr-dmmem-udimm-2d ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_dmem.bin --ddr-immem-rdimm-1d ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_imem.bin --ddr-immem-rdimm-2d ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_imem.bin --ddr-dmmem-rdimm-1d ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_dmem.bin --ddr-dmmem-rdimm-2d ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_dmem.bin fip_ddr_all.bin
 		fi
-		if [[ -d $ROOTDIR/patches/$i/ ]]; then
-			git am $ROOTDIR/patches/$i/*.patch
-		fi
 		if [[ -d $ROOTDIR/patches/$i-$RELEASE/ ]]; then
 			git am $ROOTDIR/patches/$i-$RELEASE/*.patch
+		elif [[ -d $ROOTDIR/patches/$i/ ]]; then
+			git am $ROOTDIR/patches/$i/*.patch
 		fi
 		if [[ $RELEASE == *"-update"* ]]; then
 			# Check extract the LSDK name up to the '-update-...'
@@ -286,7 +301,8 @@ if [ "x$SECURE" == "xtrue" ]; then
 	cp tools/fiptool/ddr-phy-binary/lx2160a/*.bin .
 	make -j${PARALLEL} PLAT=lx2160acex7 all fip fip_ddr_sec fip_fuse pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin TRUSTED_BOARD_BOOT=1 CST_DIR=$ROOTDIR/build/cst/ GENERATE_COT=0 BOOT_MODE=${BOOT_MODE_VAR} SECURE_BOOT=yes FUSE_PROG=1 FUSE_PROV_FILE=$ROOTDIR/build/cst/fuse_scr.bin $ATF_DEBUG
 else
-	make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=auto SECURE_BOOT=false
+	make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=auto SECURE_BOOT=false $ATF_DEBUG
+       #	DDR_PHY_DEBUG=yes DDR_DEBUG=yes # DEBUG_PHY_IO=yes
 fi
 
 echo "Building mc-utils"
@@ -319,7 +335,7 @@ cat > kernel2160cex7.its << EOF
 		};
 		initrd {
 			description = "initrd for arm64";
-			data = /incbin/("../../patches/linux-${RELEASE}/ramdisk_rootfs_arm64.ext4.gz");
+			data = /incbin/("../../patches/ramdisk_rootfs_arm64.ext4.gz");
 			type = "ramdisk";
 			arch = "arm64";
 			os = "linux";
@@ -332,7 +348,7 @@ cat > kernel2160cex7.its << EOF
 		};
 		lx2160acex7-dtb {
 			description = "lx2160acex7-dtb";
-			data = /incbin/("arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtb");
+			data = /incbin/("arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-cx.dtb");
 			type = "flat_dt";
 			arch = "arm64";
 			os = "linux";
@@ -360,7 +376,7 @@ mkdir -p $ROOTDIR/images/tmp/
 mkdir -p $ROOTDIR/images/tmp/boot
 make INSTALL_MOD_PATH=$ROOTDIR/images/tmp/ INSTALL_MOD_STRIP=1 modules_install
 cp $ROOTDIR/build/linux/arch/arm64/boot/Image $ROOTDIR/images/tmp/boot
-cp $ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtb $ROOTDIR/images/tmp/boot
+cp $ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx216*.dtb $ROOTDIR/images/tmp/boot
 
 
 
@@ -370,10 +386,8 @@ export CROSS=$CROSS_COMPILE
 export RTE_SDK=$ROOTDIR/build/dpdk
 export DESTDIR=$ROOTDIR/build/dpdk/install
 export RTE_TARGET=arm64-dpaa-linuxapp-gcc
-#make -j32 T=arm64-dpaa-linuxapp-gcc CONFIG_RTE_KNI_KMOD=n CONFIG_RTE_LIBRTE_PMD_OPENSSL=n clean
-make -j32 T=arm64-dpaa-linuxapp-gcc CONFIG_RTE_KNI_KMOD=n CONFIG_RTE_LIBRTE_PMD_OPENSSL=n install
-make -j32 T=arm64-dpaa-linuxapp-gcc CONFIG_RTE_KNI_KMOD=n CONFIG_RTE_LIBRTE_PMD_OPENSSL=n -C examples/l2fwd install
-make -j32 T=arm64-dpaa-linuxapp-gcc CONFIG_RTE_KNI_KMOD=n CONFIG_RTE_LIBRTE_PMD_OPENSSL=n -C examples/l3fwd install
+meson arm64-dpaa-build -Dexamples=all --cross-file config/arm/arm64_dpaa_linux_gcc
+ninja -C arm64-dpaa-build
 
 
 ###############################################################################
@@ -383,13 +397,13 @@ echo "Assembling kernel and rootfs image"
 cd $ROOTDIR
 mkdir -p $ROOTDIR/images/tmp/extlinux/
 cat > $ROOTDIR/images/tmp/extlinux/extlinux.conf << EOF
-  TIMEOUT 30
-  DEFAULT linux
-  MENU TITLE linux-lx2160a boot options
-  LABEL primary
-    MENU LABEL primary kernel
-    LINUX /boot/Image
-    FDT /boot/fsl-lx2160a-cex7.dtb
+  timeout 30
+  default linux
+  menu title linux-lx2160a boot options
+  label primary
+    menu label primary kernel
+    linux /boot/Image
+    fdtdir /boot/
     APPEND console=ttyAMA0,115200 earlycon=pl011,mmio32,0x21c0000 default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf root=PARTUUID=30303030-01 rw rootwait
 EOF
 
@@ -399,7 +413,7 @@ e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.ext4:extlinux
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/extlinux/extlinux.conf $ROOTDIR/images/tmp/ubuntu-core.ext4:extlinux/
 e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.ext4:boot
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/Image $ROOTDIR/images/tmp/ubuntu-core.ext4:boot/
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/fsl-lx2160a-cex7.dtb $ROOTDIR/images/tmp/ubuntu-core.ext4:boot/
+e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/fsl-lx216*.dtb $ROOTDIR/images/tmp/ubuntu-core.ext4:boot/
 
 # Copy over kernel image
 echo "Copying kernel modules"
@@ -475,7 +489,7 @@ if [ "x$RELEASE" == "xLSDK-20.04" ]; then
 	MC=mc_10.24.0_lx2160a.itb
 	dd if=$ROOTDIR/build/qoriq-mc-binary/lx2160a/${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
 else
-	MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/ | cut -f1`
+	MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/ | grep -v sha256sum | cut -f1`
 	dd if=$ROOTDIR/build/qoriq-mc-binary/lx216xa/${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
 fi
 

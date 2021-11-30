@@ -1,0 +1,181 @@
+From 28aacde9406bd28c8660b1065d21e58a6bec570a Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Mon, 29 Nov 2021 16:43:00 +0200
+Subject: [PATCH] arch: arm64: dts: lx2162 add som and solidnet device trees
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/Makefile        |   1 +
+ .../dts/freescale/fsl-lx2162a-solidnet.dts    |  31 +++++
+ .../boot/dts/freescale/fsl-lx2162a-som.dtsi   | 109 ++++++++++++++++++
+ 3 files changed, 141 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/freescale/fsl-lx2162a-solidnet.dts
+ create mode 100644 arch/arm64/boot/dts/freescale/fsl-lx2162a-som.dtsi
+
+diff --git a/arch/arm64/boot/dts/freescale/Makefile b/arch/arm64/boot/dts/freescale/Makefile
+index cfb8166a6aa3..eaf7319389b6 100644
+--- a/arch/arm64/boot/dts/freescale/Makefile
++++ b/arch/arm64/boot/dts/freescale/Makefile
+@@ -53,6 +53,7 @@ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls2088a-qds.dtb
+ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls2088a-rdb.dtb
+ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-clearfog-cx.dtb
+ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-honeycomb.dtb
++dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2162a-solidnet.dtb
+ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-qds.dtb
+ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-rdb.dtb
+ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2162a-qds.dtb
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-solidnet.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-solidnet.dts
+new file mode 100644
+index 000000000000..2878a460183f
+--- /dev/null
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-solidnet.dts
+@@ -0,0 +1,31 @@
++// SPDX-License-Identifier: (GPL-2.0 OR MIT)
++//
++// Device Tree file for LX2162A SolidNet
++//
++// Copyright 2021 SolidRun ltd. (Rabeeh@solid-run.com)
++
++/dts-v1/;
++
++#include "fsl-lx2162a-som.dtsi"
++
++/ {
++	model = "SolidRun LX2162A based SolidNet";
++	compatible = "fsl,lx2162a-dpu", "fsl,lx2160a";
++	aliases {
++		crypto = &crypto;
++		serial0 = &uart0;
++	};
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++};
++
++&dpmac5 {
++	phy-connection-type = "usxgmii";
++	managed = "in-band-status";
++};
++
++&dpmac6 {
++	phy-connection-type = "usxgmii";
++	managed = "in-band-status";
++};
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-som.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2162a-som.dtsi
+new file mode 100644
+index 000000000000..9b90cef2df04
+--- /dev/null
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-som.dtsi
+@@ -0,0 +1,109 @@
++// SPDX-License-Identifier: (GPL-2.0 OR MIT)
++//
++// Device Tree file for LX2162A-SOM
++//
++// Copyright 2021 SolidRun Ltd. (rabeeh@solid-run.com)
++
++
++#include "fsl-lx2160a.dtsi"
++
++&crypto {
++	status = "okay";
++};
++
++&dpmac17 {
++	phy-handle = <&rgmii_phy1>;
++	phy-connection-type = "rgmii-id";
++};
++
++&emdio1 {
++	status = "okay";
++
++	rgmii_phy1: ethernet-phy@1 {
++		reg = <1>;
++	};
++};
++
++&esdhc1 {
++	mmc-hs200-1_8v;
++	mmc-hs400-1_8v;
++	bus-width = <8>;
++	status = "okay";
++};
++
++&i2c0 {
++	status = "okay";
++	lx2162a-som-fan-temperature-ctrlr@18 {
++		compatible = "ti,amc6821";
++		reg = <0x18>;
++		cooling-min-state = <0>;
++		cooling-max-state = <9>;
++		#cooling-cells = <2>;
++	};
++	tps5622@69 {
++		compatible = "tps53679";
++		reg = <0x69>;
++	};
++};
++
++&i2c2 {
++	status = "okay";
++};
++
++&i2c4 {
++	status = "okay";
++};
++
++&i2c5 {
++	status = "okay";
++	rtc@6f {
++		compatible = "microchip,mcp7940x";
++		reg = <0x6f>;
++	};
++};
++
++&fspi {
++	status = "okay";
++
++	flash@0 {
++		#address-cells = <1>;
++		#size-cells = <1>;
++		compatible = "micron,m25p80";
++		m25p,fast-read;
++		spi-max-frequency = <50000000>;
++		reg = <0>;
++		/* The following setting enables 1-1-8 (CMD-ADDR-DATA) mode */
++		spi-rx-bus-width = <8>;
++		spi-tx-bus-width = <8>;
++	};
++};
++
++&sata0 {
++	status = "okay";
++};
++
++&sata1 {
++	status = "okay";
++};
++
++&sata2 {
++	status = "okay";
++};
++
++&sata3 {
++	status = "okay";
++};
++
++&uart0 {
++	status = "okay";
++};
++
++&uart1 {
++	status = "okay";
++};
++
++&usb0 {
++	status = "okay";
++};
++
++
+-- 
+2.25.1
+

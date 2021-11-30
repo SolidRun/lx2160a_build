@@ -1,0 +1,26 @@
+From 2ae3b51f85375e32b818cb64fbe42750d1d6254f Mon Sep 17 00:00:00 2001
+From: Russell King <rmk@armlinux.org.uk>
+Date: Thu, 23 Jan 2020 15:53:30 +0000
+Subject: [PATCH] lx2160acex7: add SD1 mode 4 serdes configuration
+
+Add mode 4 serdes configuration for SGMII and 1000BASE-X on serdes 1.
+
+Signed-off-by: Russell King <rmk@armlinux.org.uk>
+---
+ lx2160acex7/configs/lx2160a_SD1_4.rcwi | 4 ++++
+ 1 file changed, 4 insertions(+)
+ create mode 100644 lx2160acex7/configs/lx2160a_SD1_4.rcwi
+
+diff --git a/lx2160acex7/configs/lx2160a_SD1_4.rcwi b/lx2160acex7/configs/lx2160a_SD1_4.rcwi
+new file mode 100644
+index 000000000000..ec8ca959b59b
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_SD1_4.rcwi
+@@ -0,0 +1,4 @@
++SRDS_PRTCL_S1=4
++/* SRDS_INTRA_REF_CLK_S1 = 1 PLLF used for PLLS */
++SRDS_PLL_REF_CLK_SEL_S1=0
++SRDS_PLL_PD_PLL1=1
+-- 
+2.20.1
+

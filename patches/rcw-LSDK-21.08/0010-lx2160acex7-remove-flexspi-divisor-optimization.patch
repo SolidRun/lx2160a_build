@@ -1,0 +1,144 @@
+From 4f1f779e2d0757ab1d328761c06dc09b9c6a3544 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Tue, 1 Sep 2020 12:39:31 +0300
+Subject: [PATCH 10/10] lx2160acex7: remove flexspi divisor optimization
+
+Keep the flexspi divisor as default; which is 17MHz when the fabric at
+700MHz.
+The HoneyComb / ClearFog CX carrier boards holds an SPI flash that it's
+MUX is limited to 20MHz.
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ lx2160acex7/configs/lx2160a_1900_600_2600.rcwi |  3 ---
+ lx2160acex7/configs/lx2160a_2000_700_2400.rcwi |  3 ---
+ lx2160acex7/configs/lx2160a_2000_700_2600.rcwi |  3 ---
+ lx2160acex7/configs/lx2160a_2000_700_2900.rcwi |  3 ---
+ lx2160acex7/configs/lx2160a_2000_700_3200.rcwi |  3 ---
+ lx2160acex7/configs/lx2160a_2400_700_3200.rcwi |  3 ---
+ lx2160acex7/configs/lx2160a_2500_700_3200.rcwi |  3 ---
+ lx2160acex7/configs/lx2160a_2600_700_3200.rcwi |  3 ---
+ lx2160acex7/configs/lx2160a_defaults.rcwi      | 10 ++++++++--
+ lx2160acex7/configs/lx2160a_xspiboot.rcwi      |  3 ---
+ 10 files changed, 8 insertions(+), 29 deletions(-)
+
+diff --git a/lx2160acex7/configs/lx2160a_1900_600_2600.rcwi b/lx2160acex7/configs/lx2160a_1900_600_2600.rcwi
+index 8b61021..a3b7b29 100644
+--- a/lx2160acex7/configs/lx2160a_1900_600_2600.rcwi
++++ b/lx2160acex7/configs/lx2160a_1900_600_2600.rcwi
+@@ -7,6 +7,3 @@ SYS_PLL_RAT=12
+ 
+ MEM_PLL_RAT=26
+ MEM2_PLL_RAT=26
+-
+-/* Modify FlexSPI Clock Divisor value */
+-/* #include <../lx2160asi/flexspi_divisor_24.rcw>*/
+diff --git a/lx2160acex7/configs/lx2160a_2000_700_2400.rcwi b/lx2160acex7/configs/lx2160a_2000_700_2400.rcwi
+index 6b0b150..4cb3abf 100644
+--- a/lx2160acex7/configs/lx2160a_2000_700_2400.rcwi
++++ b/lx2160acex7/configs/lx2160a_2000_700_2400.rcwi
+@@ -7,6 +7,3 @@ SYS_PLL_RAT=14
+ 
+ MEM_PLL_RAT=24
+ MEM2_PLL_RAT=24
+-
+-/* Modify FlexSPI Clock Divisor value */
+-/* #include <../lx2160asi/flexspi_divisor_28.rcw>*/
+diff --git a/lx2160acex7/configs/lx2160a_2000_700_2600.rcwi b/lx2160acex7/configs/lx2160a_2000_700_2600.rcwi
+index 21dce67..a5c436c 100644
+--- a/lx2160acex7/configs/lx2160a_2000_700_2600.rcwi
++++ b/lx2160acex7/configs/lx2160a_2000_700_2600.rcwi
+@@ -7,6 +7,3 @@ SYS_PLL_RAT=14
+ 
+ MEM_PLL_RAT=26
+ MEM2_PLL_RAT=26
+-
+-/* Modify FlexSPI Clock Divisor value */
+-/* #include <../lx2160asi/flexspi_divisor_28.rcw>*/
+diff --git a/lx2160acex7/configs/lx2160a_2000_700_2900.rcwi b/lx2160acex7/configs/lx2160a_2000_700_2900.rcwi
+index e6a8e30..d1db3fb 100644
+--- a/lx2160acex7/configs/lx2160a_2000_700_2900.rcwi
++++ b/lx2160acex7/configs/lx2160a_2000_700_2900.rcwi
+@@ -7,6 +7,3 @@ SYS_PLL_RAT=14
+ 
+ MEM_PLL_RAT=29
+ MEM2_PLL_RAT=29
+-
+-/* Modify FlexSPI Clock Divisor value */
+-/* #include <../lx2160asi/flexspi_divisor_28.rcw>*/
+diff --git a/lx2160acex7/configs/lx2160a_2000_700_3200.rcwi b/lx2160acex7/configs/lx2160a_2000_700_3200.rcwi
+index 27ee377..22fcadf 100644
+--- a/lx2160acex7/configs/lx2160a_2000_700_3200.rcwi
++++ b/lx2160acex7/configs/lx2160a_2000_700_3200.rcwi
+@@ -7,6 +7,3 @@ SYS_PLL_RAT=14
+ 
+ MEM_PLL_RAT=32
+ MEM2_PLL_RAT=32
+-
+-/* Modify FlexSPI Clock Divisor value */
+-#include <../lx2160asi/flexspi_divisor_28.rcw>
+diff --git a/lx2160acex7/configs/lx2160a_2400_700_3200.rcwi b/lx2160acex7/configs/lx2160a_2400_700_3200.rcwi
+index fc0fd6c..8f74ff0 100644
+--- a/lx2160acex7/configs/lx2160a_2400_700_3200.rcwi
++++ b/lx2160acex7/configs/lx2160a_2400_700_3200.rcwi
+@@ -7,6 +7,3 @@ SYS_PLL_RAT=14
+ 
+ MEM_PLL_RAT=32
+ MEM2_PLL_RAT=32
+-
+-/* Modify FlexSPI Clock Divisor value */
+-#include <../lx2160asi/flexspi_divisor_28.rcw>
+diff --git a/lx2160acex7/configs/lx2160a_2500_700_3200.rcwi b/lx2160acex7/configs/lx2160a_2500_700_3200.rcwi
+index 62d9069..2dc1460 100644
+--- a/lx2160acex7/configs/lx2160a_2500_700_3200.rcwi
++++ b/lx2160acex7/configs/lx2160a_2500_700_3200.rcwi
+@@ -7,6 +7,3 @@ SYS_PLL_RAT=14
+ 
+ MEM_PLL_RAT=32
+ MEM2_PLL_RAT=32
+-
+-/* Modify FlexSPI Clock Divisor value */
+-#include <../lx2160asi/flexspi_divisor_28.rcw>
+diff --git a/lx2160acex7/configs/lx2160a_2600_700_3200.rcwi b/lx2160acex7/configs/lx2160a_2600_700_3200.rcwi
+index e244917..d9fd795 100644
+--- a/lx2160acex7/configs/lx2160a_2600_700_3200.rcwi
++++ b/lx2160acex7/configs/lx2160a_2600_700_3200.rcwi
+@@ -7,6 +7,3 @@ SYS_PLL_RAT=14
+ 
+ MEM_PLL_RAT=32
+ MEM2_PLL_RAT=32
+-
+-/* Modify FlexSPI Clock Divisor value */
+-#include <../lx2160asi/flexspi_divisor_28.rcw>
+diff --git a/lx2160acex7/configs/lx2160a_defaults.rcwi b/lx2160acex7/configs/lx2160a_defaults.rcwi
+index 7997d49..359e86c 100644
+--- a/lx2160acex7/configs/lx2160a_defaults.rcwi
++++ b/lx2160acex7/configs/lx2160a_defaults.rcwi
+@@ -45,5 +45,11 @@ write 0x2320000,0x20000000
+ /* common PBI commands */
+ #include <../lx2160asi/common.rcw>
+ 
+-/* Modify FlexSPI Clock Divisor value - for now keep it fixed value but using loadc/jumpc/jump it can be calculated on the fly */
+-#include <../lx2160asi/flexspi_divisor_28.rcw>
++/*
++ * Do not modify the FlexSPI clock divisor value when using HoneyComb / ClearFog CX
++ * as carrier boards. The reason is that the analog mux used on the carrier board
++ * can't accomodate more than 20MHz SPI frequency. So keep the value default 0x14
++ * which indicates divide by 80. In 700MHz fabric clock this is around 17MHz SPI
++ * clock.
++ */
++/*#include <../lx2160asi/flexspi_divisor_28.rcw>*/
+diff --git a/lx2160acex7/configs/lx2160a_xspiboot.rcwi b/lx2160acex7/configs/lx2160a_xspiboot.rcwi
+index fa092c9..21782ec 100644
+--- a/lx2160acex7/configs/lx2160a_xspiboot.rcwi
++++ b/lx2160acex7/configs/lx2160a_xspiboot.rcwi
+@@ -6,6 +6,3 @@
+ 
+ /* common PBI commands */
+ #include <../lx2160asi/common.rcw>
+-
+-/* Modify FlexSPI Clock Divisor value */
+-#include <../lx2160asi/flexspi_divisor_28.rcw>
+-- 
+2.17.1
+

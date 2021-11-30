@@ -1,0 +1,66 @@
+From 04ac1bae27bc5eafc588431bc9e268e655f5bb38 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Mon, 14 Jun 2021 08:30:53 +0300
+Subject: [PATCH] lx2160acex7: more SERDES prototocol configurations
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ lx2160acex7/configs/lx2160a_SD1_0.rcwi | 3 +++
+ lx2160acex7/configs/lx2160a_SD1_7.rcwi | 6 ++++++
+ lx2160acex7/configs/lx2160a_SD2_0.rcwi | 3 +++
+ lx2160acex7/configs/lx2160a_SD2_9.rcwi | 1 +
+ lx2160acex7/configs/lx2160a_SD3_0.rcwi | 2 ++
+ 5 files changed, 15 insertions(+)
+ create mode 100644 lx2160acex7/configs/lx2160a_SD1_0.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160a_SD1_7.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160a_SD2_0.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160a_SD2_9.rcwi
+
+diff --git a/lx2160acex7/configs/lx2160a_SD1_0.rcwi b/lx2160acex7/configs/lx2160a_SD1_0.rcwi
+new file mode 100644
+index 0000000..8a2dd84
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_SD1_0.rcwi
+@@ -0,0 +1,3 @@
++SRDS_PRTCL_S1=0
++SRDS_PLL_PD_PLL1=1
++SRDS_PLL_PD_PLL2=1
+diff --git a/lx2160acex7/configs/lx2160a_SD1_7.rcwi b/lx2160acex7/configs/lx2160a_SD1_7.rcwi
+new file mode 100644
+index 0000000..73a8115
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_SD1_7.rcwi
+@@ -0,0 +1,6 @@
++/*
++ * Notice that this requires swapping PLLF and PLLS on the PCB.
++ */
++
++SRDS_PRTCL_S1=7
++SRDS_PLL_REF_CLK_SEL_S1=2
+diff --git a/lx2160acex7/configs/lx2160a_SD2_0.rcwi b/lx2160acex7/configs/lx2160a_SD2_0.rcwi
+new file mode 100644
+index 0000000..a1215d2
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_SD2_0.rcwi
+@@ -0,0 +1,3 @@
++SRDS_PRTCL_S2=0
++SRDS_PLL_PD_PLL3=1
++SRDS_PLL_PD_PLL4=1
+diff --git a/lx2160acex7/configs/lx2160a_SD2_9.rcwi b/lx2160acex7/configs/lx2160a_SD2_9.rcwi
+new file mode 100644
+index 0000000..c3e03a5
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160a_SD2_9.rcwi
+@@ -0,0 +1 @@
++SRDS_PRTCL_S2=9
+diff --git a/lx2160acex7/configs/lx2160a_SD3_0.rcwi b/lx2160acex7/configs/lx2160a_SD3_0.rcwi
+index 1904856..0ff505d 100644
+--- a/lx2160acex7/configs/lx2160a_SD3_0.rcwi
++++ b/lx2160acex7/configs/lx2160a_SD3_0.rcwi
+@@ -1 +1,3 @@
+ SRDS_PRTCL_S3=0
++SRDS_PLL_PD_PLL5=1
++SRDS_PLL_PD_PLL6=1
+-- 
+2.25.1
+

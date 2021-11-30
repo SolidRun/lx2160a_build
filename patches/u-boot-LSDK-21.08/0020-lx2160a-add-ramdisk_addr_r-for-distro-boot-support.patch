@@ -1,0 +1,47 @@
+From 19c1a661a69a7b2d6af0867c112e1cf25acd03b6 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Mon, 29 Nov 2021 16:17:16 +0200
+Subject: [PATCH] lx2160a: add ramdisk_addr_r for distro-boot support
+
+Because ramdisks can be huge, the addresses were reordered by size so
+that ramdisk is loaded beyond kernel and fdt:
+- 0x81000000: 1MB for DTB
+- 0x81100000: 255MB for Kernel
+- 0x90000000: open end for ramdisk
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ include/configs/lx2160a_common.h | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/include/configs/lx2160a_common.h b/include/configs/lx2160a_common.h
+index 4a9c28858f..c18b9170ad 100644
+--- a/include/configs/lx2160a_common.h
++++ b/include/configs/lx2160a_common.h
+@@ -238,7 +238,8 @@ int select_i2c_ch_pca9547_sec(unsigned char ch);
+ 
+ #define EXTRA_ENV_SETTINGS			\
+ 	"hwconfig=fsl_ddr:bank_intlv=auto\0"	\
+-	"ramdisk_addr=0x800000\0"		\
++	"ramdisk_addr=0x9000000\0"		\
++	"ramdisk_addr_r=0x9000000\0"		\
+ 	"ramdisk_size=0x2000000\0"		\
+ 	"fdt_high=0xa0000000\0"			\
+ 	"initrd_high=0xffffffffffffffff\0"	\
+@@ -248,10 +249,10 @@ int select_i2c_ch_pca9547_sec(unsigned char ch);
+ 	"scripthdraddr=0x80080000\0"		\
+ 	"fdtheader_addr_r=0x80100000\0"		\
+ 	"kernelheader_addr_r=0x80200000\0"	\
+-	"kernel_addr_r=0x81000000\0"		\
++	"kernel_addr_r=0x81100000\0"		\
+ 	"kernelheader_size=0x40000\0"		\
+-	"fdt_addr_r=0x90000000\0"		\
+-	"fdt_addr=0x90000000\0"                 \
++	"fdt_addr_r=0x81000000\0"		\
++	"fdt_addr=0x81000000\0"                 \
+ 	"load_addr=0xa0000000\0"		\
+ 	"kernel_size=0x2800000\0"		\
+ 	"kernel_addr_sd=0x8000\0"		\
+-- 
+2.25.1
+

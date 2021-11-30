@@ -1,0 +1,46 @@
+From f438a4ae56663a82d0ffbf02cddf5e67be54932a Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Sun, 28 Nov 2021 13:28:56 +0200
+Subject: [PATCH 2/4] plat/nxp: Add lx2162-som support
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c b/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
+index 3e1881d4a..eb28216e7 100644
+--- a/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
++++ b/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
+@@ -25,6 +25,7 @@
+ int ddr_board_options(struct ddr_info *priv)
+ {
+ 	struct memctl_opt *popts = &priv->opt;
++	uint32_t svr;
+ 
+ 	popts->vref_dimm = 0x24;		/* range 1, 83.4% */
+ 	popts->rtt_override = 0;
+@@ -42,7 +43,20 @@ int ddr_board_options(struct ddr_info *priv)
+ 	popts->odt = 48;
+ 	popts->phy_tx_impedance = 48;
+ 
++	svr = mmio_read_32(NXP_DCFG_ADDR + DCFG_SVR_OFFSET);
++	/* LX2162-SOM */
++	if (svr & 0x800) {
++		popts->vref_dimm = 0x19;
++		popts->rtt_override = 1;
++		popts->rtt_override_value = 0x5;
++		popts->output_driver_impedance = 1;
++		popts->rtt_park = 120;
++		popts->phy_atx_impedance = 20;
++		popts->vref_phy = 0x4D;
++		popts->odt = 60;
++	}
+ 	return 0;
++
+ }
+ 
+ long long init_ddr(void)
+-- 
+2.25.1
+
