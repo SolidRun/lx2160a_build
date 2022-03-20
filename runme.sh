@@ -19,6 +19,7 @@ UEFI_RELEASE=${UEFI_RELEASE:-RELEASE}
 SHALLOW=${SHALLOW:false}
 SECURE=${SECURE:false}
 ATF_DEBUG=${ATF_DEBUG:false}
+DISTRO=${DISTRO:ubuntu}
 
 if [ "x$SHALLOW" == "xtrue" ]; then
 	SHALLOW_FLAG="--depth 1"
@@ -106,6 +107,21 @@ case "${DDR_SPEED}" in
 	;;
 esac
 
+case "${DISTRO}" in
+	ubuntu)
+		ROOTFS=ubuntu-core
+		ROOTFS_SIZE=350M
+	;;
+	debian)
+		ROOTFS=debian-bullseye
+		ROOTFS_SIZE=350M
+	;;
+	*)
+		echo "Please use one of the supported distros"
+		exit -1
+	;;
+esac
+
 echo "Checking all required tools are installed"
 
 set +e
@@ -187,7 +203,7 @@ for i in $QORIQ_COMPONENTS; do
 done
 
 
-if [[ ! -f $ROOTDIR/build/ubuntu-core.ext4 ]]; then
+if [[ ! -f $ROOTDIR/build/ubuntu-core.ext4 ]] && [ "x$DISTRO" == "xubuntu" ]; then
 	cd $ROOTDIR/build
 	mkdir -p ubuntu
 	cd ubuntu
@@ -234,9 +250,65 @@ EOF
 	chmod +x overlay/etc/init.d/S99bootstrap-ubuntu.sh
 	make
 	IMG=ubuntu-core.ext4.tmp
-	truncate -s 350M $IMG
+	truncate -s $ROOTFS_SIZE $IMG
 	qemu-system-aarch64 -m 1G -M virt -cpu cortex-a57 -nographic -smp 1 -kernel output/images/Image -append "console=ttyAMA0" -netdev user,id=eth0 -device virtio-net-device,netdev=eth0 -initrd output/images/rootfs.cpio.gz -drive file=$IMG,if=none,format=raw,id=hd0 -device virtio-blk-device,drive=hd0 -no-reboot
 	mv $IMG $ROOTDIR/build/ubuntu-core.ext4
+fi
+
+if [[ ! -f $ROOTDIR/build/debian-bullseye.ext4 ]] && [ "x$DISTRO" == "xdebian" ]; then
+	cd $ROOTDIR/build
+	mkdir -p debian
+	cd debian
+	if [ ! -d buildroot ]; then
+		git clone $SHALLOW_FLAG https://github.com/buildroot/buildroot -b $BUILDROOT_VERSION
+	fi
+	cd buildroot
+	cp $ROOTDIR/configs/buildroot/lx2160acex7_defconfig configs/
+	make lx2160acex7_defconfig
+	mkdir -p overlay/etc/init.d/
+	cat > overlay/etc/init.d/S99bootstrap-debian.sh << EOF
+#!/bin/sh
+
+case "\$1" in
+	start)
+		resize
+		mkfs.ext4 -F /dev/vda -b 4096
+		mount /dev/vda /mnt
+		cd /tmp
+		udhcpc -i eth0
+		wget http://deb.debian.org/debian/pool/main/d/debootstrap/debootstrap_1.0.123.tar.gz
+		tar zxf debootstrap*.tar.gz
+		cd debootstrap
+		mkdir -p /usr/share/debootstrap/scripts
+		mkdir -p /usr/sbin
+		cp -a scripts/* /usr/share/debootstrap/scripts
+		install -o root -g root -m 0644 functions /usr/share/debootstrap
+		sed 's/@VERSION@/\$(VERSION)/g' debootstrap > /usr/sbin/debootstrap
+		chown root:root /usr/sbin/debootstrap
+		chmod 0755 /usr/sbin/debootstrap
+		mkdir -p /tmp/cache
+		mkdir -p /mnt/var/lib/apt
+		mkdir -p /mnt/var/cache/apt
+		mount -t tmpfs tmpfs /mnt/var/lib/apt/
+		mount -t tmpfs tmpfs /mnt/var/cache/apt/
+		debootstrap --no-check-certificate --verbose --arch arm64 --cache-dir=/tmp/cache --include=fdisk,e2fsprogs,isc-dhcp-client,ntpdate,sudo bullseye /mnt
+		#debootstrap --no-check-certificate --verbose --arch arm64 --cache-dir=/tmp/cache --include=locales,less,wget,procps,openssh-server,ifupdown,net-tools,isc-dhcp-client,ntpdate,lm-sensors,i2c-tools,psmisc,sudo,htop,iproute2,iputils-ping,kmod,network-manager,iptables,rng-tools,apt-utils bullseye /mnt
+		echo "nameserver 8.8.8.8" > /mnt/etc/resolv.conf
+		echo "localhost" > /mnt/etc/hostname
+		echo "127.0.0.1 localhost" > /mnt/etc/hosts
+		echo -e "root\nroot" | chroot /mnt passwd
+		umount /mnt/var/lib/apt/
+		umount /mnt/var/cache/apt/
+		reboot
+		;;
+esac
+EOF
+	chmod +x overlay/etc/init.d/S99bootstrap-debian.sh
+	make
+	IMG=debian-bullseye.ext4.tmp
+	truncate -s 350M $IMG
+	qemu-system-aarch64 -m 1G -M virt -cpu cortex-a57 -nographic -smp 1 -kernel output/images/Image -append "console=ttyAMA0" -netdev user,id=eth0 -device virtio-net-device,netdev=eth0 -initrd output/images/rootfs.cpio.gz -drive file=$IMG,if=none,format=raw,id=hd0 -device virtio-blk-device,drive=hd0 -no-reboot
+	mv $IMG $ROOTDIR/build/debian-bullseye.ext4
 fi
 
 if [[ ! -d $ROOTDIR/build/qoriq-mc-binary ]]; then
@@ -407,24 +479,23 @@ cat > $ROOTDIR/images/tmp/extlinux/extlinux.conf << EOF
     APPEND console=ttyAMA0,115200 earlycon=pl011,mmio32,0x21c0000 default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf root=PARTUUID=30303030-01 rw rootwait
 EOF
 
-# blkid images/tmp/ubuntu-core.img | cut -f2 -d'"'
-cp $ROOTDIR/build/ubuntu-core.ext4 $ROOTDIR/images/tmp/
-e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.ext4:extlinux
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/extlinux/extlinux.conf $ROOTDIR/images/tmp/ubuntu-core.ext4:extlinux/
-e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.ext4:boot
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/Image $ROOTDIR/images/tmp/ubuntu-core.ext4:boot/
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/fsl-lx216*.dtb $ROOTDIR/images/tmp/ubuntu-core.ext4:boot/
+cp $ROOTDIR/build/$ROOTFS.ext4 $ROOTDIR/images/tmp/
+e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:extlinux
+e2cp -G 0 -O 0 $ROOTDIR/images/tmp/extlinux/extlinux.conf $ROOTDIR/images/tmp/$ROOTFS.ext4:extlinux/
+e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:boot
+e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/Image $ROOTDIR/images/tmp/$ROOTFS.ext4:boot/
+e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/fsl-lx216*.dtb $ROOTDIR/images/tmp/$ROOTFS.ext4:boot/
 
 # Copy over kernel image
 echo "Copying kernel modules"
 cd $ROOTDIR/images/tmp/
 for i in `find lib`; do
 	if [ -d $i ]; then
-		e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.ext4:usr/$i
+		e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:usr/$i
 	fi
 	if [ -f $i ]; then
 		DIR=`dirname $i`
-		e2cp -G 0 -O 0 -p $ROOTDIR/images/tmp/$i $ROOTDIR/images/tmp/ubuntu-core.ext4:usr/$DIR
+		e2cp -G 0 -O 0 -p $ROOTDIR/images/tmp/$i $ROOTDIR/images/tmp/$ROOTFS.ext4:usr/$DIR
 	fi
 done
 cd -
@@ -432,20 +503,20 @@ cd -
 # install restool
 echo "Install restool"
 cd $ROOTDIR/
-e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/ls-append-dpl $ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/
-e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/ls-main $ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/
-e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/restool $ROOTDIR/images/tmp/ubuntu-core.ext4:/usr/bin/
-e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-addmux
-e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-addni
-e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-addsw
-e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-listmac
-e2ln images/tmp/ubuntu-core.ext4:/usr/bin/ls-main /usr/bin/ls-listni
+e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/ls-append-dpl $ROOTDIR/images/tmp/$ROOTFS.ext4:/usr/bin/
+e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/ls-main $ROOTDIR/images/tmp/$ROOTFS.ext4:/usr/bin/
+e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/restool $ROOTDIR/images/tmp/$ROOTFS.ext4:/usr/bin/
+e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-addmux
+e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-addni
+e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-addsw
+e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-listmac
+e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-listni
 
-truncate -s 420M $ROOTDIR/images/tmp/ubuntu-core.img
-parted --script $ROOTDIR/images/tmp/ubuntu-core.img mklabel msdos mkpart primary 64MiB 417MiB
+truncate -s 420M $ROOTDIR/images/tmp/$ROOTFS.img
+parted --script $ROOTDIR/images/tmp/$ROOTFS.img mklabel msdos mkpart primary 64MiB 417MiB
 # Generate the above partuuid 3030303030 which is the 4 characters of '0' in ascii
-echo "0000" | dd of=$ROOTDIR/images/tmp/ubuntu-core.img bs=1 seek=440 conv=notrunc
-dd if=$ROOTDIR/images/tmp/ubuntu-core.ext4 of=$ROOTDIR/images/tmp/ubuntu-core.img bs=1M seek=64 conv=notrunc
+echo "0000" | dd of=$ROOTDIR/images/tmp/$ROOTFS.img bs=1 seek=440 conv=notrunc
+dd if=$ROOTDIR/images/tmp/$ROOTFS.ext4 of=$ROOTDIR/images/tmp/$ROOTFS.img bs=1M seek=64 conv=notrunc
 
 echo "Assembling Boot Image"
 cd $ROOTDIR/
@@ -509,6 +580,6 @@ dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/${BL2}.pbl of=images/lx2
 dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/${BL2}.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
 
 # Copy first 64MByte from image excluding MBR to ubuntu-core.img for eMMC boot
-dd if=images/${IMG} of=$ROOTDIR/images/tmp/ubuntu-core.img bs=512 seek=1 skip=1 count=131071 conv=notrunc
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/ubuntu-core.img $ROOTDIR/images/tmp/boot.part:/
+dd if=images/${IMG} of=$ROOTDIR/images/tmp/$ROOTFS.img bs=512 seek=1 skip=1 count=131071 conv=notrunc
+e2cp -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.img $ROOTDIR/images/tmp/boot.part:/
 dd if=$ROOTDIR/images/tmp/boot.part of=$ROOTDIR/images/${IMG} bs=1M seek=64
