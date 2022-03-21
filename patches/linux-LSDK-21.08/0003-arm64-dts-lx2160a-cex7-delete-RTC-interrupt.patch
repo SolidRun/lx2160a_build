@@ -1,0 +1,33 @@
+From 12dffe14e372ab7af26c12ca4cc91876a0fb7b41 Mon Sep 17 00:00:00 2001
+From: Russell King <rmk+kernel@armlinux.org.uk>
+Date: Sun, 10 Jan 2021 13:58:15 +0000
+Subject: [PATCH] arm64: dts: lx2160a-cex7: delete RTC interrupt
+
+The RTC interrupt is incorrect and prevents the RTC driver
+initialising. In any case, the PCF2127 driver wants an active low
+interrupt, which neither the GIC nor the GPIO blocks support.
+There is an ISPPT block in the LX2160A, but this is not supported
+in mainline kernels. So, just delete the interrupt.
+
+Signed-off-by: Russell King <rmk+kernel@armlinux.org.uk>
+Signed-off-by: Shawn Guo <shawnguo@kernel.org>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+index d87d16460875..49fcf025494f 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+@@ -134,8 +134,6 @@ &i2c4 {
+ 	rtc@51 {
+ 		compatible = "nxp,pcf2129";
+ 		reg = <0x51>;
+-		// IRQ10_B
+-		interrupts = <GIC_SPI 150 IRQ_TYPE_LEVEL_HIGH>;
+ 	};
+ };
+ 
+-- 
+2.25.1
+

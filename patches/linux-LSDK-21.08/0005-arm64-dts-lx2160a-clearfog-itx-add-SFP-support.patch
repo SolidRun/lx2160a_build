@@ -1,0 +1,134 @@
+From 312a46148513d8567d013c3474e64543aeea5950 Mon Sep 17 00:00:00 2001
+From: Russell King <rmk+kernel@armlinux.org.uk>
+Date: Tue, 9 Mar 2021 16:36:58 +0000
+Subject: [PATCH] arm64: dts: lx2160a-clearfog-itx: add SFP support
+
+Add 2x2 SFP+ cage support for clearfog-itx boards.
+
+Signed-off-by: Russell King <rmk+kernel@armlinux.org.uk>
+Signed-off-by: Shawn Guo <shawnguo@kernel.org>
+---
+ .../boot/dts/freescale/fsl-lx2160a-cex7.dtsi  | 24 +++++++
+ .../freescale/fsl-lx2160a-clearfog-itx.dtsi   | 64 +++++++++++++++++++
+ 2 files changed, 88 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+index 459dccad8326..afb455210bd0 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+@@ -122,6 +122,30 @@ temperature-sensor@48 {
+ 				vcc-supply = <&sb_3v3>;
+ 			};
+ 		};
++
++		sfp0_i2c: i2c@4 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <4>;
++		};
++
++		sfp1_i2c: i2c@5 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <5>;
++		};
++
++		sfp2_i2c: i2c@6 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <6>;
++		};
++
++		sfp3_i2c: i2c@7 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <7>;
++		};
+ 	};
+ };
+ 
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+index 2b63235ca627..17f8e733972a 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+@@ -30,6 +30,54 @@ key {
+ 			gpios = <&gpio2 6 GPIO_ACTIVE_LOW>;
+ 		};
+ 	};
++
++	sfp0: sfp-0 {
++		compatible = "sff,sfp";
++		i2c-bus = <&sfp0_i2c>;
++		mod-def0-gpio = <&gpio2 0 GPIO_ACTIVE_LOW>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp1: sfp-1 {
++		compatible = "sff,sfp";
++		i2c-bus = <&sfp1_i2c>;
++		mod-def0-gpio = <&gpio2 9 GPIO_ACTIVE_LOW>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp2: sfp-2 {
++		compatible = "sff,sfp";
++		i2c-bus = <&sfp2_i2c>;
++		mod-def0-gpio = <&gpio2 10 GPIO_ACTIVE_LOW>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp3: sfp-3 {
++		compatible = "sff,sfp";
++		i2c-bus = <&sfp3_i2c>;
++		mod-def0-gpio = <&gpio2 11 GPIO_ACTIVE_LOW>;
++		maximum-power-milliwatt = <2000>;
++	};
++};
++
++&dpmac7 {
++	sfp = <&sfp0>;
++	managed = "in-band-status";
++};
++
++&dpmac8 {
++	sfp = <&sfp1>;
++	managed = "in-band-status";
++};
++
++&dpmac9 {
++	sfp = <&sfp2>;
++	managed = "in-band-status";
++};
++
++&dpmac10 {
++	sfp = <&sfp3>;
++	managed = "in-band-status";
+ };
+ 
+ &emdio2 {
+@@ -44,6 +92,22 @@ &esdhc0 {
+ 	status = "okay";
+ };
+ 
++&pcs_mdio7 {
++	status = "okay";
++};
++
++&pcs_mdio8 {
++	status = "okay";
++};
++
++&pcs_mdio9 {
++	status = "okay";
++};
++
++&pcs_mdio10 {
++	status = "okay";
++};
++
+ &sata0 {
+ 	status = "okay";
+ };
+-- 
+2.25.1
+

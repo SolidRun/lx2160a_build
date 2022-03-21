@@ -1,0 +1,35 @@
+From 22171213e503edce38f249cff82b9ad3775b9026 Mon Sep 17 00:00:00 2001
+From: Russell King <rmk+kernel@armlinux.org.uk>
+Date: Fri, 15 Jan 2021 23:36:39 +0000
+Subject: [PATCH] arm64: dts: lx2160a-cex7: increase at8035 PHY gigabit Tw
+ parameter
+
+Increase the SmartEEE Tw parameter for Atheros PHYs to stop gigabit
+links from sporadically dropping. Testing on this platform shows that
+a value of 24 results in a stable link, whereas 23 or below has the
+occasional drop.
+
+Tested with a Netgear GS116 unmanaged switch link partner with Cat 5e
+cabling.
+
+Signed-off-by: Russell King <rmk+kernel@armlinux.org.uk>
+Signed-off-by: Shawn Guo <shawnguo@kernel.org>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+index 49fcf025494f..459dccad8326 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+@@ -40,6 +40,7 @@ &emdio1 {
+ 
+ 	rgmii_phy1: ethernet-phy@1 {
+ 		reg = <1>;
++		qca,smarteee-tw-us-1g = <24>;
+ 	};
+ };
+ 
+-- 
+2.25.1
+
