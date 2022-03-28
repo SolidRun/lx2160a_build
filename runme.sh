@@ -12,14 +12,14 @@ BUILDROOT_VERSION=2020.02.1
 ###############################################################################
 # Misc
 ###############################################################################
-RELEASE=${RELEASE:-LSDK-21.08}
-DDR_SPEED=${DDR_SPEED:-3200}
-SERDES=${SERDES:-8_5_2}
-UEFI_RELEASE=${UEFI_RELEASE:-RELEASE}
-SHALLOW=${SHALLOW:false}
-SECURE=${SECURE:false}
-ATF_DEBUG=${ATF_DEBUG:false}
-DISTRO=${DISTRO:ubuntu}
+: ${RELEASE:=LSDK-21.08}
+: ${DDR_SPEED:=2600}
+: ${SERDES:=8_5_2}
+: ${UEFI_RELEASE:=RELEASE}
+: ${SHALLOW:=false}
+: ${SECURE:=false}
+: ${ATF_DEBUG:=false}
+: ${DISTRO:=ubuntu}
 
 if [ "x$SHALLOW" == "xtrue" ]; then
 	SHALLOW_FLAG="--depth 1"

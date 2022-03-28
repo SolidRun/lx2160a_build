@@ -16,11 +16,18 @@ A docker image providing a consistent build environment can be used as below:
 1. build container image (first time only)
    ```
    docker build -t lx2160a_build docker
+   # optional with an apt proxy, e.g. apt-cacher-ng
+   # docker build --build-arg APTPROXY=http://127.0.0.1:3142 -t lx2160a_build docker
    ```
 2. invoke build script in working directory
    ```
-   docker run -i -t -v "$PWD":/work lx2160a_build $(id -u) $(id -g)
+   docker run -i -t -v "$PWD":/work lx2160a_build -u $(id -u) -g $(id -g)
    ```
+
+### rootless Podman
+
+Due to the way podman performs user-id mapping, the root user inside the container (uid=0, gid=0) will be mapped to the user running podman (e.g. 1000:100).
+Therefore in order for the build directory to be owned by current user, `-u 0 -g 0` have to be passed to *docker run*.
 
 ## Build with host tools
 Simply running ./runme.sh will check for required tools, clone and build images and place results in images/ directory.
@@ -41,7 +48,7 @@ Selecting boot loader - *BOOT_LOADER=u-boot,uefi*
 
 ### Examples:
 - `./runme.sh` **or**
-- `docker run -i -t -v "$PWD":/work lx2160a_build $(id -u) $(id -g)`
+- `docker run -i -t -v "$PWD":/work lx2160a_build -u $(id -u) -g $(id -g)`
 
 generates *images/lx2160acex7_2000_700_3200_8_5_2.img* which is an image ready to be deployed on micro SD card and *images/lx2160acex7_xspi_2000_700_3200_8_5_2.img* which is an image ready to be deployed on the COM SPI flash.
 
