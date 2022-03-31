@@ -1,0 +1,92 @@
+From 706968646b36732de79aae3354a858bf387edf57 Mon Sep 17 00:00:00 2001
+From: Ioana Ciornei <ioana.ciornei@nxp.com>
+Date: Wed, 10 Nov 2021 17:09:06 +0200
+Subject: [PATCH 11/13] dpaa2-eth: configure the MAC XIF_MODE register on
+ protocol change
+
+This patch ioremaps the MEMAC XIF_MODE register in order to change the
+protocol (IFMODE field) from XLGMII (10G/25G mode) to GMII mode in case
+of a major reconfiguration.
+
+This is just a hack in the dpaa2-eth driver until we have support in the
+MC firmware.
+
+Signed-off-by: Ioana Ciornei <ioana.ciornei@nxp.com>
+---
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.c  | 26 +++++++++++++++++++
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.h  |  1 +
+ 2 files changed, 27 insertions(+)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index b174b59ea45b..6a5f754c8c61 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -165,6 +165,7 @@ static void dpaa2_mac_config(struct phylink_config *config, unsigned int mode,
+ {
+ 	struct dpaa2_mac *mac = phylink_to_dpaa2_mac(config);
+ 	struct dpmac_link_state *dpmac_state = &mac->state;
++	u32 if_mode, orig, tmp;
+ 	int err;
+ 
+ 	if (state->an_enabled)
+@@ -178,6 +179,24 @@ static void dpaa2_mac_config(struct phylink_config *config, unsigned int mode,
+ 		netdev_err(mac->net_dev, "%s: dpmac_set_link_state() = %d\n",
+ 			   __func__, err);
+ 
++	switch (state->interface) {
++	case PHY_INTERFACE_MODE_10GBASER:
++	case PHY_INTERFACE_MODE_USXGMII:
++		if_mode = 0x1;
++		break;
++	case PHY_INTERFACE_MODE_SGMII:
++	case PHY_INTERFACE_MODE_1000BASEX:
++		if_mode = 0x3;
++		break;
++	default:
++		break;
++	}
++
++	orig = ioread32(mac->if_mode_reg);
++	tmp = orig & ~0x3;
++	tmp |= if_mode;
++	iowrite32(tmp, mac->if_mode_reg);
++
+ 	err = phy_set_mode_ext(mac->serdes_phy, PHY_MODE_ETHERNET, state->interface);
+ 	if (err)
+ 		netdev_err(mac->net_dev, "phy_set_mode_ext() = %d\n", err);
+@@ -412,6 +431,7 @@ int dpaa2_mac_open(struct dpaa2_mac *mac)
+ {
+ 	struct fsl_mc_device *dpmac_dev = mac->mc_dev;
+ 	struct net_device *net_dev = mac->net_dev;
++	unsigned long if_mode_addr;
+ 	int err;
+ 
+ 	err = dpmac_open(mac->mc_io, 0, dpmac_dev->obj_desc.id,
+@@ -434,6 +454,12 @@ int dpaa2_mac_open(struct dpaa2_mac *mac)
+ 	mac->fw_node = dpaa2_mac_get_node(&mac->mc_dev->dev, mac->attr.id);
+ 	net_dev->dev.of_node = to_of_node(mac->fw_node);
+ 
++	if_mode_addr = 0x8c07080 + 0x4000 * (dpmac_dev->obj_desc.id - 1);
++	mac->if_mode_reg = ioremap(if_mode_addr, 4);
++	if (!mac->if_mode_reg) {
++		netdev_err(net_dev, "ioremap on if_mode failed\n");
++	}
++
+ 	return 0;
+ 
+ err_close_dpmac:
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
+index a0fdb43185ea..5f1a500b503a 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
+@@ -28,6 +28,7 @@ struct dpaa2_mac {
+ 	struct fwnode_handle *fw_node;
+ 
+ 	struct phy *serdes_phy;
++	void __iomem *if_mode_reg;
+ };
+ 
+ bool dpaa2_mac_is_type_fixed(struct fsl_mc_device *dpmac_dev,
+-- 
+2.34.1
+

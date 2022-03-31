@@ -1,0 +1,169 @@
+From 08d2275cb55bf41e48d6ee10309229965594f37f Mon Sep 17 00:00:00 2001
+From: Ioana Ciornei <ioana.ciornei@nxp.com>
+Date: Wed, 10 Nov 2021 17:06:45 +0200
+Subject: [PATCH 10/13] dpaa2-eth: configure the SerDes phy on a protocol
+ change
+
+This patch integrates the dpaa2-eth driver with the generic PHY
+infrastructure in order to search, find and reconfigure the SerDes lanes
+in case of a protocol change.
+
+The phylink's .mac_prepare() and .mac_finish() callbacks are implemented
+just so that the SerDes lane can be stopped and then powered back on in
+case reconfiguration is necessary.
+On the .mac_config() callback, the phy_set_mode_ext() API is called so
+that the SerDes28G PHY driver can change the lane's configuration.
+
+Signed-off-by: Ioana Ciornei <ioana.ciornei@nxp.com>
+---
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.c  | 74 ++++++++++---------
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.h  |  2 +
+ 2 files changed, 42 insertions(+), 34 deletions(-)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index a5c76ff33bed..b174b59ea45b 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -4,6 +4,7 @@
+ #include <linux/fsl/mc.h>
+ #include <linux/msi.h>
+ #include <linux/acpi.h>
++#include <linux/phy/phy.h>
+ #include <linux/property.h>
+ 
+ #include "dpaa2-eth.h"
+@@ -106,46 +107,12 @@ static int dpaa2_mac_get_if_mode(struct fwnode_handle *dpmac_node,
+ 	return err;
+ }
+ 
+-static bool dpaa2_mac_phy_mode_mismatch(struct dpaa2_mac *mac,
+-					phy_interface_t interface)
+-{
+-	switch (interface) {
+-	/* We can switch between SGMII and 1000BASE-X at runtime with
+-	 * pcs-lynx
+-	 */
+-	case PHY_INTERFACE_MODE_SGMII:
+-	case PHY_INTERFACE_MODE_1000BASEX:
+-		if (mac->pcs &&
+-		    (mac->if_mode == PHY_INTERFACE_MODE_SGMII ||
+-		     mac->if_mode == PHY_INTERFACE_MODE_1000BASEX))
+-			return false;
+-		return interface != mac->if_mode;
+-
+-	case PHY_INTERFACE_MODE_10GBASER:
+-	case PHY_INTERFACE_MODE_USXGMII:
+-	case PHY_INTERFACE_MODE_QSGMII:
+-	case PHY_INTERFACE_MODE_RGMII:
+-	case PHY_INTERFACE_MODE_RGMII_ID:
+-	case PHY_INTERFACE_MODE_RGMII_RXID:
+-	case PHY_INTERFACE_MODE_RGMII_TXID:
+-		return (interface != mac->if_mode);
+-	default:
+-		return true;
+-	}
+-}
+-
+ static void dpaa2_mac_validate(struct phylink_config *config,
+ 			       unsigned long *supported,
+ 			       struct phylink_link_state *state)
+ {
+-	struct dpaa2_mac *mac = phylink_to_dpaa2_mac(config);
+ 	__ETHTOOL_DECLARE_LINK_MODE_MASK(mask) = { 0, };
+ 
+-	if (state->interface != PHY_INTERFACE_MODE_NA &&
+-	    dpaa2_mac_phy_mode_mismatch(mac, state->interface)) {
+-		goto empty_set;
+-	}
+-
+ 	phylink_set_port_modes(mask);
+ 	phylink_set(mask, Autoneg);
+ 	phylink_set(mask, Pause);
+@@ -210,6 +177,10 @@ static void dpaa2_mac_config(struct phylink_config *config, unsigned int mode,
+ 	if (err)
+ 		netdev_err(mac->net_dev, "%s: dpmac_set_link_state() = %d\n",
+ 			   __func__, err);
++
++	err = phy_set_mode_ext(mac->serdes_phy, PHY_MODE_ETHERNET, state->interface);
++	if (err)
++		netdev_err(mac->net_dev, "phy_set_mode_ext() = %d\n", err);
+ }
+ 
+ static void dpaa2_mac_link_up(struct phylink_config *config,
+@@ -263,11 +234,37 @@ static void dpaa2_mac_link_down(struct phylink_config *config,
+ 		netdev_err(mac->net_dev, "dpmac_set_link_state() = %d\n", err);
+ }
+ 
++static int dpaa2_mac_prepare(struct phylink_config *config, unsigned int mode,
++			     phy_interface_t interface)
++{
++	struct dpaa2_mac *mac = phylink_to_dpaa2_mac(config);
++
++	dpaa2_mac_link_down(config, mode, interface);
++
++	if (mac->serdes_phy)
++		phy_power_off(mac->serdes_phy);
++
++	return 0;
++}
++
++static int dpaa2_mac_finish(struct phylink_config *config, unsigned int mode,
++			    phy_interface_t interface)
++{
++	struct dpaa2_mac *mac = phylink_to_dpaa2_mac(config);
++
++	if (mac->serdes_phy)
++		phy_power_on(mac->serdes_phy);
++
++	return 0;
++}
++
+ static const struct phylink_mac_ops dpaa2_mac_phylink_ops = {
+ 	.validate = dpaa2_mac_validate,
+ 	.mac_config = dpaa2_mac_config,
+ 	.mac_link_up = dpaa2_mac_link_up,
+ 	.mac_link_down = dpaa2_mac_link_down,
++	.mac_prepare = dpaa2_mac_prepare,
++	.mac_finish = dpaa2_mac_finish,
+ };
+ 
+ static int dpaa2_pcs_create(struct dpaa2_mac *mac,
+@@ -321,6 +318,7 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ {
+ 	struct net_device *net_dev = mac->net_dev;
+ 	struct fwnode_handle *dpmac_node;
++	struct phy *serdes_phy = NULL;
+ 	struct phylink *phylink;
+ 	int err;
+ 
+@@ -337,6 +335,14 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ 		return -EINVAL;
+ 	mac->if_mode = err;
+ 
++	if (!phy_interface_mode_is_rgmii(mac->if_mode) &&
++	    is_of_node(dpmac_node)) {
++		serdes_phy = of_phy_get(to_of_node(dpmac_node), NULL);
++		if (IS_ERR(serdes_phy))
++			return -EPROBE_DEFER;
++	}
++	mac->serdes_phy = serdes_phy;
++
+ 	/* The MAC does not have the capability to add RGMII delays so
+ 	 * error out if the interface mode requests them and there is no PHY
+ 	 * to act upon them
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
+index b337f9da639b..a0fdb43185ea 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
+@@ -26,6 +26,8 @@ struct dpaa2_mac {
+ 	enum dpmac_link_type if_link_type;
+ 	struct lynx_pcs *pcs;
+ 	struct fwnode_handle *fw_node;
++
++	struct phy *serdes_phy;
+ };
+ 
+ bool dpaa2_mac_is_type_fixed(struct fsl_mc_device *dpmac_dev,
+-- 
+2.34.1
+

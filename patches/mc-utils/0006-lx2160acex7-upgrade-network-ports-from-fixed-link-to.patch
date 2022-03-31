@@ -1,0 +1,54 @@
+From ae5d80dc0f1b92dface59c9e14f4627ca8e03cfc Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 31 Mar 2022 10:57:54 +0300
+Subject: [PATCH 6/6] lx2160acex7: upgrade network ports from fixed link to phy
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ config/lx2160a/CEX7/dpc-8_x_usxgmii.dts | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/config/lx2160a/CEX7/dpc-8_x_usxgmii.dts b/config/lx2160a/CEX7/dpc-8_x_usxgmii.dts
+index 44e22bb..7b0e576 100644
+--- a/config/lx2160a/CEX7/dpc-8_x_usxgmii.dts
++++ b/config/lx2160a/CEX7/dpc-8_x_usxgmii.dts
+@@ -72,28 +72,28 @@
+ 	board_info {
+ 		ports {
+ 			mac@3 {
+-				link_type = "MAC_LINK_TYPE_FIXED";
++				link_type = "MAC_LINK_TYPE_PHY";
+ 			};
+ 			mac@4 {
+-				link_type = "MAC_LINK_TYPE_FIXED";
++				link_type = "MAC_LINK_TYPE_PHY";
+ 			};
+ 			mac@5 {
+-				link_type = "MAC_LINK_TYPE_FIXED";
++				link_type = "MAC_LINK_TYPE_PHY";
+ 			};
+ 			mac@6 {
+-				link_type = "MAC_LINK_TYPE_FIXED";
++				link_type = "MAC_LINK_TYPE_PHY";
+ 			};
+ 			mac@7 {
+-				link_type = "MAC_LINK_TYPE_FIXED";
++				link_type = "MAC_LINK_TYPE_PHY";
+ 			};
+ 			mac@8 {
+-				link_type = "MAC_LINK_TYPE_FIXED";
++				link_type = "MAC_LINK_TYPE_PHY";
+ 			};
+ 			mac@9 {
+-				link_type = "MAC_LINK_TYPE_FIXED";
++				link_type = "MAC_LINK_TYPE_PHY";
+ 			};
+ 			mac@10 {
+-				link_type = "MAC_LINK_TYPE_FIXED";
++				link_type = "MAC_LINK_TYPE_PHY";
+ 			};
+ 			mac@17 {
+ 				link_type = "MAC_LINK_TYPE_PHY";
+-- 
+2.34.1
+

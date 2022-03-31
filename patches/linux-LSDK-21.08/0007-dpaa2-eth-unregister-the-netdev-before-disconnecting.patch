@@ -1,0 +1,34 @@
+From 2ffca903d11b80fc624a09f3556a68b4f1cfd173 Mon Sep 17 00:00:00 2001
+From: Robert-Ionut Alexa <robert-ionut.alexa@nxp.com>
+Date: Thu, 1 Jul 2021 14:49:08 +0300
+Subject: [PATCH 07/13] dpaa2-eth: unregister the netdev before disconnecting
+ from the PHY
+
+The netdev should be unregistered before we are disconnecting from the MAC/PHY
+so that the dev_close callback is called and the PHY and the phylink workqueues
+are actually stopped before we are disconnecting and destroying the phylink instance.
+
+Fixes: 719479230893 ("dpaa2-eth: add MAC/PHY support through phylink")
+Signed-off-by: Robert-Ionut Alexa <robert-ionut.alexa@nxp.com>
+---
+ drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c
+index 816256eaeac7..756041df9d08 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c
+@@ -4535,9 +4535,8 @@ static int dpaa2_eth_remove(struct fsl_mc_device *ls_dev)
+ #ifdef CONFIG_DEBUG_FS
+ 	dpaa2_dbg_remove(priv);
+ #endif
+-	dpaa2_eth_disconnect_mac(priv);
+-
+ 	unregister_netdev(net_dev);
++	dpaa2_eth_disconnect_mac(priv);
+ 
+ 	dpaa2_eth_dl_port_del(priv);
+ 	dpaa2_eth_dl_traps_unregister(priv);
+-- 
+2.34.1
+

@@ -1,0 +1,100 @@
+From b09da32305a0a5e416cf1bbcb370b6bd6ebffbac Mon Sep 17 00:00:00 2001
+From: Ioana Ciornei <ioana.ciornei@nxp.com>
+Date: Wed, 3 Nov 2021 17:47:31 +0200
+Subject: [PATCH 08/13] arm64: dts: lx2160a: describe the SerDes block #1
+
+Describe the SerDes block #1 using the generic phys infrastructure. This
+way, the ethernet nodes can each reference their serdes lanes
+individually using the 'phys' dts property.
+
+Signed-off-by: Ioana Ciornei <ioana.ciornei@nxp.com>
+---
+ .../freescale/fsl-lx2160a-clearfog-itx.dtsi   |  4 ++
+ .../arm64/boot/dts/freescale/fsl-lx2160a.dtsi | 41 +++++++++++++++++++
+ 2 files changed, 45 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+index 17f8e733972a..14a6334adff2 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+@@ -63,21 +63,25 @@ sfp3: sfp-3 {
+ &dpmac7 {
+ 	sfp = <&sfp0>;
+ 	managed = "in-band-status";
++	phys = <&serdes1_lane_d>;
+ };
+ 
+ &dpmac8 {
+ 	sfp = <&sfp1>;
+ 	managed = "in-band-status";
++	phys = <&serdes1_lane_c>;
+ };
+ 
+ &dpmac9 {
+ 	sfp = <&sfp2>;
+ 	managed = "in-band-status";
++	phys = <&serdes1_lane_b>;
+ };
+ 
+ &dpmac10 {
+ 	sfp = <&sfp3>;
+ 	managed = "in-band-status";
++	phys = <&serdes1_lane_a>;
+ };
+ 
+ &emdio2 {
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+index cff0699d7992..c493b889c2a8 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+@@ -613,6 +613,47 @@ soc {
+ 		ranges;
+ 		dma-ranges = <0x0 0x0 0x0 0x0 0x10000 0x00000000>;
+ 
++		serdes_1: serdes_phy@1ea0000 {
++			compatible = "fsl,serdes-28g";
++			reg = <0x00 0x1ea0000 0x0 0x1e30>;
++			#address-cells = <1>;
++			#size-cells = <0>;
++			#phy-cells = <1>;
++
++			serdes1_lane_a: phy@0 {
++				reg = <0>;
++				#phy-cells = <0>;
++			};
++			serdes1_lane_b: phy@1 {
++				reg = <1>;
++				#phy-cells = <0>;
++			};
++			serdes1_lane_c: phy@2 {
++				reg = <2>;
++				#phy-cells = <0>;
++			};
++			serdes1_lane_d: phy@3 {
++				reg = <3>;
++				#phy-cells = <0>;
++			};
++			serdes1_lane_e: phy@4 {
++				reg = <4>;
++				#phy-cells = <0>;
++			};
++			serdes1_lane_f: phy@5 {
++				reg = <5>;
++				#phy-cells = <0>;
++			};
++			serdes1_lane_g: phy@6 {
++				reg = <6>;
++				#phy-cells = <0>;
++			};
++			serdes1_lane_h: phy@7 {
++				reg = <7>;
++				#phy-cells = <0>;
++			};
++		};
++
+ 		crypto: crypto@8000000 {
+ 			compatible = "fsl,sec-v5.0", "fsl,sec-v4.0";
+ 			fsl,sec-era = <10>;
+-- 
+2.34.1
+
