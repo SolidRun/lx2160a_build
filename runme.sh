@@ -92,6 +92,10 @@ case "${SERDES}" in
 		DPC=dpc-dual-40g.dtb
 		DPL=dpl-eth.dual-40g.19.dtb
 	;;
+	21_*)
+		DPC=dpc-6x25g.dtb
+		DPL=dpl-eth.6x25g.21.dtb
+	;;
 	*)
 		echo "Please define SERDES configuration"
 		exit -1
