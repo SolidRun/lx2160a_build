@@ -3,7 +3,7 @@ FROM debian:buster-slim
 
 # apt proxy (optional)
 ARG APTPROXY=
-RUN test -n "$APTPROXY" && printf 'Acquire::http { Proxy "%s"; }\n' $APTPROXY | tee -a /etc/apt/apt.conf.d/proxy
+RUN test -n "$APTPROXY" && printf 'Acquire::http { Proxy "%s"; }\n' $APTPROXY | tee -a /etc/apt/apt.conf.d/proxy || true
 
 # update
 RUN set -e; \
