@@ -20,6 +20,7 @@ BUILDROOT_VERSION=2020.02.1
 : ${SECURE:=false}
 : ${ATF_DEBUG:=false}
 : ${DISTRO:=ubuntu}
+: ${BR2_PRIMARY_SITE:=} # custom buildroot mirror
 
 if [ "x$SHALLOW" == "xtrue" ]; then
 	SHALLOW_FLAG="--depth 1"
@@ -215,7 +216,11 @@ if [[ ! -f $ROOTDIR/build/ubuntu-core.ext4 ]] && [ "x$DISTRO" == "xubuntu" ]; th
 		git clone $SHALLOW_FLAG https://github.com/buildroot/buildroot -b $BUILDROOT_VERSION
 	fi
 	cd buildroot
+	if [ $UID -eq 0 ]; then
+		export FORCE_UNSAFE_CONFIGURE=1
+	fi
 	cp $ROOTDIR/configs/buildroot/lx2160acex7_defconfig configs/
+	printf 'BR2_PRIMARY_SITE="%s"\n' "${BR2_PRIMARY_SITE}" >> configs/lx2160acex7_defconfig
 	make lx2160acex7_defconfig
 	mkdir -p overlay/etc/init.d/
 	cat > overlay/etc/init.d/S99bootstrap-ubuntu.sh << EOF
@@ -267,7 +272,11 @@ if [[ ! -f $ROOTDIR/build/debian-bullseye.ext4 ]] && [ "x$DISTRO" == "xdebian" ]
 		git clone $SHALLOW_FLAG https://github.com/buildroot/buildroot -b $BUILDROOT_VERSION
 	fi
 	cd buildroot
+	if [ $UID -eq 0 ]; then
+		export FORCE_UNSAFE_CONFIGURE=1
+	fi
 	cp $ROOTDIR/configs/buildroot/lx2160acex7_defconfig configs/
+	printf 'BR2_PRIMARY_SITE="%s"\n' "${BR2_PRIMARY_SITE}" >> configs/lx2160acex7_defconfig
 	make lx2160acex7_defconfig
 	mkdir -p overlay/etc/init.d/
 	cat > overlay/etc/init.d/S99bootstrap-debian.sh << EOF
