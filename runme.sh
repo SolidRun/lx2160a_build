@@ -13,7 +13,7 @@ BUILDROOT_VERSION=2020.02.1
 # Misc
 ###############################################################################
 : ${RELEASE:=LSDK-21.08}
-: ${DDR_SPEED:=2600}
+: ${DDR_SPEED:=3200}
 : ${SERDES:=8_5_2}
 : ${UEFI_RELEASE:=RELEASE}
 : ${SHALLOW:=false}
@@ -23,7 +23,7 @@ BUILDROOT_VERSION=2020.02.1
 : ${BR2_PRIMARY_SITE:=} # custom buildroot mirror
 
 if [ "x$SHALLOW" == "xtrue" ]; then
-	SHALLOW_FLAG="--depth 1"
+	SHALLOW_FLAG="--depth 1000"
 fi
 
 if [ "x$ATF_DEBUG" == "xtrue" ]; then
@@ -53,9 +53,9 @@ case "${SERDES}" in
 		DPC=dpc-8_x_usxgmii.dtb
 		DPL=dpl-eth.8x10g.19.dtb
 	;;
-	8_9_*)
+	8_9_*|8S_9_*)
 		DPC=dpc-8_x_usxgmii_8_x_sgmii.dtb
-		DPL=dpl-eth.8x10g.8x1g.19.dtb
+		DPL=dpl-eth.8x10g.8x1g.dtb
 	;;
 	2_*)
 		DPC=dpc-8_x_usxgmii.dtb
