@@ -1,0 +1,213 @@
+From c5d7beec4f28c3b9615bd7cd20a720fcb5f4580a Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 9 May 2022 10:55:53 +0300
+Subject: [PATCH 18/18] arm64: dts: lx2160a-half-twins: link sfp cage leds to
+ sfp cages
+
+This is a hack in that the led trigger framework is completely
+sidestepped.
+---
+ .../dts/freescale/fsl-lx2160a-half-twins.dts  | 32 +++++++++----------
+ 1 file changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+index e6c46ac4fc27..9cb554f55e77 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+@@ -160,177 +160,177 @@ c1_at_sfp: c1-at-sfp {
+ 		i2c-bus = <&twins_sfp_c1_at_i2c>;
+ 		mod-def0-gpio = <&expander0 1 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_c1_at>;
+ 	};
+ 	c1_ab_sfp: c1-ab-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c1_ab_i2c>;
+ 		mod-def0-gpio = <&expander0 2 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_c1_ab>;
+ 	};
+ 	c1_bt_sfp: c1-bt-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c1_bt_i2c>;
+ 		mod-def0-gpio = <&expander0 3 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_c1_bt>;
+ 	};
+ 	c1_bb_sfp: c1-bb-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c1_bb_i2c>;
+ 		mod-def0-gpio = <&expander0 4 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_c1_bb>;
+ 	};
+ 	c2_at_sfp: c2-at-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c2_at_i2c>;
+ 		mod-def0-gpio = <&expander0 5 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_c2_at>;
+ 	};
+ 	c2_ab_sfp: c2-ab-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c2_ab_i2c>;
+ 		mod-def0-gpio = <&expander0 6 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_c2_ab>;
+ 	};
+ 	c2_bt_sfp: c2-bt-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c2_bt_i2c>;
+ 		mod-def0-gpio = <&expander0 9 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_c2_bt>;
+ 	};
+ 	c2_bb_sfp: c2-bb-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c2_bb_i2c>;
+ 		mod-def0-gpio = <&expander0 10 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_c2_bb>;
+ 	};
+ 	c3_at_sfp: c3-at-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c3_at_i2c>;
+ 		mod-def0-gpio = <&expander0 11 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_c3_at>;
+ 	};
+ 	c3_ab_sfp: c3-ab-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c3_ab_i2c>;
+ 		mod-def0-gpio = <&expander0 12 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_c3_ab>;
+ 	};
+ 	c3_bt_sfp: c3-bt-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c3_bt_i2c>;
+ 		mod-def0-gpio = <&expander0 13 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_c3_bt>;
+ 	};
+ 	c3_bb_sfp: c3-bb-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c3_bb_i2c>;
+ 		mod-def0-gpio = <&expander0 14 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_c3_bb>;
+ 	};
+ 	ht_c3_at_sfp: ht-c3-at-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&htwins_sfp_c3_at_i2c>;
+ 		mod-def0-gpio = <&expander2 11 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_ht_c3_at>;
+ 	};
+ 	ht_c3_ab_sfp: ht-c3-ab-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&htwins_sfp_c3_ab_i2c>;
+ 		mod-def0-gpio = <&expander2 12 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_ht_c3_ab>;
+ 	};
+ 	ht_c3_bt_sfp: ht-c3-bt-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&htwins_sfp_c3_bt_i2c>;
+ 		mod-def0-gpio = <&expander2 13 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_ht_c3_bt>;
+ 	};
+ 	ht_c3_bb_sfp: ht-c3-bb-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&htwins_sfp_c3_bb_i2c>;
+ 		mod-def0-gpio = <&expander2 14 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
++		link-status-led = <&led_ht_c3_bb>;
+ 	};
+ 	leds {
+ 		compatible = "gpio-leds";
+ 		led_c1_at: led-c1-at {
+ 			gpios = <&expander1 1 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_c1_ab: led-c1-ab {
+ 			gpios = <&expander1 2 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_c1_bt: led-c1-bt {
+ 			gpios = <&expander1 4 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_c1_bb: led-c1-bb {
+ 			gpios = <&expander1 3 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_c2_at: led-c2-at {
+ 			gpios = <&expander1 5 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_c2_ab: led-c2-ab {
+ 			gpios = <&expander1 6 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_c2_bt: led-c2-bt {
+ 			gpios = <&expander1 10 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_c2_bb: led-c2-bb {
+ 			gpios = <&expander1 9 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_c3_at: led-c3-at {
+ 			gpios = <&expander1 11 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_c3_ab: led-c3-ab {
+ 			gpios = <&expander1 12 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_c3_bt: led-c3-bt {
+ 			gpios = <&expander1 14 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_c3_bb: led-c3-bb {
+ 			gpios = <&expander1 13 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_ht_c3_at: led-ht-c3-at {
+ 			gpios = <&expander3 11 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_ht_c3_ab: led-ht-c3-ab {
+ 			gpios = <&expander3 12 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_ht_c3_bt: led-ht-c3-bt {
+ 			gpios = <&expander3 14 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_ht_c3_bb: led-ht-c3-bb {
+ 			gpios = <&expander3 13 GPIO_ACTIVE_LOW>;
+-			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 	};
+-- 
+2.35.3
+

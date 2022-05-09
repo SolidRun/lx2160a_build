@@ -1,0 +1,69 @@
+From 69294b9efe4bf2873c9f3eafcd0aae964e69a9c8 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 9 May 2022 12:07:35 +0300
+Subject: [PATCH 16/18] leds: core: add variant of of_led_get for using
+ directly a led device node
+
+The existing of_led_get function expects a handle to a device-tree node,
+containing an "leds" property.
+However properties refering to LEDs can potentially have different
+names.
+Add a new of_led_get_hack function that can directly parse a given led node.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/leds/led-class.c | 25 +++++++++++++++++++++++++
+ include/linux/leds.h     |  1 +
+ 2 files changed, 26 insertions(+)
+
+diff --git a/drivers/leds/led-class.c b/drivers/leds/led-class.c
+index 131ca83f5fb3..3198ebb5cfaf 100644
+--- a/drivers/leds/led-class.c
++++ b/drivers/leds/led-class.c
+@@ -249,6 +249,31 @@ struct led_classdev *of_led_get(struct device_node *np, int index)
+ }
+ EXPORT_SYMBOL_GPL(of_led_get);
+ 
++/**
++ * of_led_get_hack() - request a LED device via the LED framework
++ * @led_node: device node of the LED device
++ *
++ * Returns the LED device parsed from the device tree node
++ * or a negative error-code on failure.
++ */
++struct led_classdev *of_led_get_hack(struct device_node *led_node)
++{
++	struct device *led_dev;
++	struct led_classdev *led_cdev;
++
++	led_dev = class_find_device_by_of_node(leds_class, led_node);
++	if (!led_dev)
++		return ERR_PTR(-EPROBE_DEFER);
++
++	led_cdev = dev_get_drvdata(led_dev);
++
++	if (!try_module_get(led_cdev->dev->parent->driver->owner))
++		return ERR_PTR(-ENODEV);
++
++	return led_cdev;
++}
++EXPORT_SYMBOL_GPL(of_led_get_hack);
++
+ /**
+  * led_put() - release a LED device
+  * @led_cdev: LED device
+diff --git a/include/linux/leds.h b/include/linux/leds.h
+index 6a8d6409c993..92bafe1f8e2d 100644
+--- a/include/linux/leds.h
++++ b/include/linux/leds.h
+@@ -206,6 +206,7 @@ void led_classdev_suspend(struct led_classdev *led_cdev);
+ void led_classdev_resume(struct led_classdev *led_cdev);
+ 
+ extern struct led_classdev *of_led_get(struct device_node *np, int index);
++extern struct led_classdev *of_led_get_hack(struct device_node *led_node);
+ extern void led_put(struct led_classdev *led_cdev);
+ struct led_classdev *__must_check devm_of_led_get(struct device *dev,
+ 						  int index);
+-- 
+2.35.3
+

@@ -1,0 +1,148 @@
+From 9be18c5767fa66213441095344afbc540e936157 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 8 May 2022 16:36:14 +0300
+Subject: [PATCH 17/18] net: sfp: support assigning status LEDs to SFP
+ connectors
+
+Add support for turning on- and off an LED to indicate link status on
+sfp ports. This is a necessary hack to work shortcomings of the generic
+LED framework outlined below:
+
+While it is generally suggested to use the generic led framework with
+triggers such as netdev or phy, neither is currently useable when
+combining imultiple dpaa2 network devices with sfp connectors and LEDs
+controlled from GPIOs.
+
+netdev triggers are insufficient for two reasons:
+First because network devices are dynamically created and destroyed at
+runtime, e.g. through NXPs restool, the names and numbering of interfaces
+are never stable.
+Secondly the mapping of one network interface to an led node appears to
+be manual by writing the interface name - e.g. eth0 - to the sysfs entry
+for a particular LED.
+
+phy triggers are insufficient for two other reasons:
+The real phy, the one inside an SFP module, is inserted at runtime,
+arbitrarily by a an operator. It can exist at different i2c addresses -
+or not at all e.g. for many fiber modules.
+There can be a second "phy" though, on Layerscape platforms the serdes's
+have are now described inside the dpmac nodes as phys, and they could
+conceivably be equally aware of link status or negotiated speed.
+However the phy led trigger driver is only registered from the
+phy_connect or phy_attach functions when connecting an object of type
+phy_device to a net_device. But the DPAA2 driver does not instantiate a
+phy_device object in the first place.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../devicetree/bindings/net/sff,sfp.txt       |  4 +++
+ drivers/net/phy/sfp.c                         | 36 +++++++++++++++++++
+ 2 files changed, 40 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/net/sff,sfp.txt b/Documentation/devicetree/bindings/net/sff,sfp.txt
+index 832139919f20..d46df1300d28 100644
+--- a/Documentation/devicetree/bindings/net/sff,sfp.txt
++++ b/Documentation/devicetree/bindings/net/sff,sfp.txt
+@@ -37,6 +37,10 @@ Optional Properties:
+   Specifies the maximum power consumption allowable by a module in the
+   slot, in milli-Watts.  Presently, modules can be up to 1W, 1.5W or 2W.
+ 
++- link-status-led:
++    description: An LED node for showing link status.
++    $ref: /schemas/types.yaml#/definitions/phandle
++
+ Example #1: Direct serdes to SFP connection
+ 
+ sfp_eth3: sfp-eth3 {
+diff --git a/drivers/net/phy/sfp.c b/drivers/net/phy/sfp.c
+index 2fff62695455..0f18e77b8b68 100644
+--- a/drivers/net/phy/sfp.c
++++ b/drivers/net/phy/sfp.c
+@@ -7,6 +7,7 @@
+ #include <linux/i2c.h>
+ #include <linux/interrupt.h>
+ #include <linux/jiffies.h>
++#include <linux/leds.h>
+ #include <linux/mdio/mdio-i2c.h>
+ #include <linux/module.h>
+ #include <linux/mutex.h>
+@@ -258,6 +259,7 @@ struct sfp {
+ 	char *hwmon_name;
+ #endif
+ 
++	struct led_classdev *link_status_led;
+ };
+ 
+ static bool sff_module_supported(const struct sfp_eeprom_id *id)
+@@ -1490,6 +1492,8 @@ static int sfp_sm_probe_phy(struct sfp *sfp, bool is_c45)
+ 
+ static void sfp_sm_link_up(struct sfp *sfp)
+ {
++	if (sfp->link_status_led)
++		led_set_brightness(sfp->link_status_led, sfp->link_status_led->max_brightness);
+ 	sfp_link_up(sfp->sfp_bus);
+ 	sfp_sm_next(sfp, SFP_S_LINK_UP, 0);
+ }
+@@ -1497,6 +1501,8 @@ static void sfp_sm_link_up(struct sfp *sfp)
+ static void sfp_sm_link_down(struct sfp *sfp)
+ {
+ 	sfp_link_down(sfp->sfp_bus);
++	if (sfp->link_status_led)
++		led_set_brightness(sfp->link_status_led, LED_OFF);
+ }
+ 
+ static void sfp_sm_link_check_los(struct sfp *sfp)
+@@ -2425,6 +2431,23 @@ static int sfp_probe(struct platform_device *pdev)
+ 
+ 		i2c = of_find_i2c_adapter_by_node(np);
+ 		of_node_put(np);
++
++		np = of_parse_phandle(node, "link-status-led", 0);
++		sfp->link_status_led = of_led_get_hack(np);
++		of_node_put(np);
++
++		if (IS_ERR(sfp->link_status_led)) {
++			switch (PTR_ERR(sfp->link_status_led)) {
++				case -ENODEV:
++					sfp->link_status_led = NULL;
++					break;
++				default:
++					dev_err(sfp->dev, "failed to get link-status led from 'link-status-led' property: %pe\n", sfp->link_status_led);
++					fallthrough;
++				case -EPROBE_DEFER:
++					return PTR_ERR(sfp->link_status_led);
++			};
++		}
+ 	} else if (has_acpi_companion(&pdev->dev)) {
+ 		struct acpi_device *adev = ACPI_COMPANION(&pdev->dev);
+ 		struct fwnode_handle *fw = acpi_fwnode_handle(adev);
+@@ -2453,6 +2476,14 @@ static int sfp_probe(struct platform_device *pdev)
+ 		return err;
+ 	}
+ 
++	if (sfp->link_status_led) {
++		/* remove from sysfs to avoid userspce control */
++		led_sysfs_disable(sfp->link_status_led);
++
++		/* turn off initially */
++		led_set_brightness(sfp->link_status_led, LED_OFF);
++	}
++
+ 	for (i = 0; i < GPIO_MAX; i++)
+ 		if (sff->gpios & BIT(i)) {
+ 			sfp->gpio[i] = devm_gpiod_get_optional(sfp->dev,
+@@ -2545,6 +2576,11 @@ static int sfp_remove(struct platform_device *pdev)
+ {
+ 	struct sfp *sfp = platform_get_drvdata(pdev);
+ 
++	if (sfp->link_status_led) {
++		/* re-enable sysfs interface */
++		led_sysfs_enable(sfp->link_status_led);
++	}
++
+ 	sfp_unregister_socket(sfp->sfp_bus);
+ 
+ 	rtnl_lock();
+-- 
+2.35.3
+

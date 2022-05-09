@@ -1,0 +1,62 @@
+From c41f02f90056c820a5f407fc0aeaced0d68a922b Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 9 May 2022 12:43:35 +0300
+Subject: [PATCH 14/18] arm64: dts: lx2160a-half-twins: fix swapped leds
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../boot/dts/freescale/fsl-lx2160a-half-twins.dts    | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+index 55d4bbb6caa2..606f7f717622 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+@@ -264,12 +264,12 @@ led_c1_ab {
+ 			default-state = "off";
+ 		};
+ 		led_c1_bt {
+-			gpios = <&expander1 3 GPIO_ACTIVE_LOW>;
++			gpios = <&expander1 4 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_c1_bb {
+-			gpios = <&expander1 4 GPIO_ACTIVE_LOW>;
++			gpios = <&expander1 3 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+@@ -284,12 +284,12 @@ led_c2_ab {
+ 			default-state = "off";
+ 		};
+ 		led_c2_bt {
+-			gpios = <&expander1 9 GPIO_ACTIVE_LOW>;
++			gpios = <&expander1 10 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_c2_bb {
+-			gpios = <&expander1 10 GPIO_ACTIVE_LOW>;
++			gpios = <&expander1 9 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+@@ -304,12 +304,12 @@ led_c3_ab {
+ 			default-state = "off";
+ 		};
+ 		led_c3_bt {
+-			gpios = <&expander1 13 GPIO_ACTIVE_LOW>;
++			gpios = <&expander1 14 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+ 		led_c3_bb {
+-			gpios = <&expander1 14 GPIO_ACTIVE_LOW>;
++			gpios = <&expander1 13 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-- 
+2.35.3
+

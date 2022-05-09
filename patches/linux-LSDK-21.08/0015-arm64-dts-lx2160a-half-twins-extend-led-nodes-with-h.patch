@@ -1,0 +1,120 @@
+From bd4c1c7d26d81d66b667e46e4a0d3b64f43db01e Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 9 May 2022 11:05:55 +0300
+Subject: [PATCH 15/18] arm64: dts: lx2160a-half-twins: extend led nodes with
+ handle and name
+
+Add ": led-bla-blub" suffix to led nodes so that they can be referred to
+by name.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../dts/freescale/fsl-lx2160a-half-twins.dts  | 32 +++++++++----------
+ 1 file changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+index 606f7f717622..e6c46ac4fc27 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+@@ -253,82 +253,82 @@ ht_c3_bb_sfp: ht-c3-bb-sfp {
+ 	};
+ 	leds {
+ 		compatible = "gpio-leds";
+-		led_c1_at {
++		led_c1_at: led-c1-at {
+ 			gpios = <&expander1 1 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_c1_ab {
++		led_c1_ab: led-c1-ab {
+ 			gpios = <&expander1 2 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_c1_bt {
++		led_c1_bt: led-c1-bt {
+ 			gpios = <&expander1 4 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_c1_bb {
++		led_c1_bb: led-c1-bb {
+ 			gpios = <&expander1 3 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_c2_at {
++		led_c2_at: led-c2-at {
+ 			gpios = <&expander1 5 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_c2_ab {
++		led_c2_ab: led-c2-ab {
+ 			gpios = <&expander1 6 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_c2_bt {
++		led_c2_bt: led-c2-bt {
+ 			gpios = <&expander1 10 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_c2_bb {
++		led_c2_bb: led-c2-bb {
+ 			gpios = <&expander1 9 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_c3_at {
++		led_c3_at: led-c3-at {
+ 			gpios = <&expander1 11 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_c3_ab {
++		led_c3_ab: led-c3-ab {
+ 			gpios = <&expander1 12 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_c3_bt {
++		led_c3_bt: led-c3-bt {
+ 			gpios = <&expander1 14 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_c3_bb {
++		led_c3_bb: led-c3-bb {
+ 			gpios = <&expander1 13 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_ht_c3_at {
++		led_ht_c3_at: led-ht-c3-at {
+ 			gpios = <&expander3 11 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_ht_c3_ab {
++		led_ht_c3_ab: led-ht-c3-ab {
+ 			gpios = <&expander3 12 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_ht_c3_bt {
++		led_ht_c3_bt: led-ht-c3-bt {
+ 			gpios = <&expander3 14 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+ 		};
+-		led_ht_c3_bb {
++		led_ht_c3_bb: led-ht-c3-bb {
+ 			gpios = <&expander3 13 GPIO_ACTIVE_LOW>;
+ 			linux,default-trigger = "netdev";
+ 			default-state = "off";
+-- 
+2.35.3
+
