@@ -1,0 +1,27 @@
+From e7defd76a8434247cb051fbec65a8e98c4843a8d Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Mon, 9 May 2022 10:36:28 +0300
+Subject: [PATCH 13/13] arm64: dts: half-twins: fixed typo in dpmac17
+ phy-handle propery removal
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+index ebde6c03f545..55d4bbb6caa2 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+@@ -412,7 +412,7 @@ &dpmac16 {
+ 	phys = <&serdes2_lane_f>;
+ };
+ &dpmac17 {
+-	/delete-property/ phy_handle;
++	/delete-property/ phy-handle;
+ 	/delete-property/ phy-connection-type;
+ 	sfp = <&c1_bb_sfp>;
+ 	managed = "in-band-status";
+-- 
+2.25.1
+

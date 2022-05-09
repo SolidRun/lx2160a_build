@@ -1,0 +1,37 @@
+From 01a8324337bf15372c17f7cde7c508ddc4352fe4 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Mon, 9 May 2022 10:30:59 +0300
+Subject: [PATCH 8/8] lx2160acex7: Limit internal MC recycle queues to 1G
+
+This modification makes it possible to send packets thru dpmac.18
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ config/lx2160a/CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/config/lx2160a/CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts b/config/lx2160a/CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts
+index 354de30..55f07cc 100644
+--- a/config/lx2160a/CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts
++++ b/config/lx2160a/CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts
+@@ -70,6 +70,17 @@
+ 	};
+ 
+ 	board_info {
++
++		recycle_ports {
++			recycle@1 {
++				max_rate = "1G";
++			};
++
++			recycle@2 {
++				max_rate = "1G";
++			};
++		};
++
+ 		ports {
+ 			mac@3 {
+ 				link_type = "MAC_LINK_TYPE_PHY";
+-- 
+2.25.1
+

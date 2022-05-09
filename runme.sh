@@ -56,6 +56,10 @@ case "${SERDES}" in
 	8_9_*|8S_9_*)
 		DPC=dpc-8_x_usxgmii_8_x_sgmii.dtb
 		DPL=dpl-eth.8x10g.8x1g.dtb
+		# MC 10.28.1 is incapable of mapping all 16 dpnis. 10.28.100 fixes that
+		if [ "x$RELEASE" == "xLSDK-21.08" ]; then
+			MC_FORCE=patches/mc_10.28.100_lx2160a.itb
+		fi
 	;;
 	2_*)
 		DPC=dpc-8_x_usxgmii.dtb
@@ -573,8 +577,14 @@ if [ "x$RELEASE" == "xLSDK-20.04" ]; then
 	MC=mc_10.24.0_lx2160a.itb
 	dd if=$ROOTDIR/build/qoriq-mc-binary/lx2160a/${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
 else
-	MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/ | grep -v sha256sum | cut -f1`
-	dd if=$ROOTDIR/build/qoriq-mc-binary/lx216xa/${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
+	if [ "x$MC_FORCE" == "x" ]; then
+		MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/ | grep -v sha256sum | cut -f1`
+		dd if=$ROOTDIR/build/qoriq-mc-binary/lx216xa/${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
+	else
+		echo "Forcing MC firmware selection"
+		MC=$MC_FORCE
+		dd if=$ROOTDIR/$MC_FORCE of=images/${IMG} bs=512 seek=20480 conv=notrunc
+	fi
 fi
 
 # DPAA2 DPL at 0x6800
