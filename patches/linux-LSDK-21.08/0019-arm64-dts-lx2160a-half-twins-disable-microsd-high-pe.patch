@@ -1,0 +1,36 @@
+From 442e692db3f9e5bfea6845333f7b0d99f3f7c042 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 25 May 2022 16:23:09 +0300
+Subject: [PATCH] arm64: dts: lx2160a-half-twins: disable microsd
+ high-performance modes
+
+Disable high-speed modes in Linux to ensure the microSD operates in the
+same mode as it does during rcw and u-boot.
+
+This is a work-around for when the system gets stuck after reboot failing
+to read from the microSD card.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+index ebfce1ad7ace..9d25d84b4a29 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+@@ -450,10 +450,7 @@ &emdio2 {
+ 	status = "disabled";
+ };
+ &esdhc0 {
+-	sd-uhs-sdr104;
+-	sd-uhs-sdr50;
+-	sd-uhs-sdr25;
+-	sd-uhs-sdr12;
++	no-1-v-8;
+ 	status = "okay";
+ };
+ &pcs_mdio3 {
+-- 
+2.35.3
+
