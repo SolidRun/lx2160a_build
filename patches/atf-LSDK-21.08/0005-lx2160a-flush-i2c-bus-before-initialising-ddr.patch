@@ -1,7 +1,7 @@
-From 097f2c352af953cdb2515f8ffdff4f384f8c35c0 Mon Sep 17 00:00:00 2001
+From d9118d3e9ff4d493d30a9fac19a1679b4e8913af Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Thu, 26 May 2022 11:22:53 +0300
-Subject: [PATCH] lx2160a: flush i2c bus before initialising ddr
+Subject: [PATCH 5/7] lx2160a: flush i2c bus before initialising ddr
 
 The i2c bus can get locked by a slave device holding sda low, when the
 cpu is reset during a transaction.
@@ -9,12 +9,11 @@ Implement workaround according to LX2160A Chip Errata 07/2020 A-010650.
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---
- plat/nxp/common/setup/common.mk             |   1 +
- plat/nxp/common/setup/ls_bl2_el3_setup.c    |   5 +
- plat/nxp/common/setup/ls_common.c           |   1 +
- plat/nxp/common/setup/ls_i2c_init.c         | 228 ++++++++++++++++++++
- plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c |   1 +
- 5 files changed, 236 insertions(+)
+ plat/nxp/common/setup/common.mk          |   1 +
+ plat/nxp/common/setup/ls_bl2_el3_setup.c |   5 +
+ plat/nxp/common/setup/ls_common.c        |   1 +
+ plat/nxp/common/setup/ls_i2c_init.c      | 231 +++++++++++++++++++++++
+ 4 files changed, 238 insertions(+)
  create mode 100644 plat/nxp/common/setup/ls_i2c_init.c
 
 diff --git a/plat/nxp/common/setup/common.mk b/plat/nxp/common/setup/common.mk
@@ -66,10 +65,10 @@ index f8bc99130..6d9b6c9aa 100644
  #include <mmu_def.h>
 diff --git a/plat/nxp/common/setup/ls_i2c_init.c b/plat/nxp/common/setup/ls_i2c_init.c
 new file mode 100644
-index 000000000..ef113126c
+index 000000000..13b505c12
 --- /dev/null
 +++ b/plat/nxp/common/setup/ls_i2c_init.c
-@@ -0,0 +1,228 @@
+@@ -0,0 +1,231 @@
 +#include <stdint.h>
 +#include <stdio.h>
 +#include <stdlib.h>
@@ -90,19 +89,19 @@ index 000000000..ef113126c
 +#define NXP_IIC8_ADDR	0x02070000
 +
 +#define RCWSR12				0x70010012c
-+#define RCWSR12_IIC2_PMUX_MASK		0x00000007 // [0..2]
++#define RCWSR12_IIC2_PMUX_MASK		0x00000007 /* [0..2] */
 +#define RCWSR12_IIC2_PMUX_IIC2		0x00000000
 +#define RCWSR12_IIC2_PMUX_GPIO		0x00000001
-+#define RCWSR12_IIC3_PMUX_MASK		0x00000038 // [3..5]
++#define RCWSR12_IIC3_PMUX_MASK		0x00000038 /* [3..5] */
 +#define RCWSR12_IIC3_PMUX_IIC3		0x00000000
 +#define RCWSR12_IIC3_PMUX_GPIO		0x00000008
-+#define RCWSR12_IIC4_PMUX_MASK		0x000001c0 // [6..8]
++#define RCWSR12_IIC4_PMUX_MASK		0x000001c0 /* [6..8] */
 +#define RCWSR12_IIC4_PMUX_IIC4		0x00000000
 +#define RCWSR12_IIC4_PMUX_GPIO		0x00000040
-+#define RCWSR12_IIC5_PMUX_MASK		0x00000e00 // [9..11]
++#define RCWSR12_IIC5_PMUX_MASK		0x00000e00 /* [9..11] */
 +#define RCWSR12_IIC5_PMUX_IIC5		0x00000000
 +#define RCWSR12_IIC5_PMUX_GPIO		0x00000200
-+#define RCWSR12_IIC6_PMUX_MASK		0x00007000 // [12..14]
++#define RCWSR12_IIC6_PMUX_MASK		0x00007000 /* [12..14] */
 +#define RCWSR12_IIC6_PMUX_IIC6		0x00000000
 +#define RCWSR12_IIC6_PMUX_GPIO		0x00001000
 +#define RCWSR13				0x700100130
@@ -110,7 +109,7 @@ index 000000000..ef113126c
 +#define RCWSR12_SDHC2_DAT74_PMUX_SDHC2	0x00000000
 +#define RCWSR12_SDHC2_DAT74_PMUX_IIC78	0x00000001
 +#define RCWSR14				0x700100134
-+#define RCWSR14_IIC1_PMUX_MASK		0x00000400 // [10]
++#define RCWSR14_IIC1_PMUX_MASK		0x00000400 /* [10] */
 +#define RCWSR14_IIC1_PMUX_IIC1		0x00000000
 +#define RCWSR14_IIC1_PMUX_GPIO		0x00000400
 +
@@ -121,15 +120,15 @@ index 000000000..ef113126c
 + * in case the system was reset during a transaction.
 + */
 +void bl2_i2c_init() {
-+	// IIC5
++	/* IIC5 */
 +	i2c_init(NXP_IIC5_ADDR);
 +	ls_i2c_flush(4, "IIC5");
 +
-+	// IIC3
++	/* IIC3 */
 +	i2c_init(NXP_IIC3_ADDR);
 +	ls_i2c_flush(2, "IIC3");
 +
-+	// IIC1
++	/* IIC1 */
 +	i2c_init(NXP_IIC1_ADDR);
 +	ls_i2c_flush(0, "IIC1");
 +}
@@ -144,67 +143,67 @@ index 000000000..ef113126c
 +} ls_i2c_bus_info[] = {
 +	{
 +		.pinmux_addr = RCWSR14,
-+		.pinmux_mask = RCWSR14_IIC1_PMUX_MASK, // bit 10 - 0x200000?
++		.pinmux_mask = RCWSR14_IIC1_PMUX_MASK,
 +		.pinmux_sel = RCWSR14_IIC1_PMUX_GPIO,
 +		.gpio_addr = NXP_GPIO1_ADDR,
-+		.gpio_scl = 3, // GPIO1_DAT03
-+		.gpio_sda = 2, // GPIO1_DAT02
++		.gpio_scl = 3, /* GPIO1_DAT03 */
++		.gpio_sda = 2, /* GPIO1_DAT02 */
 +	},
 +	{
 +		.pinmux_addr = RCWSR12,
 +		.pinmux_mask = RCWSR12_IIC2_PMUX_MASK,
 +		.pinmux_sel = RCWSR12_IIC2_PMUX_GPIO,
 +		.gpio_addr = NXP_GPIO1_ADDR,
-+		.gpio_scl = 31, // GPIO1_DAT31
-+		.gpio_sda = 30, // GPIO1_DAT30
++		.gpio_scl = 31, /* GPIO1_DAT31 */
++		.gpio_sda = 30, /* GPIO1_DAT30 */
 +	},
 +	{
 +		.pinmux_addr = RCWSR12,
 +		.pinmux_mask = RCWSR12_IIC3_PMUX_MASK,
 +		.pinmux_sel = RCWSR12_IIC3_PMUX_GPIO,
 +		.gpio_addr = NXP_GPIO1_ADDR,
-+		.gpio_scl = 29, // GPIO1_DAT29
-+		.gpio_sda = 28, // GPIO1_DAT28
++		.gpio_scl = 29, /* GPIO1_DAT29 */
++		.gpio_sda = 28, /* GPIO1_DAT28 */
 +	},
 +	{
 +		.pinmux_addr = RCWSR12,
 +		.pinmux_mask = RCWSR12_IIC4_PMUX_MASK,
 +		.pinmux_sel = RCWSR12_IIC4_PMUX_GPIO,
 +		.gpio_addr = NXP_GPIO1_ADDR,
-+		.gpio_scl = 27, // GPIO1_DAT27
-+		.gpio_sda = 26, // GPIO1_DAT26
++		.gpio_scl = 27, /* GPIO1_DAT27 */
++		.gpio_sda = 26, /* GPIO1_DAT26 */
 +	},
 +	{
 +		.pinmux_addr = RCWSR12,
 +		.pinmux_mask = RCWSR12_IIC5_PMUX_MASK,
 +		.pinmux_sel = RCWSR12_IIC5_PMUX_GPIO,
 +		.gpio_addr = NXP_GPIO1_ADDR,
-+		.gpio_scl = 25, // GPIO1_DAT25
-+		.gpio_sda = 24, // GPIO1_DAT24
++		.gpio_scl = 25, /* GPIO1_DAT25 */
++		.gpio_sda = 24, /* GPIO1_DAT24 */
 +	},
 +	{
 +		.pinmux_addr = RCWSR12,
 +		.pinmux_mask = RCWSR12_IIC6_PMUX_MASK,
 +		.pinmux_sel = RCWSR12_IIC6_PMUX_GPIO,
 +		.gpio_addr = NXP_GPIO1_ADDR,
-+		.gpio_scl = 23, // GPIO1_DAT23
-+		.gpio_sda = 22, // GPIO1_DAT22
++		.gpio_scl = 23, /* GPIO1_DAT23 */
++		.gpio_sda = 22, /* GPIO1_DAT22 */
 +	},
 +	{
 +		.pinmux_addr = RCWSR13,
 +		.pinmux_mask = RCWSR12_SDHC2_DAT74_PMUX_MASK,
 +		.pinmux_sel = RCWSR12_SDHC2_DAT74_PMUX_IIC78,
 +		.gpio_addr = NXP_GPIO2_ADDR,
-+		.gpio_scl = 16, // GPIO2_DAT16
-+		.gpio_sda = 15, // GPIO2_DAT15
++		.gpio_scl = 16, /* GPIO2_DAT16 */
++		.gpio_sda = 15, /* GPIO2_DAT15 */
 +	},
 +	{
 +		.pinmux_addr = RCWSR13,
 +		.pinmux_mask = RCWSR12_SDHC2_DAT74_PMUX_MASK,
 +		.pinmux_sel = RCWSR12_SDHC2_DAT74_PMUX_IIC78,
 +		.gpio_addr = NXP_GPIO2_ADDR,
-+		.gpio_scl = 18, // GPIO2_DAT18
-+		.gpio_sda = 17, // GPIO2_DAT17
++		.gpio_scl = 18, /* GPIO2_DAT18 */
++		.gpio_sda = 17, /* GPIO2_DAT17 */
 +	},
 +};
 +
@@ -250,7 +249,6 @@ index 000000000..ef113126c
 +	mmio_write_32(info->pinmux_addr, pinmux);
 +
 +	/* configure SCL as output open drain + SDA as input open drain */
-+	//gpdir = (gpdir | scl_mask) & ~sda_mask;
 +	gpdir = (gpdir | scl_mask) & ~sda_mask;
 +	gpodr |= scl_mask | sda_mask;
 +	gpdat |= scl_mask | sda_mask;
@@ -259,7 +257,9 @@ index 000000000..ef113126c
 +	mmio_write_32(gpodr_addr, gpodr);
 +	mmio_write_32(gpdat_addr, gpdat);
 +	mmio_write_32(gpibe_addr, gpibe);
-+	udelay(1);
++
++	/* delay at least one cycle to for a slave to complete one bit */
++	udelay(10);
 +
 +	/*
 +	 * detect if bus is blocked: sda is expected high while scl is high.
@@ -267,7 +267,7 @@ index 000000000..ef113126c
 +	 */
 +	gpdat = mmio_read_32(gpdat_addr);
 +	if(gpdat & sda_mask) {
-+		// not blocked, nothing to do
++		/* not blocked, nothing to do */
 +		goto restore;
 +	}
 +	NOTICE("flushing blocked i2c bus %u (%s)\n", busno, busname);
@@ -279,6 +279,8 @@ index 000000000..ef113126c
 +	mmio_write_32(gpdir_addr, gpdir);
 +	mmio_write_32(gpdat_addr, gpdat);
 +	mmio_write_32(gpibe_addr, gpibe);
++
++	VERBOSE("flushing i2c bus %u (%s)\n", busno, busname);
 +
 +	/* toggle clock 9 times */
 +	for(uint8_t i = 0; i < 9; i++) {
@@ -298,18 +300,6 @@ index 000000000..ef113126c
 +
 +	return;
 +}
-diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c b/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
-index eb28216e7..9f1c50449 100644
---- a/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
-+++ b/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
-@@ -101,6 +101,7 @@ long long init_ddr(void)
- 	}
- #endif
- 
-+	NOTICE("DDR init\n");
- 	dram_size = dram_init(&info
- #if defined(NXP_HAS_CCN504) || defined(NXP_HAS_CCN508)
- 		    , NXP_CCN_HN_F_0_ADDR
 -- 
 2.35.3
 

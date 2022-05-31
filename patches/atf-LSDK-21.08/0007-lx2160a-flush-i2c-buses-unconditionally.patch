@@ -1,0 +1,102 @@
+From 9ff38bdb447c9c90c9e56101dba47410f67f1e09 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 31 May 2022 10:16:49 +0300
+Subject: [PATCH 7/7] lx2160a: flush i2c buses unconditionally
+
+Detection of the error case is difficult because the value of sda
+depends on the previously written bit.
+Remove detection code and flush every time.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/common/setup/ls_i2c_init.c | 38 ++++++-----------------------
+ 1 file changed, 8 insertions(+), 30 deletions(-)
+
+diff --git a/plat/nxp/common/setup/ls_i2c_init.c b/plat/nxp/common/setup/ls_i2c_init.c
+index cf1a7207a..202fe2e6d 100644
+--- a/plat/nxp/common/setup/ls_i2c_init.c
++++ b/plat/nxp/common/setup/ls_i2c_init.c
+@@ -188,10 +188,10 @@ static struct i2c_bus_info {
+  */
+ static void ls_i2c_flush(uint8_t busno, const char *busname) {
+ 	struct i2c_bus_info *info;
+-	uintptr_t gpdir_addr, gpodr_addr, gpdat_addr, gpibe_addr;
+-	uint32_t pinmux, gpdir, gpodr, gpdat, gpibe;
++	uintptr_t gpdir_addr, gpodr_addr, gpdat_addr;
++	uint32_t pinmux, gpdir, gpodr, gpdat;
+ 	struct {
+-		uint32_t pinmux, gpdir, gpodr, gpdat, gpibe;
++		uint32_t pinmux, gpdir, gpodr, gpdat;
+ 	} backup;
+ 	uint32_t scl_mask, sda_mask;
+ 
+@@ -204,7 +204,6 @@ static void ls_i2c_flush(uint8_t busno, const char *busname) {
+ 	gpdir_addr = info->gpio_addr + 0x0;
+ 	gpodr_addr = info->gpio_addr + 0x4;
+ 	gpdat_addr = info->gpio_addr + 0x8;
+-	gpibe_addr = info->gpio_addr + 0x18;
+ 	scl_mask = 0x80000000 >> info->gpio_scl;
+ 	sda_mask = 0x80000000 >> info->gpio_sda;
+ 
+@@ -213,43 +212,24 @@ static void ls_i2c_flush(uint8_t busno, const char *busname) {
+ 	gpdir = backup.gpdir = mmio_read_32(gpdir_addr);
+ 	gpodr = backup.gpodr = mmio_read_32(gpodr_addr);
+ 	gpdat = backup.gpdat = mmio_read_32(gpdat_addr);
+-	gpibe = backup.gpibe = mmio_read_32(gpibe_addr);
+ 
+ 	/* configure SCL+SDA as GPIOs */
+ 	pinmux = (pinmux & ~info->pinmux_mask) | info->pinmux_sel;
+ 	mmio_write_32(info->pinmux_addr, pinmux);
+ 
+-	/* configure SCL as output open drain + SDA as input open drain */
+-	gpdir = (gpdir | scl_mask) & ~sda_mask;
++	/* configure SCL+SDA as output open drain */
++	gpdir |= scl_mask | sda_mask;
+ 	gpodr |= scl_mask | sda_mask;
+ 	gpdat |= scl_mask | sda_mask;
+-	gpibe |= sda_mask;
+ 	mmio_write_32(gpdir_addr, gpdir);
+ 	mmio_write_32(gpodr_addr, gpodr);
+ 	mmio_write_32(gpdat_addr, gpdat);
+-	mmio_write_32(gpibe_addr, gpibe);
+-
+-	/* delay at least one cycle to for a slave to complete one bit */
+-	udelay(10);
+ 
+ 	/*
+-	 * detect if bus is blocked: sda is expected high while scl is high.
+-	 * If sda is still low, a slave device is blocking it.
++	 * reliable detection of blocked bus is hard
++	 * because sda depends on the last sent bit.
++	 * Flush unconditionally instead.
+ 	 */
+-	gpdat = mmio_read_32(gpdat_addr);
+-	if(gpdat & sda_mask) {
+-		/* not blocked, nothing to do */
+-		goto restore;
+-	}
+-	NOTICE("flushing blocked i2c bus %u (%s)\n", busno, busname);
+-
+-	/* configure SCL+SDA as output open drain */
+-	gpdir |= sda_mask;
+-	gpdat |= sda_mask;
+-	gpibe &= ~sda_mask;
+-	mmio_write_32(gpdir_addr, gpdir);
+-	mmio_write_32(gpdat_addr, gpdat);
+-	mmio_write_32(gpibe_addr, gpibe);
+ 
+ 	VERBOSE("flushing i2c bus %u (%s)\n", busno, busname);
+ 
+@@ -261,9 +241,7 @@ static void ls_i2c_flush(uint8_t busno, const char *busname) {
+ 		udelay(10);
+ 	}
+ 
+-restore:
+ 	/* restore configuration registers */
+-	mmio_write_32(gpibe_addr, backup.gpibe);
+ 	mmio_write_32(gpdat_addr, backup.gpdat);
+ 	mmio_write_32(gpodr_addr, backup.gpodr);
+ 	mmio_write_32(gpdir_addr, backup.gpdir);
+-- 
+2.35.3
+

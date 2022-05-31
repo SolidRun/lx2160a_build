@@ -1,0 +1,82 @@
+From 8e43e0c3b8ea4d7d1ea8a0b03c2113b4ae22c4b1 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 30 May 2022 18:57:37 +0300
+Subject: [PATCH 6/7] lx2160a: flush i2c bus connected mux channels
+
+Some i2c buses have multi-channel muxes connected.
+During reset channel 0 is selected by default; However any other channel
+may be in a blocked state.
+
+Detect if known muxes are connected and flush all their channels.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/common/setup/ls_i2c_init.c | 42 +++++++++++++++++++++++++++++
+ 1 file changed, 42 insertions(+)
+
+diff --git a/plat/nxp/common/setup/ls_i2c_init.c b/plat/nxp/common/setup/ls_i2c_init.c
+index 13b505c12..cf1a7207a 100644
+--- a/plat/nxp/common/setup/ls_i2c_init.c
++++ b/plat/nxp/common/setup/ls_i2c_init.c
+@@ -42,6 +42,7 @@
+ #define RCWSR14_IIC1_PMUX_IIC1		0x00000000
+ #define RCWSR14_IIC1_PMUX_GPIO		0x00000400
+ 
++static void ls_i2c_flush_pca9547(uint8_t busno, const char *busname, uint8_t address);
+ static void ls_i2c_flush(uint8_t busno, const char *busname);
+ 
+ /**
+@@ -57,9 +58,50 @@ void bl2_i2c_init() {
+ 	i2c_init(NXP_IIC3_ADDR);
+ 	ls_i2c_flush(2, "IIC3");
+ 
++	/* IIC3: twins: pca9547@77 */
++	ls_i2c_flush_pca9547(2, "IIC3", 0x77);
++
++	/* IIC3: twins: pca9547@76 */
++	ls_i2c_flush_pca9547(2, "IIC3", 0x76);
++
++	/* IIC3: half-twins: pca9547@73 */
++	ls_i2c_flush_pca9547(2, "IIC3", 0x73);
++
+ 	/* IIC1 */
+ 	i2c_init(NXP_IIC1_ADDR);
+ 	ls_i2c_flush(0, "IIC1");
++
++	/* IIC1: cex7: pca9547@77 */
++	ls_i2c_flush_pca9547(0, "IIC1", 0x77);
++}
++
++static void ls_i2c_flush_pca9547(uint8_t busno, const char *busname, uint8_t chip) {
++	uint8_t channel, creg = 0;
++	char buffer[64];
++	int ret;
++
++	/* try read configuration register */
++	ret = i2c_read(chip, 0x00, 1, &creg, 1);
++	if(ret != 0) {
++		/* no device responding at address, skip */
++		return;
++	}
++
++	/* after reset configuration register reads 0x08 */
++	if(creg != 0x08) {
++		/* probably not a pca9547, skip */
++		return;
++	}
++
++	for(uint8_t i = 8; i > 0; i--) {
++		/* select channel i */
++		channel = 0x08 | (i-1);
++		i2c_write(chip, 0x00, 1, &channel, 1);
++
++		/* flush channel */
++		snprintf(buffer, sizeof(buffer), "%s mux@%02x channel %u", busname, chip, i);
++		ls_i2c_flush(busno, buffer);
++	}
+ }
+ 
+ static struct i2c_bus_info {
+-- 
+2.35.3
+
