@@ -33,5 +33,10 @@ sudo -u $user git config --global user.name "LX2160A Toolchain Container"
 sudo -u $user git config --global user.email "support@solid-run.com"
 
 cd /work
-# now run the build script as the build user
-sudo -u $user ./runme.sh
+# now run the build script as the build user, preserving config variables
+sudo \
+	--preserve-env=RELEASE,DDR_SPEED,SERDES,UEFI_RELEASE \
+	--preserve-env=SHALLOW,SECURE,ATF_DEBUG,DISTRO \
+	--preserve-env=BR2_PRIMARY_SITE \
+	-u $user \
+	./runme.sh
