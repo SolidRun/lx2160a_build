@@ -110,6 +110,39 @@ case "${SERDES}" in
 		DPC=dpc-6x25g.dtb
 		DPL=dpl-eth.6x25g.21.dtb
 	;;
+	LX2162A_CLEARFOG_0_0_*)
+		DPC=LX2162-USOM/clearfog-s1_0-s2_0-dpc.dtb
+		DPL=LX2162-USOM/clearfog-s1_0-s2_0-dpl.dtb
+		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
+	;;
+	LX2162A_CLEARFOG_0_7_*)
+		DPC=LX2162-USOM/clearfog-s1_0-s2_7-dpc.dtb
+		DPL=LX2162-USOM/clearfog-s1_0-s2_7-dpl.dtb
+		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
+		MC_FORCE=patches/mc_10.28.100_lx2160a.itb
+	;;
+	LX2162A_CLEARFOG_0_9_*)
+		DPC=LX2162-USOM/clearfog-s1_0-s2_9-dpc.dtb
+		DPL=LX2162-USOM/clearfog-s1_0-s2_9-dpl.dtb
+		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
+		MC_FORCE=patches/mc_10.28.100_lx2160a.itb
+	;;
+	LX2162A_CLEARFOG_0_11_*)
+		DPC=LX2162-USOM/clearfog-s1_0-s2_11-dpc.dtb
+		DPL=LX2162-USOM/clearfog-s1_0-s2_11-dpl.dtb
+		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
+		MC_FORCE=patches/mc_10.28.100_lx2160a.itb
+	;;
+	LX2162A_CLEARFOG_3_0_*)
+		DPC=LX2162-USOM/clearfog-s1_3-s2_0-dpc.dtb
+		DPL=LX2162-USOM/clearfog-s1_3-s2_0-dpl.dtb
+		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
+	;;
+	LX2162A_CLEARFOG_3_9_*)
+		DPC=LX2162-USOM/clearfog-s1_3-s2_9-dpc.dtb
+		DPL=LX2162-USOM/clearfog-s1_3-s2_9-dpl.dtb
+		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
+	;;
 	*)
 		echo "Please define SERDES configuration"
 		exit -1
@@ -262,7 +295,7 @@ case "\$1" in
 		echo "127.0.0.1 localhost" > /mnt/etc/hosts
 		export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C
 		chroot /mnt apt update
-		chroot /mnt apt install --no-install-recommends -y systemd-sysv apt locales less wget procps openssh-server ifupdown net-tools isc-dhcp-client ntpdate lm-sensors i2c-tools psmisc less sudo htop iproute2 iputils-ping kmod network-manager iptables rng-tools apt-utils
+		chroot /mnt apt install --no-install-recommends -y systemd-sysv apt locales less wget procps openssh-server ifupdown net-tools isc-dhcp-client ntpdate lm-sensors i2c-tools psmisc less sudo htop iproute2 iputils-ping kmod network-manager iptables rng-tools apt-utils ethtool
 		echo -e "root\nroot" | chroot /mnt passwd
 		umount /mnt/var/lib/apt/
 		umount /mnt/var/cache/apt
@@ -614,10 +647,16 @@ else
 fi
 
 # DPAA2 DPL at 0x6800
-dd if=$ROOTDIR/build/mc-utils/config/lx2160a/CEX7/${DPL} of=images/${IMG} bs=512 seek=26624 conv=notrunc
+if [[ ! $DPL =~ / ]]; then
+	DPL="CEX7/$DPL"
+fi
+dd if=$ROOTDIR/build/mc-utils/config/lx2160a/${DPL} of=images/${IMG} bs=512 seek=26624 conv=notrunc
 
 # DPAA2 DPC at 0x7000
-dd if=$ROOTDIR/build/mc-utils/config/lx2160a/CEX7/${DPC} of=images/${IMG} bs=512 seek=28672 conv=notrunc
+if [[ ! $DPC =~ / ]]; then
+	DPC="CEX7/$DPC"
+fi
+dd if=$ROOTDIR/build/mc-utils/config/lx2160a/${DPC} of=images/${IMG} bs=512 seek=28672 conv=notrunc
 
 # Kernel at 0x8000
 dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=32768 conv=notrunc

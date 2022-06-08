@@ -1,0 +1,504 @@
+From 79ac46f001064cbd954203d571841b49ded72856 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 8 Sep 2022 15:17:03 +0300
+Subject: [PATCH] arm64: dts: add lx2162 clearfog
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/Makefile        |   1 +
+ .../dts/freescale/fsl-lx2162a-clearfog.dts    | 471 ++++++++++++++++++
+ 2 files changed, 472 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+
+diff --git a/arch/arm64/boot/dts/freescale/Makefile b/arch/arm64/boot/dts/freescale/Makefile
+index bf51a3cfeda7..3896283a75cd 100644
+--- a/arch/arm64/boot/dts/freescale/Makefile
++++ b/arch/arm64/boot/dts/freescale/Makefile
+@@ -54,6 +54,7 @@ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls2088a-rdb.dtb
+ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-clearfog-cx.dtb
+ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-honeycomb.dtb
+ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-half-twins.dtb
++dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2162a-clearfog.dtb
+ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2162a-solidnet.dtb
+ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-qds.dtb
+ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-rdb.dtb
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+new file mode 100644
+index 000000000000..b9fe7f017c3c
+--- /dev/null
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+@@ -0,0 +1,471 @@
++// SPDX-License-Identifier: (GPL-2.0 OR MIT)
++//
++// Device Tree file for LX2162A Clearfog
++//
++// Copyright 2022 Josua Mayer <josua@solid-run.com>
++
++/dts-v1/;
++
++#include "fsl-lx2162a-som.dtsi"
++
++/* work-around for phy address 1 conflict on mdio bus */
++#define OCTOPHY_ADDR_OFFSET_LOWER 0x08
++#define OCTOPHY_ADDR_OFFSET_UPPER 0x00
++#define OCTOPHY_ADDR_LOWER(index) (OCTOPHY_ADDR_OFFSET_LOWER + index)
++#define OCTOPHY_ADDR_UPPER(index) (OCTOPHY_ADDR_OFFSET_UPPER + index)
++
++/ {
++	model = "SolidRun LX2162A Clearfog";
++	compatible = "solidrun,clearfog", "fsl,lx2160a";
++	aliases {
++        crypto = &crypto;
++		serial0 = &uart0;
++	};
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++
++	sfp0: sfp-0 {
++		compatible = "sff,sfp";
++		i2c-bus = <&sfp_i2c0>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp1: sfp-1 {
++		compatible = "sff,sfp";
++		i2c-bus = <&sfp_i2c1>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp2: sfp-2 {
++		compatible = "sff,sfp";
++		i2c-bus = <&sfp_i2c2>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp3: sfp-3 {
++		compatible = "sff,sfp";
++		i2c-bus = <&sfp_i2c3>;
++		maximum-power-milliwatt = <2000>;
++	};
++};
++
++&i2c2 {
++	retimer@30 {
++		compatible = "ti,ds250df410";
++		reg = <0x30>;
++	};
++
++	i2c-switch@70 {
++		compatible = "nxp,pca9546";
++		#address-cells = <1>;
++		#size-cells = <0>;
++		reg = <0x70>;
++		i2c-mux-idle-disconnect;
++
++		/* upper 10G connector */
++		sfp_i2c0: i2c@0 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <0>;
++		};
++
++		/* lower 10G connector */
++		sfp_i2c1: i2c@1 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <1>;
++		};
++
++		/* upper 25G connector */
++		sfp_i2c2: i2c@2 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <2>;
++		};
++
++		/* lower 25G connector */
++		sfp_i2c3: i2c@3 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <3>;
++		};
++	};
++
++	i2c-switch@71 {
++		compatible = "nxp,pca9546";
++		#address-cells = <1>;
++		#size-cells = <0>;
++		reg = <0x71>;
++		i2c-mux-idle-disconnect;
++		mpcie1_i2c: i2c@0 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <0>;
++		};
++		mpcie0_i2c: i2c@1 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <1>;
++		};
++		pcieclk_i2c: i2c@2 {
++			#address-cells = <1>;
++			#size-cells = <0>;
++			reg = <2>;
++
++			pcieclk@6b {
++				compatible = "skyworks,si53154";
++				reg = <0x6b>;
++			};
++		};
++	};
++};
++
++/*
++ * Serdes 1 Clocks:
++ * - PLLF = 161.1328125MHz
++ * - PLLS = PLLF
++ */
++
++/*
++ * SD1 Protocol 2: 4x 1Gbps
++ * - Lane 0 (H): USXGMII / XFI WRIOP MAC3
++ * - Lane 1 (G): USXGMII / XFI WRIOP MAC4
++ * - Lane 2 (F): USXGMII / XFI WRIOP MAC5
++ * - Lane 3 (E): USXGMII / XFI WRIOP MAC6
++ * Requires either 100MHz or 125MHz reference clock
++ */
++
++/*
++ * SD1 Protocol 3: 4x 10Gbps
++ * - Lane 0 (H): USXGMII / XFI WRIOP MAC3
++ * - Lane 1 (G): USXGMII / XFI WRIOP MAC4
++ * - Lane 2 (F): USXGMII / XFI WRIOP MAC5
++ * - Lane 3 (E): USXGMII / XFI WRIOP MAC6
++ * Requires either 156.25MHz or 161.1328125MHz reference clock
++ */
++
++/*
++ * SD1 Protocol 17: 4x 25Gbps
++ * - Lane 0 (H): 25GE WRIOP MAC3
++ * - Lane 1 (G): 25GE WRIOP MAC4
++ * - Lane 2 (F): 25GE WRIOP MAC5
++ * - Lane 3 (E): 25GE WRIOP MAC6
++ * Requires 161.1328125MHz reference clock
++ */
++
++/*
++ * SD1 Protocol 18: 2x 10Gbps + 2x 25Gbps
++ * - Lane 0 (H): USXGMII / XFI WRIOP MAC3
++ * - Lane 1 (G): USXGMII / XFI WRIOP MAC4
++ * - Lane 2 (F): 25GE WRIOP MAC5
++ * - Lane 3 (E): 25GE WRIOP MAC6
++ * Requires 161.1328125MHz reference clock
++ */
++
++/* upper 10G connector */
++&dpmac3 {
++	status = "okay";
++	phys = <&serdes1_lane_h>;
++	phy-connection-type = "10gbase-r";
++	// sfp = <&sfp0>;
++
++	fixed-link {
++		speed = <10000>;
++		full-duplex;
++	};
++};
++
++&pcs_mdio3 {
++	status = "okay";
++};
++
++/* lower 10G connector */
++&dpmac4 {
++	status = "okay";
++	phys = <&serdes1_lane_g>;
++	phy-connection-type = "10gbase-r";
++	// sfp = <&sfp1>;
++
++	fixed-link {
++		speed = <10000>;
++		full-duplex;
++	};
++};
++
++&pcs_mdio4 {
++	status = "okay";
++};
++
++&dpmac5 {
++	status = "okay";
++	phys = <&serdes1_lane_f>;
++	phy-connection-type = "10gbase-r";
++	//phy-connection-type = "25g-aui";
++
++	fixed-link {
++		speed = <10000>;
++		full-duplex;
++	};
++};
++
++&pcs_mdio5 {
++	status = "okay";
++};
++
++&dpmac6 {
++	status = "okay";
++	phys = <&serdes1_lane_e>;
++	phy-connection-type = "10gbase-r";
++	//phy-connection-type = "25g-aui";
++
++	fixed-link {
++		speed = <10000>;
++		full-duplex;
++	};
++};
++
++&pcs_mdio6 {
++	status = "okay";
++};
++
++&serdes_1 {
++	status = "okay";
++};
++
++/*
++ * Serdes 2 Clocks:
++ * - PLLF = 100MHz (Carrier CLK_SLOT1)
++ * - PLLS = 156.25MHz (SoM)
++ */
++
++/*
++ * SD2 Protocol 7: 4x 1Gbps + 2x PCIe Gen. 2 x1 + 2x 10Gbps
++ * - Lane 0 (A): PCIe.3
++ * - Lane 1 (B): SGMII WRIOP MAC12
++ * - Lane 2 (C): SGMII WRIOP MAC17
++ * - Lane 3 (D): SGMII WRIOP MAC18
++ * - Lane 4 (E): PCIe.4
++ * - Lane 5 (F): SGMII WRIOP MAC16
++ * - Lane 6 (G): USXGMII / XFI WRIOP MAC13
++ * - Lane 7 (H): USXGMII / XFI WRIOP MAC14
++ * Requires 100MHz and 156.25MHz reference clocks
++ */
++
++/*
++ * SD2 Protocol 9: 8x 1Gbps
++ * - Lane 0 (A): SGMII WRIOP MAC11
++ * - Lane 1 (B): SGMII WRIOP MAC12
++ * - Lane 2 (C): SGMII WRIOP MAC17
++ * - Lane 3 (D): SGMII WRIOP MAC18
++ * - Lane 4 (E): SGMII WRIOP MAC15
++ * - Lane 5 (F): SGMII WRIOP MAC16
++ * - Lane 6 (G): SGMII WRIOP MAC13
++ * - Lane 7 (H): SGMII WRIOP MAC14
++ * Requires 100MHz reference clock
++ */
++
++/*
++ * SD2 Protocol 11: 6x 1Gbps + 2x PCIe Gen. 3 x1
++ * - Lane 0 (A): PCIe.3
++ * - Lane 1 (B): SGMII WRIOP MAC12
++ * - Lane 2 (C): SGMII WRIOP MAC17
++ * - Lane 3 (D): SGMII WRIOP MAC18
++ * - Lane 4 (E): PCIe.4
++ * - Lane 5 (F): SGMII WRIOP MAC16
++ * - Lane 6 (G): SGMII WRIOP MAC13
++ * - Lane 7 (H): SGMII WRIOP MAC14
++ * Requires 100MHz reference clock
++ */
++
++&dpmac11 {
++	status = "okay";
++	phys = <&serdes2_lane_a>;
++	phy-handle = <&ethernet_phy2>;
++	phy-connection-type = "rgmii-id";
++};
++
++&pcs_mdio11 {
++	status = "okay";
++};
++
++&dpmac12 {
++	status = "okay";
++	phys = <&serdes2_lane_b>;
++	phy-handle = <&ethernet_phy0>;
++	phy-connection-type = "rgmii-id";
++};
++
++&pcs_mdio12 {
++	status = "okay";
++};
++
++&dpmac17 {
++	/* override connection to on-SoM phy */
++	/delete-property/ phy-handle;
++	/delete-property/ phy-connection-type;
++
++	status = "okay";
++	phys = <&serdes2_lane_c>;
++	phy-handle = <&ethernet_phy4>;
++	phy-connection-type = "rgmii-id";
++};
++
++&pcs_mdio17 {
++	status = "okay";
++};
++
++&dpmac18 {
++	status = "okay";
++	phys = <&serdes2_lane_d>;
++	phy-handle = <&ethernet_phy6>;
++	phy-connection-type = "rgmii-id";
++};
++
++&pcs_mdio18 {
++	status = "okay";
++};
++
++&dpmac15 {
++	status = "okay";
++	phys = <&serdes2_lane_e>;
++	phy-handle = <&ethernet_phy3>;
++	phy-connection-type = "rgmii-id";
++};
++
++&pcs_mdio15 {
++	status = "okay";
++};
++
++&dpmac16 {
++	status = "okay";
++	phys = <&serdes2_lane_f>;
++	phy-handle = <&ethernet_phy1>;
++	phy-connection-type = "rgmii-id";
++};
++
++&pcs_mdio16 {
++	status = "okay";
++};
++
++&dpmac13 {
++	status = "okay";
++	phys = <&serdes2_lane_g>;
++	phy-handle = <&ethernet_phy5>;
++	phy-connection-type = "rgmii-id";
++};
++
++&pcs_mdio13 {
++	status = "okay";
++};
++
++&dpmac14 {
++	status = "okay";
++	phys = <&serdes2_lane_h>;
++	phy-handle = <&ethernet_phy7>;
++	phy-connection-type = "rgmii-id";
++};
++
++&pcs_mdio14 {
++	status = "okay";
++};
++
++&emdio1 {
++	status = "okay";
++
++	/*
++	 * SoM can have a phy at address 1 connected to SoC Ethernet Controller 1.
++	 * It competes for WRIOP MAC17 with Serdes 2 Protocols 7,9,11 - and no connector is wired.
++	 */
++	/delete-node/ ethernet-phy@1;
++
++	ethernet_phy0: mv88e3580-p0@0 {
++		reg = <OCTOPHY_ADDR_LOWER(0)>;
++		compatible = "ethernet-phy-ieee802.3-c45";
++		rx-internal-delay-ps = <2000>;
++		tx-internal-delay-ps = <2000>;
++	};
++
++	ethernet_phy1: mv88e3580-p1@1 {
++		reg = <OCTOPHY_ADDR_LOWER(1)>;
++		compatible = "ethernet-phy-ieee802.3-c45";
++		rx-internal-delay-ps = <2000>;
++		tx-internal-delay-ps = <2000>;
++	};
++
++	ethernet_phy2: mv88e3580-p2@2 {
++		reg = <OCTOPHY_ADDR_LOWER(2)>;
++		compatible = "ethernet-phy-ieee802.3-c45";
++		rx-internal-delay-ps = <2000>;
++		tx-internal-delay-ps = <2000>;
++	};
++
++	ethernet_phy3: mv88e3580-p3@3 {
++		reg = <OCTOPHY_ADDR_LOWER(3)>;
++		compatible = "ethernet-phy-ieee802.3-c45";
++		rx-internal-delay-ps = <2000>;
++		tx-internal-delay-ps = <2000>;
++	};
++
++	ethernet_phy4: mv88e3580-p4@4 {
++		reg = <OCTOPHY_ADDR_UPPER(4)>;
++		compatible = "ethernet-phy-ieee802.3-c45";
++		rx-internal-delay-ps = <2000>;
++		tx-internal-delay-ps = <2000>;
++	};
++
++	ethernet_phy5: mv88e3580-p5@5 {
++		reg = <OCTOPHY_ADDR_UPPER(5)>;
++		compatible = "ethernet-phy-ieee802.3-c45";
++		rx-internal-delay-ps = <2000>;
++		tx-internal-delay-ps = <2000>;
++	};
++
++	ethernet_phy6: mv88e3580-p6@6 {
++		reg = <OCTOPHY_ADDR_UPPER(6)>;
++		compatible = "ethernet-phy-ieee802.3-c45";
++		rx-internal-delay-ps = <2000>;
++		tx-internal-delay-ps = <2000>;
++	};
++
++	ethernet_phy7: mv88e3580-p7@7 {
++		reg = <OCTOPHY_ADDR_UPPER(7)>;
++		compatible = "ethernet-phy-ieee802.3-c45";
++		rx-internal-delay-ps = <2000>;
++		tx-internal-delay-ps = <2000>;
++	};
++};
++
++/* CON7 */
++&pcie4 {
++	status = "disabled";
++};
++
++/* CON8 */
++&pcie3 {
++	status = "disabled";
++};
++
++&serdes_2 {
++	status = "okay";
++};
++
++&sata0 {
++	status = "disabled";
++};
++
++&sata1 {
++	status = "disabled";
++};
++
++&sata2 {
++	status = "disabled";
++};
++
++&sata3 {
++	status = "disabled";
++};
++
++&usb0 {
++	status = "okay";
++};
+-- 
+2.37.3
+

@@ -1,0 +1,41 @@
+From 1b36215d63699e054f72e0aa3f99812ab7132260 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 8 Sep 2022 14:45:03 +0300
+Subject: [PATCH] arm64: dts: lx2162a-som: add EEPROMs
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2162a-som.dtsi | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-som.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2162a-som.dtsi
+index 9b90cef2df04..8e4d898971ca 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-som.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-som.dtsi
+@@ -44,6 +44,11 @@ tps5622@69 {
+ 		compatible = "tps53679";
+ 		reg = <0x69>;
+ 	};
++
++	config_eeprom: eeprom@57 {
++		reg = <0x57>;
++		compatible = "st,m24c02", "atmel,24c02";
++	};
+ };
+ 
+ &i2c2 {
+@@ -52,6 +57,11 @@ &i2c2 {
+ 
+ &i2c4 {
+ 	status = "okay";
++
++	variable_eeprom: eeprom@54 {
++		reg = <0x54>;
++		compatible = "st,m24m02", "atmel,24c2048";
++	};
+ };
+ 
+ &i2c5 {
+-- 
+2.37.3
+
