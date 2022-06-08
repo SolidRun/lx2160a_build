@@ -15,7 +15,7 @@ RUN apt-get update ; apt-get -y install build-essential wget make p7zip p7zip-fu
         device-tree-compiler acpica-tools xz-utils sudo gcc libssl-dev python2 \
         bison flex u-boot-tools git bc fuseext2 e2tools multistrap \
         qemu-system-arm g++ cpio python unzip rsync dosfstools tar pandoc \
-        python3 meson ninja-build squashfs-tools parted mtools
+        python3 meson ninja-build squashfs-tools parted mtools kmod
 
 # build environment
 WORKDIR /work
