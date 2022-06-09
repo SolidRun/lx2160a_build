@@ -1,0 +1,41 @@
+From 254549a68139784aca808cb82067d932bc4923fd Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 9 Jun 2022 11:33:22 +0300
+Subject: [PATCH] arm64: dts: lx2160a-clearfog-itx: add carrier spi flash
+
+The Clearfog-CS and Honeycomb carriers both have additional flash memory
+connected to fspi on CS1, which is also accessible from the uBMC via a
+mux. Add a device-tree node for this chip.
+
+Signed-off-by: Yazan Shhady <yazan.shhady@solid-run.com>
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+index 14a6334adff2..440e94f24c25 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+@@ -96,6 +96,18 @@ &esdhc0 {
+ 	status = "okay";
+ };
+ 
++&fspi {
++	carrier_flash: w25q32@1 {
++		#address-cells = <1>;
++		#size-cells = <1>;
++		compatible = "st,w25q32";
++		spi-max-frequency = <10000000>;
++		reg = <1>;
++		spi-rx-bus-width = <1>;
++		spi-tx-bus-width = <1>;
++        };
++};
++
+ &pcs_mdio7 {
+ 	status = "okay";
+ };
+-- 
+2.35.3
+
