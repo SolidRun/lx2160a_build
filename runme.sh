@@ -9,6 +9,7 @@ BUILDROOT_VERSION=2020.02.1
 #SERDES=8_5_2 # 8x10g
 #SERDES=13_5_2 # dual 100g
 #SERDES=20_5_2 # dual 40g
+
 ###############################################################################
 # Misc
 ###############################################################################
@@ -356,11 +357,22 @@ cd $ROOTDIR/build/rcw/lx2160acex7
 mkdir -p RCW
 OLDIFS=$IFS
 IFS="_" arr=($SERDES)
-echo "#include <configs/lx2160a_defaults.rcwi>" > RCW/template.rcw
-echo "#include <configs/lx2160a_${SPEED}.rcwi>" >> RCW/template.rcw
-echo "#include <configs/lx2160a_SD1_${arr[0]}.rcwi>" >> RCW/template.rcw
-echo "#include <configs/lx2160a_SD2_${arr[1]}.rcwi>" >> RCW/template.rcw
-echo "#include <configs/lx2160a_SD3_${arr[2]}.rcwi>" >> RCW/template.rcw
+if [ ${#arr[@]} -eq 3 ]; then
+	echo "#include <configs/lx2160a_defaults.rcwi>" > RCW/template.rcw
+	echo "#include <configs/lx2160a_${SPEED}.rcwi>" >> RCW/template.rcw
+	echo "#include <configs/lx2160a_SD1_${arr[0]}.rcwi>" >> RCW/template.rcw
+	echo "#include <configs/lx2160a_SD2_${arr[1]}.rcwi>" >> RCW/template.rcw
+	echo "#include <configs/lx2160a_SD3_${arr[2]}.rcwi>" >> RCW/template.rcw
+fi
+if [ ${#arr[@]} -eq 5 ]; then
+	# extended serdes variable with soc and carrier
+	echo "#include <configs/lx2160a_defaults.rcwi>" > RCW/template.rcw
+	echo "#include <configs/lx2160a_${SPEED}.rcwi>" >> RCW/template.rcw
+	echo "#include <configs/${arr[0],,}_${arr[1],,}.rcwi>" >> RCW/template.rcw
+	echo "#include <configs/${arr[0],,}_${arr[1],,}_SD1_${arr[2]}.rcwi>" >> RCW/template.rcw
+	echo "#include <configs/${arr[0],,}_${arr[1],,}_SD2_${arr[3]}.rcwi>" >> RCW/template.rcw
+	echo "#include <configs/${arr[0],,}_${arr[1],,}_SD3_${arr[4]}.rcwi>" >> RCW/template.rcw
+fi
 if [ "x$SECURE" == "xtrue" ]; then
 	echo "SB_EN=1" #>> RCW/template.rcw
 fi
