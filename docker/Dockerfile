@@ -5,17 +5,16 @@ FROM debian:buster-slim
 ARG APTPROXY=
 RUN test -n "$APTPROXY" && printf 'Acquire::http { Proxy "%s"; }\n' $APTPROXY | tee -a /etc/apt/apt.conf.d/proxy || true
 
+# prevent dpkg interactive dialogues
+ENV DEBIAN_FRONTEND=noninteractive
+
 # update
 RUN set -e; \
 	apt-get update; \
 	apt-get -y upgrade; \
 	:
 
-RUN apt-get update ; apt-get -y install build-essential wget make p7zip p7zip-full \
-        device-tree-compiler acpica-tools xz-utils sudo gcc libssl-dev python2 \
-        bison flex u-boot-tools git bc fuseext2 e2tools multistrap \
-        qemu-system-arm g++ cpio python unzip rsync dosfstools tar pandoc \
-        python3 meson ninja-build squashfs-tools parted mtools kmod
+RUN apt-get update ; apt-get -y install acpica-tools bc bison build-essential cpio device-tree-compiler dosfstools e2tools flex fuseext2 g++ gcc git kmod libssl-dev make meson mtools multistrap ninja-build p7zip p7zip-full pandoc parted python python2 python3 qemu-system-arm rsync squashfs-tools sudo tar u-boot-tools unzip wget xz-utils
 
 # build environment
 WORKDIR /work
