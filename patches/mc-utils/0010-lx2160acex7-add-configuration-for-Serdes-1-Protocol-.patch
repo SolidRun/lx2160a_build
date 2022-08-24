@@ -1,0 +1,281 @@
+From eb614c4cc3f68ee7733649a22e6045134dadc427 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 24 Aug 2022 11:40:13 +0300
+Subject: [PATCH] lx2160acex7: add configuration for Serdes 1 Protocol 21, 2
+ Protocol 13
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../dpc-S1_21-S2_13-6x_25gbe-2x_sgmii.dts     | 100 ++++++++++++
+ .../dpl-S1_21-S2_13-6x_25gbe-2x_sgmii.dts     | 152 ++++++++++++++++++
+ 2 files changed, 252 insertions(+)
+ create mode 100644 config/lx2160a/CEX7/dpc-S1_21-S2_13-6x_25gbe-2x_sgmii.dts
+ create mode 100644 config/lx2160a/CEX7/dpl-S1_21-S2_13-6x_25gbe-2x_sgmii.dts
+
+diff --git a/config/lx2160a/CEX7/dpc-S1_21-S2_13-6x_25gbe-2x_sgmii.dts b/config/lx2160a/CEX7/dpc-S1_21-S2_13-6x_25gbe-2x_sgmii.dts
+new file mode 100644
+index 0000000..2134252
+--- /dev/null
++++ b/config/lx2160a/CEX7/dpc-S1_21-S2_13-6x_25gbe-2x_sgmii.dts
+@@ -0,0 +1,100 @@
++/*
++* Copyright 2018 NXP
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*   * Redistributions of source code must retain the above copyright
++*     notice, this list of conditions and the following disclaimer.
++*   * Redistributions in binary form must reproduce the above copyright
++*     notice, this list of conditions and the following disclaimer in the
++*     documentation and/or other materials provided with the distribution.
++*   * Neither the name of the above-listed copyright holders nor the
++*     names of any contributors may be used to endorse or promote products
++*     derived from this software without specific prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*/
++
++/*
++* This DPC showcases one Linux configuration for lx2160a boards.
++*/
++
++/dts-v1/;
++
++/ {
++
++	resources {
++
++		icid_pools {
++
++			icid_pool@1 {
++				num = <0x64>;
++				base_icid = <0x0>;
++			};
++		};
++	};
++
++	mc_general {
++
++		log {
++			mode = "LOG_MODE_ON";
++			level = "LOG_LEVEL_WARNING";
++		};
++
++		console {
++			mode = "CONSOLE_MODE_OFF";
++			uart_id = <0x4>;
++			level = "LOG_LEVEL_WARNING";
++		};
++	};
++
++	controllers {
++
++		qbman {
++			/* Transform this number of 8-WQ channels into four times
++			 * as many 2-WQ channels. This allows the creation of a
++			 * larger number of DPCONs.
++			 */
++			wq_ch_conversion = <32>;
++		};
++	};
++
++	board_info {
++		ports {
++			mac@3 {
++				link_type = "MAC_LINK_TYPE_FIXED";
++			};
++			mac@4 {
++				link_type = "MAC_LINK_TYPE_FIXED";
++			};
++			mac@5 {
++				link_type = "MAC_LINK_TYPE_FIXED";
++			};
++			mac@6 {
++				link_type = "MAC_LINK_TYPE_FIXED";
++			};
++			mac@9 {
++				link_type = "MAC_LINK_TYPE_FIXED";
++			};
++			mac@10 {
++				link_type = "MAC_LINK_TYPE_FIXED";
++			};
++			mac@13 {
++				link_type = "MAC_LINK_TYPE_PHY";
++			};
++			mac@14 {
++				link_type = "MAC_LINK_TYPE_PHY";
++			};
++		};
++	};
++};
+diff --git a/config/lx2160a/CEX7/dpl-S1_21-S2_13-6x_25gbe-2x_sgmii.dts b/config/lx2160a/CEX7/dpl-S1_21-S2_13-6x_25gbe-2x_sgmii.dts
+new file mode 100644
+index 0000000..8351128
+--- /dev/null
++++ b/config/lx2160a/CEX7/dpl-S1_21-S2_13-6x_25gbe-2x_sgmii.dts
+@@ -0,0 +1,152 @@
++/*
++ * Copyright 2018 NXP
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ *   * Redistributions of source code must retain the above copyright
++ *     notice, this list of conditions and the following disclaimer.
++ *   * Redistributions in binary form must reproduce the above copyright
++ *     notice, this list of conditions and the following disclaimer in the
++ *     documentation and/or other materials provided with the distribution.
++ *   * Neither the name of the above-listed copyright holders nor the
++ *     names of any contributors may be used to endorse or promote products
++ *     derived from this software without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
++ */
++
++/dts-v1/;
++
++/ {
++	dpl-version = <0xa>;
++	/*****************************************************************
++	 * Containers
++	 *****************************************************************/
++	containers {
++		dprc@1 {
++			parent = "none";
++			options = "DPRC_CFG_OPT_SPAWN_ALLOWED", "DPRC_CFG_OPT_ALLOC_ALLOWED", "DPRC_CFG_OPT_IRQ_CFG_ALLOWED";
++			objects {
++				obj_set@dpmac {
++					type = "dpmac";
++					ids = <0x3 0x4 0x5 0x6 0x9 0xa 0xd 0xe>;
++				};
++				obj_set@dpmcp {
++					type = "dpmcp";
++					ids = <0x1 0x2 0x3 0x4 0x5 0x6 0x7 0x8 0x9 0xa 0xb 0xc 0xd 0xe 0xf 0x10 0x11 0x12 0x13 0x14 0x15 0x16 0x17 0x18 0x19 0x1a 0x1b 0x1c 0x1d 0x1e 0x1f 0x20 0x21 0x22 0x23>;
++				};
++			};
++		};
++	};
++
++	/*****************************************************************
++	 * Objects
++	 *****************************************************************/
++	objects {
++
++		dpmac@3 {
++		};
++		dpmac@4 {
++		};
++		dpmac@5 {
++		};
++		dpmac@6 {
++		};
++		dpmac@9 {
++		};
++		dpmac@10 {
++		};
++		dpmac@13 {
++		};
++		dpmac@14 {
++		};
++
++		dpmcp@1 {
++		};
++		dpmcp@2 {
++		};
++		dpmcp@3 {
++		};
++		dpmcp@4 {
++		};
++		dpmcp@5 {
++		};
++		dpmcp@6 {
++		};
++		dpmcp@7 {
++		};
++		dpmcp@8 {
++		};
++		dpmcp@9 {
++		};
++		dpmcp@10 {
++		};
++		dpmcp@11 {
++		};
++		dpmcp@12 {
++		};
++		dpmcp@13 {
++		};
++		dpmcp@14 {
++		};
++		dpmcp@15 {
++		};
++		dpmcp@16 {
++		};
++		dpmcp@17 {
++		};
++		dpmcp@18 {
++		};
++		dpmcp@19 {
++		};
++		dpmcp@20 {
++		};
++		dpmcp@21 {
++		};
++		dpmcp@22 {
++		};
++		dpmcp@23 {
++		};
++		dpmcp@24 {
++		};
++		dpmcp@25 {
++		};
++		dpmcp@26 {
++		};
++		dpmcp@27 {
++		};
++		dpmcp@28 {
++		};
++		dpmcp@29 {
++		};
++		dpmcp@30 {
++		};
++		dpmcp@31 {
++		};
++		dpmcp@32 {
++		};
++		dpmcp@33 {
++		};
++		dpmcp@34 {
++		};
++		dpmcp@35 {
++		};
++	};
++
++	/*****************************************************************
++	 * Connections
++	 *****************************************************************/
++	connections {
++	};
++};
++
+-- 
+2.37.2
+

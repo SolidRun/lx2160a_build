@@ -101,6 +101,10 @@ case "${SERDES}" in
 		DPC=dpc-dual-40g.dtb
 		DPL=dpl-eth.dual-40g.19.dtb
 	;;
+	21_13_*)
+		DPC=dpc-S1_21-S2_13-6x_25gbe-2x_sgmii.dtb
+		DPL=dpl-S1_21-S2_13-6x_25gbe-2x_sgmii.dtb
+	;;
 	21_*)
 		DPC=dpc-6x25g.dtb
 		DPL=dpl-eth.6x25g.21.dtb
