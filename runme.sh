@@ -45,7 +45,7 @@ export PATH=$ROOTDIR/build/toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-lin
 export CROSS_COMPILE=aarch64-linux-gnu-
 export ARCH=arm64
 
-REPO_PREFIX=`git log -1 --pretty=format:%h`
+REPO_PREFIX=`git log -1 --pretty=format:%h || echo unknown`
 echo "Repository prefix for images is $REPO_PREFIX"
 
 case "${SERDES}" in
@@ -150,10 +150,13 @@ done
 set -e
 
 # Check if git is configured
-GIT_CONF=`git config user.name`
+GIT_CONF=`git config user.name || true`
 if [ "x$GIT_CONF" == "x" ]; then
-	echo "git is not configured. please configure git username and email first"
-	exit -1
+	echo "git is not configured! using fake email and username ..."
+	export GIT_AUTHOR_NAME="SolidRun lx2160a_build Script"
+	export GIT_AUTHOR_EMAIL="support@solid-run.com"
+	export GIT_COMMITTER_NAME="${GIT_AUTHOR_NAME}"
+	export GIT_COMMITTER_EMAIL="${GIT_AUTHOR_EMAIL}"
 fi
 
 if [[ ! -d $ROOTDIR/build/toolchain ]]; then
