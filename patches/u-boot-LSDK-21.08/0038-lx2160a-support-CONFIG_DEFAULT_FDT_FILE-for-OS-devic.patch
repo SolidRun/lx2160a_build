@@ -1,0 +1,33 @@
+From 8e9e3bbab0804af9fef8de40d2c4268bc61b51dc Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 11 Sep 2022 12:57:49 +0300
+Subject: [PATCH] lx2160a: support CONFIG_DEFAULT_FDT_FILE for OS device-tree
+ selection
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ include/configs/lx2160a_common.h | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/include/configs/lx2160a_common.h b/include/configs/lx2160a_common.h
+index dc428c6f49..06057b7447 100644
+--- a/include/configs/lx2160a_common.h
++++ b/include/configs/lx2160a_common.h
+@@ -238,7 +238,14 @@ int select_i2c_ch_pca9547_sec(unsigned char ch);
+ 	"esbc_validate 0x80680000 ;"		\
+ 	"fsl_mc start mc 0x80a00000 0x80e00000\0"
+ 
++#ifdef CONFIG_DEFAULT_FDT_FILE
++#define DEFAULT_FDT_FILE_ENV "fdtfile=" CONFIG_DEFAULT_FDT_FILE "\0"
++#else
++#define DEFAULT_FDT_FILE_ENV
++#endif
++
+ #define EXTRA_ENV_SETTINGS			\
++	DEFAULT_FDT_FILE_ENV		\
+ 	"hwconfig=fsl_ddr:bank_intlv=auto\0"	\
+ 	"ramdisk_addr=0x85100000\0"		\
+ 	"ramdisk_addr_r=0x85100000\0"		\
+-- 
+2.37.3
+

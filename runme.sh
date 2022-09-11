@@ -395,6 +395,9 @@ if [ "x$SECURE" == "xtrue" ]; then
 else
 	make lx2160acex7_tfa_defconfig
 fi
+if [ -n "${DEFAULT_FDT_FILE}" ]; then
+	printf "CONFIG_DEFAULT_FDT_FILE=\"%s\"\n" "${DEFAULT_FDT_FILE}" >> .config
+fi
 make -j${PARALLEL}
 export BL33=$ROOTDIR/build/u-boot/u-boot.bin
 
