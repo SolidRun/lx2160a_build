@@ -1,0 +1,12 @@
+diff --git a/board/solidrun/lx2160a/eth_lx2160acex7.c b/board/solidrun/lx2160a/eth_lx2160acex7.c
+index 6a696deafe..e39fc7ed32 100644
+--- a/board/solidrun/lx2160a/eth_lx2160acex7.c
++++ b/board/solidrun/lx2160a/eth_lx2160acex7.c
+@@ -217,6 +217,7 @@ static struct serdes_configuration {
+ 	{1, 18, true},
+ 	{1, 19, true},
+ 	{1, 20, true},
++	{1, 21, true},
+ 
+ 	/* Serdes block #2 */
+ 	{2, 0, false},
