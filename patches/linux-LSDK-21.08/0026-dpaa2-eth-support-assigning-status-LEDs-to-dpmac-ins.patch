@@ -1,0 +1,93 @@
+From c1e8673fd18f86bae4043613662a8862afa4ea51 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 26 Sep 2022 13:46:49 +0300
+Subject: [PATCH] dpaa2-eth: support assigning status LEDs to dpmac instances
+
+Also assign link-status led references to the dpmac object when it is
+created as part of a network interface.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../net/ethernet/freescale/dpaa2/dpaa2-eth.c  | 45 +++++++++++++++++++
+ 1 file changed, 45 insertions(+)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c
+index 756041df9d08..ee5a22747455 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c
+@@ -19,6 +19,7 @@
+ #include <linux/device/driver.h>
+ #include <net/pkt_cls.h>
+ #include <net/sock.h>
++#include <linux/leds.h>
+ 
+ /* Hack: only here in order to use device_driver_detach.
+  * To be replaced with the use of MC _ENDPOINT_CHANGED interrupts on all
+@@ -4161,6 +4162,28 @@ static int dpaa2_eth_connect_mac(struct dpaa2_eth_priv *priv)
+ 		goto err_free_mac;
+ 	priv->mac = mac;
+ 
++	if (is_of_node(mac->fw_node)) {
++		struct device_node *np;
++
++		np = of_parse_phandle(to_of_node(mac->fw_node), "link-status-led", 0);
++		mac->link_status_led = of_led_get_hack(np);
++		of_node_put(np);
++
++		if (IS_ERR(mac->link_status_led)) {
++			err = PTR_ERR(mac->link_status_led);
++			switch (err) {
++				case -ENODEV:
++					mac->link_status_led = NULL;
++					break;
++				default:
++					netdev_err(priv->net_dev, "failed to get link-status led from 'link-status-led' property: %pe\n", mac->link_status_led);
++					fallthrough;
++				case -EPROBE_DEFER:
++					goto err_close_mac;
++			};
++		}
++	}
++
+ 	if (dpaa2_eth_is_type_phy(priv)) {
+ 		err = dpaa2_mac_connect(mac);
+ 		if (err) {
+@@ -4169,6 +4192,21 @@ static int dpaa2_eth_connect_mac(struct dpaa2_eth_priv *priv)
+ 		}
+ 	}
+ 
++	if (mac->link_status_led) {
++		mutex_lock(&mac->link_status_led->led_access);
++
++		/* remove from sysfs to avoid userspce control */
++		led_sysfs_disable(mac->link_status_led);
++
++		/* remove triggers, if any */
++		led_trigger_remove(mac->link_status_led);
++
++		mutex_unlock(&mac->link_status_led->led_access);
++
++		/* turn off initially */
++		led_set_brightness(mac->link_status_led, LED_OFF);
++	}
++
+ 	return 0;
+ 
+ err_close_mac:
+@@ -4187,6 +4225,13 @@ static void dpaa2_eth_disconnect_mac(struct dpaa2_eth_priv *priv)
+ 	if (!dpaa2_eth_has_mac(priv))
+ 		return;
+ 
++	if (priv->mac->link_status_led) {
++		/* re-enable sysfs interface */
++		mutex_lock(&priv->mac->link_status_led->led_access);
++		led_sysfs_enable(priv->mac->link_status_led);
++		mutex_unlock(&priv->mac->link_status_led->led_access);
++	}
++
+ 	dpaa2_mac_close(priv->mac);
+ 	dpaa2_eth_dpmac_driver_attach(priv->mac->mc_dev);
+ 	kfree(priv->mac);
+-- 
+2.37.3
+
