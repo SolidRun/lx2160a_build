@@ -1,0 +1,130 @@
+From cd9771eaa89a4d46fc2c94655890f39d39984aae Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 26 Sep 2022 13:13:06 +0300
+Subject: [PATCH 24/25] dpaa2-mac: support assigning status LEDs to dpmac
+ instances
+
+This is an alternative hack sidestepping the led trigger framework.
+It updates link status on the LEDs from the viewpoint of the MAC - which
+is the only Linux object still alive e.g. when binding ports to dpdk, or
+a virtual machine.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.c  | 51 +++++++++++++++++++
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.h  |  2 +
+ 2 files changed, 53 insertions(+)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index c46d29e28582..2ec4c940dc99 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -6,6 +6,7 @@
+ #include <linux/acpi.h>
+ #include <linux/phy/phy.h>
+ #include <linux/property.h>
++#include <linux/leds.h>
+ 
+ #include "dpaa2-eth.h"
+ #include "dpaa2-mac.h"
+@@ -239,6 +240,9 @@ static void dpaa2_mac_link_up(struct phylink_config *config,
+ 	if (err)
+ 		netdev_err(mac->net_dev, "%s: dpmac_set_link_state() = %d\n",
+ 			   __func__, err);
++
++	if (mac->link_status_led)
++		led_set_brightness(mac->link_status_led, mac->link_status_led->max_brightness);
+ }
+ 
+ static void dpaa2_mac_link_down(struct phylink_config *config,
+@@ -254,6 +258,9 @@ static void dpaa2_mac_link_down(struct phylink_config *config,
+ 				   mac->mc_dev->mc_handle, dpmac_state);
+ 	if (err)
+ 		netdev_err(mac->net_dev, "dpmac_set_link_state() = %d\n", err);
++
++	if (mac->link_status_led)
++		led_set_brightness(mac->link_status_led, LED_OFF);
+ }
+ 
+ static int dpaa2_mac_prepare(struct phylink_config *config, unsigned int mode,
+@@ -894,6 +901,28 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
+ 	if (err)
+ 		goto free_portal;
+ 
++	if (is_of_node(priv->fw_node)) {
++		struct device_node *np;
++
++		np = of_parse_phandle(to_of_node(priv->fw_node), "link-status-led", 0);
++		priv->link_status_led = of_led_get_hack(np);
++		of_node_put(np);
++
++		if (IS_ERR(priv->link_status_led)) {
++			err = PTR_ERR(priv->link_status_led);
++			switch (err) {
++				case -ENODEV:
++					priv->link_status_led = NULL;
++					break;
++				default:
++					dev_err(dev, "failed to get link-status led from 'link-status-led' property: %pe\n", priv->link_status_led);
++					fallthrough;
++				case -EPROBE_DEFER:
++					goto free_portal;
++			};
++		}
++	}
++
+ 	if (dpaa2_mac_is_type_phy(priv)) {
+ 		err = dpaa2_mac_connect(priv);
+ 		if (err) {
+@@ -902,6 +931,21 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
+ 		}
+ 	}
+ 
++	if (priv->link_status_led) {
++		mutex_lock(&priv->link_status_led->led_access);
++
++		/* remove from sysfs to avoid userspce control */
++		led_sysfs_disable(priv->link_status_led);
++
++		/* remove triggers, if any */
++		led_trigger_remove(priv->link_status_led);
++
++		mutex_unlock(&priv->link_status_led->led_access);
++
++		/* turn off initially */
++		led_set_brightness(priv->link_status_led, LED_OFF);
++	}
++
+ 	return 0;
+ free_portal:
+ 	fsl_mc_portal_free(mc_dev->mc_io);
+@@ -921,6 +965,13 @@ static int dpaa2_mac_remove(struct fsl_mc_device *mc_dev)
+ 	struct net_device *net_dev = dev_get_drvdata(dev);
+ 	struct dpaa2_mac *priv = netdev_priv(net_dev);
+ 
++	if (priv->link_status_led) {
++		/* re-enable sysfs interface */
++		mutex_lock(&priv->link_status_led->led_access);
++		led_sysfs_enable(priv->link_status_led);
++		mutex_unlock(&priv->link_status_led->led_access);
++	}
++
+ 	dpaa2_mac_teardown_irqs(mc_dev);
+ 
+ 	if (dpaa2_mac_is_type_phy(priv)) {
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
+index 5f1a500b503a..60086fc9c985 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
+@@ -29,6 +29,8 @@ struct dpaa2_mac {
+ 
+ 	struct phy *serdes_phy;
+ 	void __iomem *if_mode_reg;
++
++	struct led_classdev *link_status_led;
+ };
+ 
+ bool dpaa2_mac_is_type_fixed(struct fsl_mc_device *dpmac_dev,
+-- 
+2.37.3
+

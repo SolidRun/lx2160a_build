@@ -1,0 +1,235 @@
+From 2ea0cb8ad697cb9954cf1e221b78f6a2d319ca7b Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 26 Sep 2022 13:05:17 +0300
+Subject: [PATCH 25/25] arm64: dts: lx2160a-half-twins: link sfp cage leds to
+ dpmac nodes
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../dts/freescale/fsl-lx2160a-half-twins.dts  | 32 +++++++++----------
+ 1 file changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+index 7907507b3ea5..5c3905f28b46 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+@@ -160,112 +160,96 @@ c1_at_sfp: c1-at-sfp {
+ 		i2c-bus = <&twins_sfp_c1_at_i2c>;
+ 		mod-def0-gpio = <&expander0 1 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_c1_at>;
+ 	};
+ 	c1_ab_sfp: c1-ab-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c1_ab_i2c>;
+ 		mod-def0-gpio = <&expander0 2 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_c1_ab>;
+ 	};
+ 	c1_bt_sfp: c1-bt-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c1_bt_i2c>;
+ 		mod-def0-gpio = <&expander0 3 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_c1_bt>;
+ 	};
+ 	c1_bb_sfp: c1-bb-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c1_bb_i2c>;
+ 		mod-def0-gpio = <&expander0 4 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_c1_bb>;
+ 	};
+ 	c2_at_sfp: c2-at-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c2_at_i2c>;
+ 		mod-def0-gpio = <&expander0 5 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_c2_at>;
+ 	};
+ 	c2_ab_sfp: c2-ab-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c2_ab_i2c>;
+ 		mod-def0-gpio = <&expander0 6 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_c2_ab>;
+ 	};
+ 	c2_bt_sfp: c2-bt-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c2_bt_i2c>;
+ 		mod-def0-gpio = <&expander0 9 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_c2_bt>;
+ 	};
+ 	c2_bb_sfp: c2-bb-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c2_bb_i2c>;
+ 		mod-def0-gpio = <&expander0 10 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_c2_bb>;
+ 	};
+ 	c3_at_sfp: c3-at-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c3_at_i2c>;
+ 		mod-def0-gpio = <&expander0 11 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_c3_at>;
+ 	};
+ 	c3_ab_sfp: c3-ab-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c3_ab_i2c>;
+ 		mod-def0-gpio = <&expander0 12 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_c3_ab>;
+ 	};
+ 	c3_bt_sfp: c3-bt-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c3_bt_i2c>;
+ 		mod-def0-gpio = <&expander0 13 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_c3_bt>;
+ 	};
+ 	c3_bb_sfp: c3-bb-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&twins_sfp_c3_bb_i2c>;
+ 		mod-def0-gpio = <&expander0 14 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_c3_bb>;
+ 	};
+ 	ht_c3_at_sfp: ht-c3-at-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&htwins_sfp_c3_at_i2c>;
+ 		mod-def0-gpio = <&expander2 11 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_ht_c3_at>;
+ 	};
+ 	ht_c3_ab_sfp: ht-c3-ab-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&htwins_sfp_c3_ab_i2c>;
+ 		mod-def0-gpio = <&expander2 12 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_ht_c3_ab>;
+ 	};
+ 	ht_c3_bt_sfp: ht-c3-bt-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&htwins_sfp_c3_bt_i2c>;
+ 		mod-def0-gpio = <&expander2 13 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_ht_c3_bt>;
+ 	};
+ 	ht_c3_bb_sfp: ht-c3-bb-sfp {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&htwins_sfp_c3_bb_i2c>;
+ 		mod-def0-gpio = <&expander2 14 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+-		link-status-led = <&led_ht_c3_bb>;
+ 	};
+ 	leds {
+ 		compatible = "gpio-leds";
+@@ -341,75 +325,89 @@ &dpmac3 {
+ 	sfp = <&c1_at_sfp>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes1_lane_h>;
++	link-status-led = <&led_c1_at>;
+ };
+ &dpmac4 {
+ 	sfp = <&c1_bt_sfp>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes1_lane_g>;
++	link-status-led = <&led_c1_bt>;
+ };
+ &dpmac5 {
+ 	sfp = <&ht_c3_bt_sfp>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes1_lane_f>;
++	link-status-led = <&led_ht_c3_bt>;
+ };
+ &dpmac6 {
+ 	sfp = <&ht_c3_at_sfp>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes1_lane_e>;
++	link-status-led = <&led_ht_c3_at>;
+ };
+ &dpmac7 {
+ 	sfp = <&c2_at_sfp>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes1_lane_d>;
++	link-status-led = <&led_c2_at>;
+ };
+ &dpmac8 {
+ 	sfp = <&c2_bt_sfp>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes1_lane_c>;
++	link-status-led = <&led_c2_bt>;
+ };
+ &dpmac9 {
+ 	sfp = <&c3_at_sfp>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes1_lane_b>;
++	link-status-led = <&led_c3_at>;
+ };
+ &dpmac10 {
+ 	sfp = <&c3_bt_sfp>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes1_lane_a>;
++	link-status-led = <&led_c3_bt>;
+ };
+ /* SD2 lanes #0.. #7 */
+ &dpmac11 {
+ 	sfp = <&ht_c3_ab_sfp>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes2_lane_a>;
++	link-status-led = <&led_ht_c3_ab>;
+ };
+ 
+ &dpmac12 {
+ 	sfp = <&c1_ab_sfp>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes2_lane_b>;
++	link-status-led = <&led_c1_ab>;
+ };
+ &dpmac13 { // ok
+ 	sfp = <&c3_ab_sfp>;
+ 	managed = "in-band-status";
+ 	phy-mode = "sgmii";
+ 	phys = <&serdes2_lane_g>;
++	link-status-led = <&led_c3_ab>;
+ };
+ &dpmac14 { // ok
+ 	sfp = <&c3_bb_sfp>;
+ 	managed = "in-band-status";
+ 	phy-mode = "sgmii";
+ 	phys = <&serdes2_lane_h>;
++	link-status-led = <&led_c3_bb>;
+ };
+ &dpmac15 {
+ 	sfp = <&ht_c3_bb_sfp>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes2_lane_e>;
++	link-status-led = <&led_ht_c3_bb>;
+ };
+ &dpmac16 {
+ 	sfp = <&c2_bb_sfp>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes2_lane_f>;
++	link-status-led = <&led_c2_bb>;
+ };
+ &dpmac17 {
+ 	/delete-property/ phy-handle;
+@@ -417,11 +415,13 @@ &dpmac17 {
+ 	sfp = <&c1_bb_sfp>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes2_lane_c>;
++	link-status-led = <&led_c1_bb>;
+ };
+ &dpmac18 {
+ 	sfp = <&c2_ab_sfp>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes2_lane_d>;
++	link-status-led = <&led_c2_ab>;
+ };
+ 
+ &emdio1 {
+-- 
+2.37.3
+
