@@ -1,3 +1,12 @@
+From 1d3e0bfe795a4ce5237408a8085f545017df8e7b Mon Sep 17 00:00:00 2001
+From: David Southwick <david.southwick@cern.ch>
+Date: Fri, 21 Oct 2022 13:40:44 +0200
+Subject: [PATCH] add Serdes config 21 to retimer setup
+
+---
+ board/solidrun/lx2160a/eth_lx2160acex7.c | 1 +
+ 1 file changed, 1 insertion(+)
+
 diff --git a/board/solidrun/lx2160a/eth_lx2160acex7.c b/board/solidrun/lx2160a/eth_lx2160acex7.c
 index 6a696deafe..e39fc7ed32 100644
 --- a/board/solidrun/lx2160a/eth_lx2160acex7.c
@@ -10,3 +19,6 @@ index 6a696deafe..e39fc7ed32 100644
  
  	/* Serdes block #2 */
  	{2, 0, false},
+-- 
+2.37.3
+
