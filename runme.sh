@@ -297,6 +297,7 @@ case "\$1" in
 		chroot /mnt apt update
 		chroot /mnt apt install --no-install-recommends -y systemd-sysv apt locales less wget procps openssh-server ifupdown net-tools isc-dhcp-client ntpdate lm-sensors i2c-tools psmisc less sudo htop iproute2 iputils-ping kmod network-manager iptables rng-tools apt-utils ethtool
 		echo -e "root\nroot" | chroot /mnt passwd
+		sed -i "s;[# ]*RuntimeWatchdogSec=.*\$;RuntimeWatchdogSec=30;g" /etc/systemd/system.conf
 		umount /mnt/var/lib/apt/
 		umount /mnt/var/cache/apt
 		chroot /mnt apt clean
@@ -359,6 +360,7 @@ case "\$1" in
 		echo "localhost" > /mnt/etc/hostname
 		echo "127.0.0.1 localhost" > /mnt/etc/hosts
 		echo -e "root\nroot" | chroot /mnt passwd
+		sed -i "s;[# ]*RuntimeWatchdogSec=.*\$;RuntimeWatchdogSec=30;g" /etc/systemd/system.conf
 		umount /mnt/var/lib/apt/
 		umount /mnt/var/cache/apt/
 		reboot
