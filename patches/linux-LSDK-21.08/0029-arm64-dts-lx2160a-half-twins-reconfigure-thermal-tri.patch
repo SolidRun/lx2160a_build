@@ -1,0 +1,92 @@
+From 4c5297048346199029223a7d1f62408d47efb3b0 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 26 Oct 2022 17:34:53 +0300
+Subject: [PATCH] arm64: dts: lx2160a-half-twins: reconfigure thermal trip
+ points
+
+Raise warning and critical limits to 100 and 105 degrees to ensure the
+system can run at full speed as long as possible.
+Also replace (thermal) shutdown by hard reset to ensure the system won't
+stop. RCW will wait for the system to cool down before starting again.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../dts/freescale/fsl-lx2160a-half-twins.dts  | 62 +++++++++++++++++++
+ 1 file changed, 62 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+index 5c3905f28b46..e3175b5f5234 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+@@ -24,6 +24,68 @@ chosen {
+ 	};
+ };
+ 
++/* disable power-off */
++&psci {
++	no-poweroff;
++};
++
++/* raise thermal trip points to absolute maximum */
++&cluster6_7_alert {
++	temperature = <100000>;
++};
++
++&cluster6_7_crit {
++	temperature = <105000>;
++};
++
++&ddr_cluster5_alert {
++	temperature = <100000>;
++};
++
++&ddr_cluster5_crit {
++	temperature = <105000>;
++};
++
++&wriop_alert {
++	temperature = <100000>;
++};
++
++&wriop_crit {
++	temperature = <105000>;
++};
++
++&dce_qbman_alert {
++	temperature = <100000>;
++};
++
++&dce_qbman_crit {
++	temperature = <105000>;
++};
++
++&ccn_dpaa_alert {
++	temperature = <100000>;
++};
++
++&ccn_dpaa_crit {
++	temperature = <105000>;
++};
++
++&clust4_hsio3_alert {
++	temperature = <100000>;
++};
++
++&clust4_hsio3_crit {
++	temperature = <105000>;
++};
++
++&cluster2_3_alert {
++	temperature = <100000>;
++};
++
++&cluster2_3_crit {
++	temperature = <105000>;
++};
++
+ &i2c2 {
+ 	i2c-switch@76 {
+ 		compatible = "nxp,pca9547";
+-- 
+2.38.0
+

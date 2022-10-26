@@ -1,0 +1,59 @@
+From 6139e13400bc199ed77a4a82e5cdbcad4a3c890c Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 26 Oct 2022 17:31:09 +0300
+Subject: [PATCH 27/29] firmware: psci: support disabling shutdown through
+ device-tree property
+
+Under certain conditions shutdown can be unpractical even in criticial
+situations such as heat. Add device-tree property "no-shutdown" to
+replace poweroff call with hard reset.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/firmware/psci/psci.c | 16 ++++++++++++++--
+ 1 file changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/firmware/psci/psci.c b/drivers/firmware/psci/psci.c
+index 00af99b6f97c..0bf116f31e90 100644
+--- a/drivers/firmware/psci/psci.c
++++ b/drivers/firmware/psci/psci.c
+@@ -79,6 +79,7 @@ static u32 psci_function_id[PSCI_FN_MAX];
+ 
+ static u32 psci_cpu_suspend_feature;
+ static bool psci_system_reset2_supported;
++static bool psci_disable_poweroff;
+ 
+ static inline bool psci_has_ext_power_state(void)
+ {
+@@ -276,7 +277,10 @@ static void psci_sys_reset(enum reboot_mode reboot_mode, const char *cmd)
+ 
+ static void psci_sys_poweroff(void)
+ {
+-	invoke_psci_fn(PSCI_0_2_FN_SYSTEM_OFF, 0, 0, 0);
++	if (psci_disable_poweroff)
++		psci_sys_reset(REBOOT_HARD, 0);
++	else
++		invoke_psci_fn(PSCI_0_2_FN_SYSTEM_OFF, 0, 0, 0);
+ }
+ 
+ static int __init psci_features(u32 psci_func_id)
+@@ -497,7 +501,15 @@ static int __init psci_0_2_init(struct device_node *np)
+ 	 * can be carried out according to the specific version reported
+ 	 * by firmware
+ 	 */
+-	return psci_probe();
++	err = psci_probe();
++	if (err)
++		return err;
++
++	if (of_property_read_bool(np, "no-poweroff")) {
++		psci_disable_poweroff = true;
++	}
++
++	return 0;
+ }
+ 
+ /*
+-- 
+2.38.0
+
