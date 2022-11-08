@@ -1,0 +1,285 @@
+From ad70a626eb305bbb1176106808ff78953d2ca154 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 3 Nov 2022 16:39:39 +0200
+Subject: [PATCH 30/31] arm64: dts: lx2162-clearfog: complete sfp/rj45 port
+ descriptions
+
+Describe GPIOs to SFP connectors, rename the connectors a/b
+top/bottom matching schematics and remove fixed links.
+Also change the rj45 phy mode and declare max speed per port, according
+to dpmac capabilities and physical connector.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../dts/freescale/fsl-lx2162a-clearfog.dts    | 112 +++++++++---------
+ 1 file changed, 56 insertions(+), 56 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+index b9fe7f017c3c..4acec0ecae03 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+@@ -25,27 +25,51 @@ chosen {
+ 		stdout-path = "serial0:115200n8";
+ 	};
+ 
+-	sfp0: sfp-0 {
++	leds {
++		compatible = "gpio-leds";
++		led_sfp_at: led-sfp-at {
++			gpios = <&gpio2 11 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++		led_sfp_ab: led-sfp-ab {
++			gpios = <&gpio2 5 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++		led_sfp_bt: led-sfp-bt {
++			gpios = <&gpio2 13 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++		led_sfp_bb: led-sfp-bb {
++			gpios = <&gpio2 14 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
++	};
++
++	sfp_at: sfp-at {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&sfp_i2c0>;
++		mod-def0-gpio = <&gpio2 0 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+ 	};
+ 
+-	sfp1: sfp-1 {
++	sfp_ab: sfp-ab {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&sfp_i2c1>;
++		mod-def0-gpio = <&gpio2 16 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+ 	};
+ 
+-	sfp2: sfp-2 {
++	sfp_bt: sfp-bt {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&sfp_i2c2>;
++		mod-def0-gpio = <&gpio2 12 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+ 	};
+ 
+-	sfp3: sfp-3 {
++	sfp_bb: sfp-bb {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&sfp_i2c3>;
++		mod-def0-gpio = <&gpio2 15 GPIO_ACTIVE_LOW>;
+ 		maximum-power-milliwatt = <2000>;
+ 	};
+ };
+@@ -167,13 +191,9 @@ pcieclk@6b {
+ &dpmac3 {
+ 	status = "okay";
+ 	phys = <&serdes1_lane_h>;
+-	phy-connection-type = "10gbase-r";
+-	// sfp = <&sfp0>;
+-
+-	fixed-link {
+-		speed = <10000>;
+-		full-duplex;
+-	};
++	managed = "in-band-status";
++	sfp = <&sfp_at>;
++	link-status-led = <&led_sfp_at>;
+ };
+ 
+ &pcs_mdio3 {
+@@ -184,13 +204,9 @@ &pcs_mdio3 {
+ &dpmac4 {
+ 	status = "okay";
+ 	phys = <&serdes1_lane_g>;
+-	phy-connection-type = "10gbase-r";
+-	// sfp = <&sfp1>;
+-
+-	fixed-link {
+-		speed = <10000>;
+-		full-duplex;
+-	};
++	managed = "in-band-status";
++	sfp = <&sfp_ab>;
++	link-status-led = <&led_sfp_ab>;
+ };
+ 
+ &pcs_mdio4 {
+@@ -200,13 +216,9 @@ &pcs_mdio4 {
+ &dpmac5 {
+ 	status = "okay";
+ 	phys = <&serdes1_lane_f>;
+-	phy-connection-type = "10gbase-r";
+-	//phy-connection-type = "25g-aui";
+-
+-	fixed-link {
+-		speed = <10000>;
+-		full-duplex;
+-	};
++	managed = "in-band-status";
++	sfp = <&sfp_bt>;
++	link-status-led = <&led_sfp_bt>;
+ };
+ 
+ &pcs_mdio5 {
+@@ -216,13 +228,9 @@ &pcs_mdio5 {
+ &dpmac6 {
+ 	status = "okay";
+ 	phys = <&serdes1_lane_e>;
+-	phy-connection-type = "10gbase-r";
+-	//phy-connection-type = "25g-aui";
+-
+-	fixed-link {
+-		speed = <10000>;
+-		full-duplex;
+-	};
++	managed = "in-band-status";
++	sfp = <&sfp_bb>;
++	link-status-led = <&led_sfp_bb>;
+ };
+ 
+ &pcs_mdio6 {
+@@ -282,7 +290,7 @@ &dpmac11 {
+ 	status = "okay";
+ 	phys = <&serdes2_lane_a>;
+ 	phy-handle = <&ethernet_phy2>;
+-	phy-connection-type = "rgmii-id";
++	phy-mode = "rgmii";
+ };
+ 
+ &pcs_mdio11 {
+@@ -293,7 +301,7 @@ &dpmac12 {
+ 	status = "okay";
+ 	phys = <&serdes2_lane_b>;
+ 	phy-handle = <&ethernet_phy0>;
+-	phy-connection-type = "rgmii-id";
++	phy-mode = "rgmii";
+ };
+ 
+ &pcs_mdio12 {
+@@ -308,7 +316,7 @@ &dpmac17 {
+ 	status = "okay";
+ 	phys = <&serdes2_lane_c>;
+ 	phy-handle = <&ethernet_phy4>;
+-	phy-connection-type = "rgmii-id";
++	phy-mode = "rgmii";
+ };
+ 
+ &pcs_mdio17 {
+@@ -319,7 +327,7 @@ &dpmac18 {
+ 	status = "okay";
+ 	phys = <&serdes2_lane_d>;
+ 	phy-handle = <&ethernet_phy6>;
+-	phy-connection-type = "rgmii-id";
++	phy-mode = "rgmii";
+ };
+ 
+ &pcs_mdio18 {
+@@ -330,7 +338,7 @@ &dpmac15 {
+ 	status = "okay";
+ 	phys = <&serdes2_lane_e>;
+ 	phy-handle = <&ethernet_phy3>;
+-	phy-connection-type = "rgmii-id";
++	phy-mode = "rgmii";
+ };
+ 
+ &pcs_mdio15 {
+@@ -341,7 +349,7 @@ &dpmac16 {
+ 	status = "okay";
+ 	phys = <&serdes2_lane_f>;
+ 	phy-handle = <&ethernet_phy1>;
+-	phy-connection-type = "rgmii-id";
++	phy-mode = "rgmii";
+ };
+ 
+ &pcs_mdio16 {
+@@ -352,7 +360,7 @@ &dpmac13 {
+ 	status = "okay";
+ 	phys = <&serdes2_lane_g>;
+ 	phy-handle = <&ethernet_phy5>;
+-	phy-connection-type = "rgmii-id";
++	phy-mode = "rgmii";
+ };
+ 
+ &pcs_mdio13 {
+@@ -363,7 +371,7 @@ &dpmac14 {
+ 	status = "okay";
+ 	phys = <&serdes2_lane_h>;
+ 	phy-handle = <&ethernet_phy7>;
+-	phy-connection-type = "rgmii-id";
++	phy-mode = "rgmii";
+ };
+ 
+ &pcs_mdio14 {
+@@ -382,57 +390,49 @@ &emdio1 {
+ 	ethernet_phy0: mv88e3580-p0@0 {
+ 		reg = <OCTOPHY_ADDR_LOWER(0)>;
+ 		compatible = "ethernet-phy-ieee802.3-c45";
+-		rx-internal-delay-ps = <2000>;
+-		tx-internal-delay-ps = <2000>;
++		max-speed = <1000>;
+ 	};
+ 
+ 	ethernet_phy1: mv88e3580-p1@1 {
+ 		reg = <OCTOPHY_ADDR_LOWER(1)>;
+ 		compatible = "ethernet-phy-ieee802.3-c45";
+-		rx-internal-delay-ps = <2000>;
+-		tx-internal-delay-ps = <2000>;
++		max-speed = <1000>;
+ 	};
+ 
+ 	ethernet_phy2: mv88e3580-p2@2 {
+ 		reg = <OCTOPHY_ADDR_LOWER(2)>;
+ 		compatible = "ethernet-phy-ieee802.3-c45";
+-		rx-internal-delay-ps = <2000>;
+-		tx-internal-delay-ps = <2000>;
++		max-speed = <2500>;
+ 	};
+ 
+ 	ethernet_phy3: mv88e3580-p3@3 {
+ 		reg = <OCTOPHY_ADDR_LOWER(3)>;
+ 		compatible = "ethernet-phy-ieee802.3-c45";
+-		rx-internal-delay-ps = <2000>;
+-		tx-internal-delay-ps = <2000>;
++		max-speed = <2500>;
+ 	};
+ 
+ 	ethernet_phy4: mv88e3580-p4@4 {
+ 		reg = <OCTOPHY_ADDR_UPPER(4)>;
+ 		compatible = "ethernet-phy-ieee802.3-c45";
+-		rx-internal-delay-ps = <2000>;
+-		tx-internal-delay-ps = <2000>;
++		max-speed = <1000>;
+ 	};
+ 
+ 	ethernet_phy5: mv88e3580-p5@5 {
+ 		reg = <OCTOPHY_ADDR_UPPER(5)>;
+ 		compatible = "ethernet-phy-ieee802.3-c45";
+-		rx-internal-delay-ps = <2000>;
+-		tx-internal-delay-ps = <2000>;
++		max-speed = <1000>;
+ 	};
+ 
+ 	ethernet_phy6: mv88e3580-p6@6 {
+ 		reg = <OCTOPHY_ADDR_UPPER(6)>;
+ 		compatible = "ethernet-phy-ieee802.3-c45";
+-		rx-internal-delay-ps = <2000>;
+-		tx-internal-delay-ps = <2000>;
++		max-speed = <1000>;
+ 	};
+ 
+ 	ethernet_phy7: mv88e3580-p7@7 {
+ 		reg = <OCTOPHY_ADDR_UPPER(7)>;
+ 		compatible = "ethernet-phy-ieee802.3-c45";
+-		rx-internal-delay-ps = <2000>;
+-		tx-internal-delay-ps = <2000>;
++		max-speed = <1000>;
+ 	};
+ };
+ 
+-- 
+2.38.0
+

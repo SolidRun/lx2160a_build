@@ -1,0 +1,62 @@
+From 24a248a1dea1559a07837a07c8d2506bb3bc0a6c Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 3 Nov 2022 17:12:18 +0200
+Subject: [PATCH 31/31] net: phy: marvell10g: add initial support for 88x2580
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/phy/marvell10g.c | 18 +++++++++++++++++-
+ include/linux/marvell_phy.h  |  1 +
+ 2 files changed, 18 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/phy/marvell10g.c b/drivers/net/phy/marvell10g.c
+index b1bb9b8e1e4e..f223376f488f 100644
+--- a/drivers/net/phy/marvell10g.c
++++ b/drivers/net/phy/marvell10g.c
+@@ -460,7 +460,8 @@ static int mv3310_config_init(struct phy_device *phydev)
+ 	int val;
+ 
+ 	/* Check that the PHY interface type is compatible */
+-	if (phydev->interface != PHY_INTERFACE_MODE_SGMII &&
++	if (phydev->interface != PHY_INTERFACE_MODE_RGMII &&
++	    phydev->interface != PHY_INTERFACE_MODE_SGMII &&
+ 	    phydev->interface != PHY_INTERFACE_MODE_2500BASEX &&
+ 	    phydev->interface != PHY_INTERFACE_MODE_XAUI &&
+ 	    phydev->interface != PHY_INTERFACE_MODE_RXAUI &&
+@@ -797,6 +798,21 @@ static struct phy_driver mv3310_drivers[] = {
+ 		.set_tunable	= mv3310_set_tunable,
+ 		.remove		= mv3310_remove,
+ 	},
++{
++		.phy_id		= MARVELL_PHY_ID_88E2580,
++		.phy_id_mask	= MARVELL_PHY_ID_MASK,
++		.name		= "mv88x2580",
++		.probe		= mv3310_probe,
++		.suspend	= mv3310_suspend,
++		.resume		= mv3310_resume,
++		.config_init	= mv3310_config_init,
++		.config_aneg	= mv3310_config_aneg,
++		.aneg_done	= mv3310_aneg_done,
++		.read_status	= mv3310_read_status,
++		.get_tunable	= mv3310_get_tunable,
++		.set_tunable	= mv3310_set_tunable,
++		.remove		= mv3310_remove,
++	},
+ };
+ 
+ module_phy_driver(mv3310_drivers);
+diff --git a/include/linux/marvell_phy.h b/include/linux/marvell_phy.h
+index f5cf19d19776..cae71b159542 100644
+--- a/include/linux/marvell_phy.h
++++ b/include/linux/marvell_phy.h
+@@ -24,6 +24,7 @@
+ #define MARVELL_PHY_ID_88E3016		0x01410e60
+ #define MARVELL_PHY_ID_88X3310		0x002b09a0
+ #define MARVELL_PHY_ID_88E2110		0x002b09b0
++#define MARVELL_PHY_ID_88E2580      0x002b0bc3
+ 
+ /* These Ethernet switch families contain embedded PHYs, but they do
+  * not have a model ID. So the switch driver traps reads to the ID2
+-- 
+2.38.0
+
