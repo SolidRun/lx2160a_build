@@ -1,0 +1,74 @@
+From 8ba6fb5b441bbd63424ebdfd16818a3b11ef13b3 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 8 Nov 2022 16:32:43 +0200
+Subject: [PATCH] dts: lx2162-clearfog: fix sfp gios again :(
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../boot/dts/freescale/fsl-lx2162a-clearfog.dts  | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+index 4acec0ecae03..d21717592183 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+@@ -28,19 +28,19 @@ chosen {
+ 	leds {
+ 		compatible = "gpio-leds";
+ 		led_sfp_at: led-sfp-at {
+-			gpios = <&gpio2 11 GPIO_ACTIVE_HIGH>;
++			gpios = <&gpio2 5 GPIO_ACTIVE_HIGH>; /* PROC_IRQ5 */
+ 			default-state = "off";
+ 		};
+ 		led_sfp_ab: led-sfp-ab {
+-			gpios = <&gpio2 5 GPIO_ACTIVE_HIGH>;
++			gpios = <&gpio2 11 GPIO_ACTIVE_HIGH>; /* PROC_IRQ11 */
+ 			default-state = "off";
+ 		};
+ 		led_sfp_bt: led-sfp-bt {
+-			gpios = <&gpio2 13 GPIO_ACTIVE_HIGH>;
++			gpios = <&gpio2 13 GPIO_ACTIVE_HIGH>; /* EVT1_B */
+ 			default-state = "off";
+ 		};
+ 		led_sfp_bb: led-sfp-bb {
+-			gpios = <&gpio2 14 GPIO_ACTIVE_HIGH>;
++			gpios = <&gpio2 14 GPIO_ACTIVE_HIGH>; /* EVT2_B */
+ 			default-state = "off";
+ 		};
+ 	};
+@@ -48,28 +48,28 @@ led_sfp_bb: led-sfp-bb {
+ 	sfp_at: sfp-at {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&sfp_i2c0>;
+-		mod-def0-gpio = <&gpio2 0 GPIO_ACTIVE_LOW>;
++		mod-def0-gpio = <&gpio2 16 GPIO_ACTIVE_LOW>; /* EVT4_B */
+ 		maximum-power-milliwatt = <2000>;
+ 	};
+ 
+ 	sfp_ab: sfp-ab {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&sfp_i2c1>;
+-		mod-def0-gpio = <&gpio2 16 GPIO_ACTIVE_LOW>;
++		mod-def0-gpio = <&gpio2 1 GPIO_ACTIVE_LOW>; /* PROC_IRQ1 */
+ 		maximum-power-milliwatt = <2000>;
+ 	};
+ 
+ 	sfp_bt: sfp-bt {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&sfp_i2c2>;
+-		mod-def0-gpio = <&gpio2 12 GPIO_ACTIVE_LOW>;
++		mod-def0-gpio = <&gpio2 0 GPIO_ACTIVE_LOW>; /* PROC_IRQ0 */
+ 		maximum-power-milliwatt = <2000>;
+ 	};
+ 
+ 	sfp_bb: sfp-bb {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&sfp_i2c3>;
+-		mod-def0-gpio = <&gpio2 15 GPIO_ACTIVE_LOW>;
++		mod-def0-gpio = <&gpio2 15 GPIO_ACTIVE_LOW>; /* EVT3_B */
+ 		maximum-power-milliwatt = <2000>;
+ 	};
+ };
+-- 
+2.38.1
+
