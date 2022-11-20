@@ -1,0 +1,36 @@
+From 3fef5ab21bebab810df37f7b737889848651a986 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 20 Nov 2022 13:56:44 +0200
+Subject: [PATCH 41/45] HACK: dpaa2-mac: only validate link modes supported by
+ serdes phy
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index 815cd0018980..4452a056b580 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -190,10 +190,17 @@ static void dpaa2_mac_validate(struct phylink_config *config,
+ 	__ETHTOOL_DECLARE_LINK_MODE_MASK(mask) = { 0, };
+ 
+ 	if (state->interface != PHY_INTERFACE_MODE_NA &&
++	    !mac->serdes_phy &&
+ 	    dpaa2_mac_phy_mode_mismatch(mac, state->interface)) {
+ 		goto empty_set;
+ 	}
+ 
++	if (state->interface != PHY_INTERFACE_MODE_NA &&
++	    mac->serdes_phy &&
++	    phy_validate(mac->serdes_phy, PHY_MODE_ETHERNET, state->interface, NULL)) {
++		goto empty_set;
++	}
++
+ 	phylink_set_port_modes(mask);
+ 	phylink_set(mask, Autoneg);
+ 	phylink_set(mask, Pause);
+-- 
+2.38.1
+

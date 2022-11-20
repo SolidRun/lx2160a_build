@@ -1,0 +1,87 @@
+From b030f5defb06f13583ebc85cf3035f2c090691b8 Mon Sep 17 00:00:00 2001
+From: Ioana Ciornei <ioana.ciornei@nxp.com>
+Date: Fri, 11 Mar 2022 23:22:24 +0200
+Subject: [PATCH 38/45] dpaa2-mac: add the MC API for reconfiguring the
+ protocol
+
+The MC firmware gained recently a new command which can reconfigure the
+running protocol on the underlying MAC. Add this new command which will
+be used in the next patches in order to do a major reconfig on the
+interface.
+
+Signed-off-by: Ioana Ciornei <ioana.ciornei@nxp.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ .../net/ethernet/freescale/dpaa2/dpmac-cmd.h  |  6 +++++
+ drivers/net/ethernet/freescale/dpaa2/dpmac.c  | 23 +++++++++++++++++++
+ drivers/net/ethernet/freescale/dpaa2/dpmac.h  |  3 +++
+ 3 files changed, 32 insertions(+)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpmac-cmd.h b/drivers/net/ethernet/freescale/dpaa2/dpmac-cmd.h
+index b5c119cb5cb1..587a8efc55c6 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpmac-cmd.h
++++ b/drivers/net/ethernet/freescale/dpaa2/dpmac-cmd.h
+@@ -34,6 +34,9 @@
+ #define DPMAC_CMDID_SET_LINK_STATE	DPMAC_CMD_V2(0x0c3)
+ 
+ #define DPMAC_CMDID_GET_COUNTER		DPMAC_CMD(0x0c4)
++
++#define DPMAC_CMDID_SET_PROTOCOL	DPMAC_CMD(0x0c7)
++
+ /* Macros for accessing command fields smaller than 1byte */
+ #define DPMAC_MASK(field)        \
+ 	GENMASK(DPMAC_##field##_SHIFT + DPMAC_##field##_SIZE - 1, \
+@@ -135,4 +138,7 @@ struct dpmac_rsp_get_api_version {
+ 	__le16 minor;
+ };
+ 
++struct dpmac_cmd_set_protocol {
++	u8 eth_if;
++};
+ #endif /* _FSL_DPMAC_CMD_H */
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpmac.c b/drivers/net/ethernet/freescale/dpaa2/dpmac.c
+index 2a405f13b9d8..bd670fe87666 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpmac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpmac.c
+@@ -482,3 +482,26 @@ int dpmac_get_api_version(struct fsl_mc_io *mc_io, u32 cmd_flags,
+ 
+ 	return 0;
+ }
++
++/**
++ * dpmac_set_protocol() - Reconfigure the DPMAC protocol
++ * @mc_io:      Pointer to opaque I/O object
++ * @cmd_flags:  Command flags; one or more of 'MC_CMD_FLAG_'
++ * @token:      Token of DPMAC object
++ * @protocol:   New protocol for the DPMAC to be reconfigured in.
++ *
++ * Return:      '0' on Success; Error code otherwise.
++ */
++int dpmac_set_protocol(struct fsl_mc_io *mc_io, u32 cmd_flags, u16 token,
++		       enum dpmac_eth_if protocol)
++{
++	struct dpmac_cmd_set_protocol *cmd_params;
++	struct fsl_mc_command cmd = { 0 };
++
++	cmd.header = mc_encode_cmd_header(DPMAC_CMDID_SET_PROTOCOL,
++					  cmd_flags, token);
++	cmd_params = (struct dpmac_cmd_set_protocol *)cmd.params;
++	cmd_params->eth_if = protocol;
++
++	return mc_send_command(mc_io, &cmd);
++}
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpmac.h b/drivers/net/ethernet/freescale/dpaa2/dpmac.h
+index 2042bdcf4f47..86c2003db9ae 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpmac.h
++++ b/drivers/net/ethernet/freescale/dpaa2/dpmac.h
+@@ -300,4 +300,7 @@ int dpmac_clear_irq_status(struct fsl_mc_io *mc_io,
+ 
+ int dpmac_get_api_version(struct fsl_mc_io *mc_io, u32 cmd_flags,
+ 			  u16 *major_ver, u16 *minor_ver);
++
++int dpmac_set_protocol(struct fsl_mc_io *mc_io, u32 cmd_flags, u16 token,
++		       enum dpmac_eth_if protocol);
+ #endif /* __FSL_DPMAC_H */
+-- 
+2.38.1
+

@@ -1,0 +1,66 @@
+From c29576ac49708fb4d783ea49e17edb4226c0c1d3 Mon Sep 17 00:00:00 2001
+From: Ioana Ciornei <ioana.ciornei@nxp.com>
+Date: Fri, 11 Mar 2022 23:22:28 +0200
+Subject: [PATCH 42/45] arch: arm64: dts: lx2160a: describe the SerDes block #1
+
+Describe the SerDes block #1 using the generic phys infrastructure. This
+way, the ethernet nodes can each reference their serdes lanes
+individually using the 'phys' dts property.
+
+Signed-off-by: Ioana Ciornei <ioana.ciornei@nxp.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi | 4 ++++
+ arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi              | 6 ++++++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+index 74ae703e0f53..e1c900b71f7d 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+@@ -63,21 +63,25 @@ sfp3: sfp-3 {
+ &dpmac7 {
+ 	sfp = <&sfp0>;
+ 	managed = "in-band-status";
++	phys = <&serdes_1 3>;
+ };
+ 
+ &dpmac8 {
+ 	sfp = <&sfp1>;
+ 	managed = "in-band-status";
++	phys = <&serdes_1 2>;
+ };
+ 
+ &dpmac9 {
+ 	sfp = <&sfp2>;
+ 	managed = "in-band-status";
++	phys = <&serdes_1 1>;
+ };
+ 
+ &dpmac10 {
+ 	sfp = <&sfp3>;
+ 	managed = "in-band-status";
++	phys = <&serdes_1 0>;
+ };
+ 
+ &emdio2 {
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+index 23b48824b139..f78e478a094e 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+@@ -613,6 +613,12 @@ soc {
+ 		ranges;
+ 		dma-ranges = <0x0 0x0 0x0 0x0 0x10000 0x00000000>;
+ 
++		serdes_1: phy@1ea0000 {
++			compatible = "fsl,lynx-28g";
++			reg = <0x0 0x1ea0000 0x0 0x1e30>;
++			#phy-cells = <1>;
++		};
++
+ 		crypto: crypto@8000000 {
+ 			compatible = "fsl,sec-v5.0", "fsl,sec-v4.0";
+ 			fsl,sec-era = <10>;
+-- 
+2.38.1
+

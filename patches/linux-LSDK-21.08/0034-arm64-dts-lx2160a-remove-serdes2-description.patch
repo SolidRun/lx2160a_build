@@ -1,0 +1,65 @@
+From 7ff87b026321d30874de2866fb83cba65f7c0282 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 20 Nov 2022 10:24:38 +0200
+Subject: [PATCH 34/45] arm64: dts: lx2160a: remove serdes2 description
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../arm64/boot/dts/freescale/fsl-lx2160a.dtsi | 41 -------------------
+ 1 file changed, 41 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+index fd14b4c5b9fb..23b48824b139 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+@@ -613,47 +613,6 @@ soc {
+ 		ranges;
+ 		dma-ranges = <0x0 0x0 0x0 0x0 0x10000 0x00000000>;
+ 
+-		serdes_2: serdes_phy@1eb0000 {
+-			compatible = "fsl,serdes-28g";
+-			reg = <0x00 0x1eb0000 0x0 0x1e30>;
+-			#address-cells = <1>;
+-			#size-cells = <0>;
+-			#phy-cells = <1>;
+-
+-			serdes2_lane_a: phy@0 {
+-				reg = <0>;
+-				#phy-cells = <0>;
+-			};
+-			serdes2_lane_b: phy@1 {
+-				reg = <1>;
+-				#phy-cells = <0>;
+-			};
+-			serdes2_lane_c: phy@2 {
+-				reg = <2>;
+-				#phy-cells = <0>;
+-			};
+-			serdes2_lane_d: phy@3 {
+-				reg = <3>;
+-				#phy-cells = <0>;
+-			};
+-			serdes2_lane_e: phy@4 {
+-				reg = <4>;
+-				#phy-cells = <0>;
+-			};
+-			serdes2_lane_f: phy@5 {
+-				reg = <5>;
+-				#phy-cells = <0>;
+-			};
+-			serdes2_lane_g: phy@6 {
+-				reg = <6>;
+-				#phy-cells = <0>;
+-			};
+-			serdes2_lane_h: phy@7 {
+-				reg = <7>;
+-				#phy-cells = <0>;
+-			};
+-		};
+-
+ 		crypto: crypto@8000000 {
+ 			compatible = "fsl,sec-v5.0", "fsl,sec-v4.0";
+ 			fsl,sec-era = <10>;
+-- 
+2.38.1
+

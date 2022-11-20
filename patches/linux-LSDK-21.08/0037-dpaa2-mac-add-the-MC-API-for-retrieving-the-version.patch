@@ -1,0 +1,93 @@
+From 7c4fb2f10a17f70c293082176f8ffb220722a5de Mon Sep 17 00:00:00 2001
+From: Ioana Ciornei <ioana.ciornei@nxp.com>
+Date: Fri, 11 Mar 2022 23:22:23 +0200
+Subject: [PATCH 37/45] dpaa2-mac: add the MC API for retrieving the version
+
+The dpmac_get_api_version command will be used in the next patches to
+determine if the current firmware is capable or not to change the
+Ethernet protocol running on the MAC.
+
+Signed-off-by: Ioana Ciornei <ioana.ciornei@nxp.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ .../net/ethernet/freescale/dpaa2/dpmac-cmd.h  |  7 +++++
+ drivers/net/ethernet/freescale/dpaa2/dpmac.c  | 31 +++++++++++++++++++
+ drivers/net/ethernet/freescale/dpaa2/dpmac.h  |  2 ++
+ 3 files changed, 40 insertions(+)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpmac-cmd.h b/drivers/net/ethernet/freescale/dpaa2/dpmac-cmd.h
+index 326b8b231f6e..b5c119cb5cb1 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpmac-cmd.h
++++ b/drivers/net/ethernet/freescale/dpaa2/dpmac-cmd.h
+@@ -19,6 +19,8 @@
+ #define DPMAC_CMDID_CLOSE		DPMAC_CMD(0x800)
+ #define DPMAC_CMDID_OPEN		DPMAC_CMD(0x80c)
+ 
++#define DPMAC_CMDID_GET_API_VERSION	DPMAC_CMD(0xa0c)
++
+ #define DPMAC_CMDID_GET_ATTR		DPMAC_CMD(0x004)
+ 
+ #define DPMAC_CMDID_SET_IRQ_ENABLE	DPMAC_CMD(0x012)
+@@ -128,4 +130,9 @@ struct dpmac_rsp_get_link_cfg {
+ 	u64 advertising;
+ };
+ 
++struct dpmac_rsp_get_api_version {
++	__le16 major;
++	__le16 minor;
++};
++
+ #endif /* _FSL_DPMAC_CMD_H */
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpmac.c b/drivers/net/ethernet/freescale/dpaa2/dpmac.c
+index 7d6649ae81ed..2a405f13b9d8 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpmac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpmac.c
+@@ -451,3 +451,34 @@ int dpmac_get_link_cfg(struct fsl_mc_io *mc_io,
+ 
+ 	return 0;
+ }
++
++/**
++ * dpmac_get_api_version() - Get Data Path MAC version
++ * @mc_io:	Pointer to MC portal's I/O object
++ * @cmd_flags:	Command flags; one or more of 'MC_CMD_FLAG_'
++ * @major_ver:	Major version of data path mac API
++ * @minor_ver:	Minor version of data path mac API
++ *
++ * Return:  '0' on Success; Error code otherwise.
++ */
++int dpmac_get_api_version(struct fsl_mc_io *mc_io, u32 cmd_flags,
++			  u16 *major_ver, u16 *minor_ver)
++{
++	struct dpmac_rsp_get_api_version *rsp_params;
++	struct fsl_mc_command cmd = { 0 };
++	int err;
++
++	cmd.header = mc_encode_cmd_header(DPMAC_CMDID_GET_API_VERSION,
++					  cmd_flags,
++					  0);
++
++	err = mc_send_command(mc_io, &cmd);
++	if (err)
++		return err;
++
++	rsp_params = (struct dpmac_rsp_get_api_version *)cmd.params;
++	*major_ver = le16_to_cpu(rsp_params->major);
++	*minor_ver = le16_to_cpu(rsp_params->minor);
++
++	return 0;
++}
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpmac.h b/drivers/net/ethernet/freescale/dpaa2/dpmac.h
+index 6022d9108f1d..2042bdcf4f47 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpmac.h
++++ b/drivers/net/ethernet/freescale/dpaa2/dpmac.h
+@@ -298,4 +298,6 @@ int dpmac_clear_irq_status(struct fsl_mc_io *mc_io,
+ 			   u8 irq_index,
+ 			   u32 status);
+ 
++int dpmac_get_api_version(struct fsl_mc_io *mc_io, u32 cmd_flags,
++			  u16 *major_ver, u16 *minor_ver);
+ #endif /* __FSL_DPMAC_H */
+-- 
+2.38.1
+

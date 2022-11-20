@@ -59,7 +59,7 @@ case "${SERDES}" in
 		DPL=dpl-eth.8x10g.8x1g.dtb
 		# MC 10.28.1 is incapable of mapping all 16 dpnis. 10.28.100 fixes that
 		if [ "x$RELEASE" == "xLSDK-21.08" ]; then
-			MC_FORCE=patches/mc_10.28.100_lx2160a.itb
+			MC_FORCE=patches/mc_lx2160a_10.32.0.itb
 		fi
 	;;
 	2_*)
@@ -119,19 +119,19 @@ case "${SERDES}" in
 		DPC=LX2162-USOM/clearfog-s1_0-s2_7-dpc.dtb
 		DPL=LX2162-USOM/clearfog-s1_0-s2_7-dpl.dtb
 		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
-		MC_FORCE=patches/mc_10.28.100_lx2160a.itb
+		MC_FORCE=patches/mc_lx2160a_10.32.0.itb
 	;;
 	LX2162A_CLEARFOG_0_9_*)
 		DPC=LX2162-USOM/clearfog-s1_0-s2_9-dpc.dtb
 		DPL=LX2162-USOM/clearfog-s1_0-s2_9-dpl.dtb
 		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
-		MC_FORCE=patches/mc_10.28.100_lx2160a.itb
+		MC_FORCE=patches/mc_lx2160a_10.32.0.itb
 	;;
 	LX2162A_CLEARFOG_0_11_*)
 		DPC=LX2162-USOM/clearfog-s1_0-s2_11-dpc.dtb
 		DPL=LX2162-USOM/clearfog-s1_0-s2_11-dpl.dtb
 		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
-		MC_FORCE=patches/mc_10.28.100_lx2160a.itb
+		MC_FORCE=patches/mc_lx2160a_10.32.0.itb
 	;;
 	LX2162A_CLEARFOG_3_0_*)
 		DPC=LX2162-USOM/clearfog-s1_3-s2_0-dpc.dtb
@@ -640,7 +640,8 @@ if [ "x$RELEASE" == "xLSDK-20.04" ]; then
 else
 	if [ "x$MC_FORCE" == "x" ]; then
 		MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/ | grep -v sha256sum | cut -f1`
-		dd if=$ROOTDIR/build/qoriq-mc-binary/lx216xa/${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
+		MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/${MC}`
+		dd if=${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
 	else
 		echo "Forcing MC firmware selection"
 		MC=$MC_FORCE

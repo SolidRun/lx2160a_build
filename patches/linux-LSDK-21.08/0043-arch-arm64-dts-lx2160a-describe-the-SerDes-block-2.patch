@@ -1,0 +1,30 @@
+From 0cbebae9215bbbcd92fa101cd7d563c172b0b730 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 20 Nov 2022 10:53:33 +0200
+Subject: [PATCH 43/45] arch: arm64: dts: lx2160a: describe the SerDes block #2
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+index f78e478a094e..23ade0a13ca6 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+@@ -619,6 +619,12 @@ serdes_1: phy@1ea0000 {
+ 			#phy-cells = <1>;
+ 		};
+ 
++		serdes_2: phy@1eb0000 {
++			compatible = "fsl,lynx-28g";
++			reg = <0x0 0x1eb0000 0x0 0x1e30>;
++			#phy-cells = <1>;
++		};
++
+ 		crypto: crypto@8000000 {
+ 			compatible = "fsl,sec-v5.0", "fsl,sec-v4.0";
+ 			fsl,sec-era = <10>;
+-- 
+2.38.1
+

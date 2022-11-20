@@ -1,0 +1,138 @@
+From a77f6bf8f2007426ab6c356e2377696a186dfa3e Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 20 Nov 2022 11:02:26 +0200
+Subject: [PATCH 44/45] arm64: dts: lx2160a-half-twins: update serdes
+ references for new driver
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../dts/freescale/fsl-lx2160a-half-twins.dts  | 32 +++++++++----------
+ 1 file changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+index e3175b5f5234..2dd8553ebd1f 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+@@ -386,89 +386,89 @@ led_ht_c3_bb: led-ht-c3-bb {
+ &dpmac3 {
+ 	sfp = <&c1_at_sfp>;
+ 	managed = "in-band-status";
+-	phys = <&serdes1_lane_h>;
++	phys = <&serdes_1 7>;
+ 	link-status-led = <&led_c1_at>;
+ };
+ &dpmac4 {
+ 	sfp = <&c1_bt_sfp>;
+ 	managed = "in-band-status";
+-	phys = <&serdes1_lane_g>;
++	phys = <&serdes_1 6>;
+ 	link-status-led = <&led_c1_bt>;
+ };
+ &dpmac5 {
+ 	sfp = <&ht_c3_bt_sfp>;
+ 	managed = "in-band-status";
+-	phys = <&serdes1_lane_f>;
++	phys = <&serdes_1 5>;
+ 	link-status-led = <&led_ht_c3_bt>;
+ };
+ &dpmac6 {
+ 	sfp = <&ht_c3_at_sfp>;
+ 	managed = "in-band-status";
+-	phys = <&serdes1_lane_e>;
++	phys = <&serdes_1 4>;
+ 	link-status-led = <&led_ht_c3_at>;
+ };
+ &dpmac7 {
+ 	sfp = <&c2_at_sfp>;
+ 	managed = "in-band-status";
+-	phys = <&serdes1_lane_d>;
++	phys = <&serdes_1 3>;
+ 	link-status-led = <&led_c2_at>;
+ };
+ &dpmac8 {
+ 	sfp = <&c2_bt_sfp>;
+ 	managed = "in-band-status";
+-	phys = <&serdes1_lane_c>;
++	phys = <&serdes_1 2>;
+ 	link-status-led = <&led_c2_bt>;
+ };
+ &dpmac9 {
+ 	sfp = <&c3_at_sfp>;
+ 	managed = "in-band-status";
+-	phys = <&serdes1_lane_b>;
++	phys = <&serdes_1 1>;
+ 	link-status-led = <&led_c3_at>;
+ };
+ &dpmac10 {
+ 	sfp = <&c3_bt_sfp>;
+ 	managed = "in-band-status";
+-	phys = <&serdes1_lane_a>;
++	phys = <&serdes_1 0>;
+ 	link-status-led = <&led_c3_bt>;
+ };
+ /* SD2 lanes #0.. #7 */
+ &dpmac11 {
+ 	sfp = <&ht_c3_ab_sfp>;
+ 	managed = "in-band-status";
+-	phys = <&serdes2_lane_a>;
++	phys = <&serdes_2 0>;
+ 	link-status-led = <&led_ht_c3_ab>;
+ };
+ 
+ &dpmac12 {
+ 	sfp = <&c1_ab_sfp>;
+ 	managed = "in-band-status";
+-	phys = <&serdes2_lane_b>;
++	phys = <&serdes_2 1>;
+ 	link-status-led = <&led_c1_ab>;
+ };
+ &dpmac13 { // ok
+ 	sfp = <&c3_ab_sfp>;
+ 	managed = "in-band-status";
+ 	phy-mode = "sgmii";
+-	phys = <&serdes2_lane_g>;
++	phys = <&serdes_2 6>;
+ 	link-status-led = <&led_c3_ab>;
+ };
+ &dpmac14 { // ok
+ 	sfp = <&c3_bb_sfp>;
+ 	managed = "in-band-status";
+ 	phy-mode = "sgmii";
+-	phys = <&serdes2_lane_h>;
++	phys = <&serdes_2 7>;
+ 	link-status-led = <&led_c3_bb>;
+ };
+ &dpmac15 {
+ 	sfp = <&ht_c3_bb_sfp>;
+ 	managed = "in-band-status";
+-	phys = <&serdes2_lane_e>;
++	phys = <&serdes_2 4>;
+ 	link-status-led = <&led_ht_c3_bb>;
+ };
+ &dpmac16 {
+ 	sfp = <&c2_bb_sfp>;
+ 	managed = "in-band-status";
+-	phys = <&serdes2_lane_f>;
++	phys = <&serdes_2 5>;
+ 	link-status-led = <&led_c2_bb>;
+ };
+ &dpmac17 {
+@@ -476,13 +476,13 @@ &dpmac17 {
+ 	/delete-property/ phy-connection-type;
+ 	sfp = <&c1_bb_sfp>;
+ 	managed = "in-band-status";
+-	phys = <&serdes2_lane_c>;
++	phys = <&serdes_2 2>;
+ 	link-status-led = <&led_c1_bb>;
+ };
+ &dpmac18 {
+ 	sfp = <&c2_ab_sfp>;
+ 	managed = "in-band-status";
+-	phys = <&serdes2_lane_d>;
++	phys = <&serdes_2 3>;
+ 	link-status-led = <&led_c2_ab>;
+ };
+ 
+-- 
+2.38.1
+

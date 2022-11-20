@@ -1,0 +1,192 @@
+From 78d5e39c9155e89c41396160145fc3c9c8bd145f Mon Sep 17 00:00:00 2001
+From: Ioana Ciornei <ioana.ciornei@nxp.com>
+Date: Fri, 11 Mar 2022 23:22:27 +0200
+Subject: [PATCH 40/45] dpaa2-mac: configure the SerDes phy on a protocol
+ change
+
+This patch integrates the dpaa2-eth driver with the generic PHY
+infrastructure in order to search, find and reconfigure the SerDes lanes
+in case of a protocol change.
+
+On the .mac_config() callback, the phy_set_mode_ext() API is called so
+that the Lynx 28G SerDes PHY driver can change the lane's configuration.
+In the same phylink callback the MC firmware is called so that it
+reconfigures the MAC side to run using the new protocol.
+
+The consumer drivers - dpaa2-eth and dpaa2-switch - are updated to call
+the dpaa2_mac_start/stop functions newly added which will
+power_on/power_off the associated SerDes lane.
+
+Signed-off-by: Ioana Ciornei <ioana.ciornei@nxp.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ .../net/ethernet/freescale/dpaa2/dpaa2-eth.c  |  5 +-
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.c  | 67 +++++++++++++++++++
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.h  |  5 ++
+ 3 files changed, 76 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c
+index ee5a22747455..430ab61f71dc 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c
+@@ -1830,8 +1830,10 @@ static int dpaa2_eth_open(struct net_device *net_dev)
+ 		goto enable_err;
+ 	}
+ 
+-	if (dpaa2_eth_is_type_phy(priv))
++	if (dpaa2_eth_is_type_phy(priv)) {
++		dpaa2_mac_start(priv->mac);
+ 		phylink_start(priv->mac->phylink);
++	}
+ 
+ 	return 0;
+ 
+@@ -1906,6 +1908,7 @@ static int dpaa2_eth_stop(struct net_device *net_dev)
+ 
+ 	if (dpaa2_eth_is_type_phy(priv)) {
+ 		phylink_stop(priv->mac->phylink);
++		dpaa2_mac_stop(priv->mac);
+ 	} else {
+ 		netif_tx_stop_all_queues(net_dev);
+ 		netif_carrier_off(net_dev);
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index 4d2a0160cc48..815cd0018980 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -4,6 +4,8 @@
+ #include <linux/fsl/mc.h>
+ #include <linux/msi.h>
+ #include <linux/acpi.h>
++#include <linux/pcs-lynx.h>
++#include <linux/phy/phy.h>
+ #include <linux/property.h>
+ #include <linux/leds.h>
+ 
+@@ -72,6 +74,29 @@ static bool dpaa2_mac_is_type_phy(struct dpaa2_mac *mac)
+ 	return false;
+ }
+ 
++static enum dpmac_eth_if dpmac_eth_if_mode(phy_interface_t if_mode)
++{
++	switch (if_mode) {
++	case PHY_INTERFACE_MODE_RGMII:
++	case PHY_INTERFACE_MODE_RGMII_ID:
++	case PHY_INTERFACE_MODE_RGMII_RXID:
++	case PHY_INTERFACE_MODE_RGMII_TXID:
++		return DPMAC_ETH_IF_RGMII;
++	case PHY_INTERFACE_MODE_USXGMII:
++		return DPMAC_ETH_IF_USXGMII;
++	case PHY_INTERFACE_MODE_QSGMII:
++		return DPMAC_ETH_IF_QSGMII;
++	case PHY_INTERFACE_MODE_SGMII:
++		return DPMAC_ETH_IF_SGMII;
++	case PHY_INTERFACE_MODE_10GBASER:
++		return DPMAC_ETH_IF_XFI;
++	case PHY_INTERFACE_MODE_1000BASEX:
++		return DPMAC_ETH_IF_1000BASEX;
++	default:
++		return DPMAC_ETH_IF_MII;
++	}
++}
++
+ static struct fwnode_handle *dpaa2_mac_get_node(struct device *dev,
+ 						u16 dpmac_id)
+ {
+@@ -233,6 +258,19 @@ static void dpaa2_mac_config(struct phylink_config *config, unsigned int mode,
+ 	if (err)
+ 		netdev_err(mac->net_dev, "%s: dpmac_set_link_state() = %d\n",
+ 			   __func__, err);
++
++	if (!mac->serdes_phy)
++		return;
++
++	/* This happens only if we support changing of protocol at runtime */
++	err = dpmac_set_protocol(mac->mc_io, 0, mac->mc_dev->mc_handle,
++				 dpmac_eth_if_mode(state->interface));
++	if (err)
++		netdev_err(mac->net_dev,  "dpmac_set_protocol() = %d\n", err);
++
++	err = phy_set_mode_ext(mac->serdes_phy, PHY_MODE_ETHERNET, state->interface);
++	if (err)
++		netdev_err(mac->net_dev, "phy_set_mode_ext() = %d\n", err);
+ }
+ 
+ static void dpaa2_mac_link_up(struct phylink_config *config,
+@@ -346,10 +384,23 @@ static void dpaa2_pcs_destroy(struct dpaa2_mac *mac)
+ 	}
+ }
+ 
++void dpaa2_mac_start(struct dpaa2_mac *mac)
++{
++	if (mac->serdes_phy)
++		phy_power_on(mac->serdes_phy);
++}
++
++void dpaa2_mac_stop(struct dpaa2_mac *mac)
++{
++	if (mac->serdes_phy)
++		phy_power_off(mac->serdes_phy);
++}
++
+ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ {
+ 	struct net_device *net_dev = mac->net_dev;
+ 	struct fwnode_handle *dpmac_node;
++	struct phy *serdes_phy = NULL;
+ 	struct phylink *phylink;
+ 	int err;
+ 
+@@ -366,6 +417,20 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ 		return -EINVAL;
+ 	mac->if_mode = err;
+ 
++	if (mac->features & DPAA2_MAC_FEATURE_PROTOCOL_CHANGE &&
++	    !phy_interface_mode_is_rgmii(mac->if_mode) &&
++	    is_of_node(dpmac_node)) {
++		serdes_phy = of_phy_get(to_of_node(dpmac_node), NULL);
++
++		if (serdes_phy == ERR_PTR(-ENODEV))
++			serdes_phy = NULL;
++		else if (IS_ERR(serdes_phy))
++			return PTR_ERR(serdes_phy);
++		else
++			phy_init(serdes_phy);
++	}
++	mac->serdes_phy = serdes_phy;
++
+ 	/* The MAC does not have the capability to add RGMII delays so
+ 	 * error out if the interface mode requests them and there is no PHY
+ 	 * to act upon them
+@@ -429,6 +494,8 @@ void dpaa2_mac_disconnect(struct dpaa2_mac *mac)
+ 	rtnl_unlock();
+ 	phylink_destroy(mac->phylink);
+ 	dpaa2_pcs_destroy(mac);
++	of_phy_put(mac->serdes_phy);
++	mac->serdes_phy = NULL;
+ }
+ 
+ int dpaa2_mac_open(struct dpaa2_mac *mac)
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
+index 1d107b99053e..09163dd210be 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
+@@ -28,6 +28,7 @@ struct dpaa2_mac {
+ 	enum dpmac_link_type if_link_type;
+ 	struct lynx_pcs *pcs;
+ 	struct fwnode_handle *fw_node;
++	struct phy *serdes_phy;
+ 
+ 	struct led_classdev *link_status_led;
+ };
+@@ -49,4 +50,8 @@ void dpaa2_mac_get_strings(u8 *data);
+ 
+ void dpaa2_mac_get_ethtool_stats(struct dpaa2_mac *mac, u64 *data);
+ 
++void dpaa2_mac_start(struct dpaa2_mac *mac);
++
++void dpaa2_mac_stop(struct dpaa2_mac *mac);
++
+ #endif /* DPAA2_MAC_H */
+-- 
+2.38.1
+
