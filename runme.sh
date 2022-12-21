@@ -20,11 +20,15 @@ BUILDROOT_VERSION=2020.02.1
 : ${SHALLOW:=false}
 : ${SECURE:=false}
 : ${ATF_DEBUG:=false}
+# Distribution for rootfs
+# - ubuntu
+# - debian
 : ${DISTRO:=ubuntu}
 # Ubuntu Version
 # - focal (20.04)
 # - jammy (22.04)
 : ${UBUNTU_VERSION:=focal}
+: ${DEBIAN_VERSION:=bullseye}
 : ${BR2_PRIMARY_SITE:=} # custom buildroot mirror
 
 if [ "x$SHALLOW" == "xtrue" ]; then
@@ -329,6 +333,12 @@ EOF
 fi
 
 if [[ ! -f $ROOTDIR/build/debian-bullseye.ext4 ]] && [ "x$DISTRO" == "xdebian" ]; then
+	if [[ $DEBIAN_VERSION == bullseye ]]; then
+		:
+	else
+		echo "Error: Unsupported Debian Version \"\${DEBIAN_VERSION}\"! To proceed please add support to runme.sh."
+		exit 1
+	fi
 	cd $ROOTDIR/build
 	mkdir -p debian
 	cd debian
@@ -368,8 +378,8 @@ case "\$1" in
 		mkdir -p /mnt/var/cache/apt
 		mount -t tmpfs tmpfs /mnt/var/lib/apt/
 		mount -t tmpfs tmpfs /mnt/var/cache/apt/
-		debootstrap --no-check-certificate --verbose --arch arm64 --cache-dir=/tmp/cache --include=fdisk,e2fsprogs,isc-dhcp-client,ntpdate,sudo bullseye /mnt
-		#debootstrap --no-check-certificate --verbose --arch arm64 --cache-dir=/tmp/cache --include=locales,less,wget,procps,openssh-server,ifupdown,net-tools,isc-dhcp-client,ntpdate,lm-sensors,i2c-tools,psmisc,sudo,htop,iproute2,iputils-ping,kmod,network-manager,iptables,rng-tools,apt-utils bullseye /mnt
+		debootstrap --no-check-certificate --verbose --arch arm64 --cache-dir=/tmp/cache --include=fdisk,e2fsprogs,isc-dhcp-client,ntpdate,sudo "${DEBIAN_VERSION}" /mnt
+		#debootstrap --no-check-certificate --verbose --arch arm64 --cache-dir=/tmp/cache --include=locales,less,wget,procps,openssh-server,ifupdown,net-tools,isc-dhcp-client,ntpdate,lm-sensors,i2c-tools,psmisc,sudo,htop,iproute2,iputils-ping,kmod,network-manager,iptables,rng-tools,apt-utils "${DEBIAN_VERSION}" /mnt
 		cat /proc/net/pnp > /mnt/etc/resolv.conf
 		echo "localhost" > /mnt/etc/hostname
 		echo "127.0.0.1 localhost" > /mnt/etc/hosts
