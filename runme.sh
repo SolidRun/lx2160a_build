@@ -21,6 +21,10 @@ BUILDROOT_VERSION=2020.02.1
 : ${SECURE:=false}
 : ${ATF_DEBUG:=false}
 : ${DISTRO:=ubuntu}
+# Ubuntu Version
+# - focal (20.04)
+# - jammy (22.04)
+: ${UBUNTU_VERSION:=focal}
 : ${BR2_PRIMARY_SITE:=} # custom buildroot mirror
 
 if [ "x$SHALLOW" == "xtrue" ]; then
@@ -258,6 +262,16 @@ done
 
 
 if [[ ! -f $ROOTDIR/build/ubuntu-core.ext4 ]] && [ "x$DISTRO" == "xubuntu" ]; then
+	if [[ $UBUNTU_VERSION == focal ]]; then
+		UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.5-base-arm64.tar.gz
+	fi
+	if [[ $UBUNTU_VERSION == jammy ]]; then
+		UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/ubuntu-base-22.04.1-base-arm64.tar.gz
+	fi
+	if [[ -z $UBUNTU_BASE_URL ]]; then
+		echo "Error: Unknown URL for Ubuntu Version \"\${UBUNTU_VERSION}\"! Please provide UBUNTU_BASE_URL."
+		exit 1
+	fi
 	cd $ROOTDIR/build
 	mkdir -p ubuntu
 	cd ubuntu
@@ -282,8 +296,8 @@ case "\$1" in
 		mount /dev/vda /mnt
 		cd /mnt/
 		cat /proc/net/pnp > /etc/resolv.conf
-		wget -c -P /tmp/ http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.1-base-arm64.tar.gz
-		tar zxf /tmp/ubuntu-base-20.04.1-base-arm64.tar.gz -C /mnt
+		wget -c -P /tmp/ -O /tmp/ubuntu-base.dl "${UBUNTU_BASE_URL}"
+		tar -C /mnt -xf /tmp/ubuntu-base.dl
 		mount -o bind /proc /mnt/proc/
 		mount -o bind /sys/ /mnt/sys/
 		mount -o bind /dev/ /mnt/dev/
