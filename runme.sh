@@ -78,9 +78,10 @@ case "${SERDES}" in
 		DPC=dpc-backplane.dtb
 		DPL=dpl-eth.8x10g.19.dtb
 	;;
-	8_*)
+	8_*|8S_*)
 		DPC=dpc-8_x_usxgmii.dtb
 		DPL=dpl-eth.8x10g.19.dtb
+		MC_FORCE=patches/mc_lx2160a_10.32.0.itb
 	;;
 	10S_*)
 		DPC=dpc-S1_10-S2_0-6x_usxgmii.dtb
