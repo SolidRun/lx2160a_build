@@ -1,0 +1,65 @@
+From d65e0ac1b8e98511f78b2f9f67c452e4517c3379 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 5 Jan 2023 19:17:53 +0200
+Subject: [PATCH 24/25] lx2160acex7: add comments to SD1_8(S) configuration
+
+This is purely cosmetic ...
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2160acex7/configs/lx2160a_SD1_8.rcwi  | 20 +++++++++++++++++---
+ lx2160acex7/configs/lx2160a_SD1_8S.rcwi | 16 ++++++++++++++++
+ 2 files changed, 33 insertions(+), 3 deletions(-)
+
+diff --git a/lx2160acex7/configs/lx2160a_SD1_8.rcwi b/lx2160acex7/configs/lx2160a_SD1_8.rcwi
+index abd6dfd..060c5cb 100644
+--- a/lx2160acex7/configs/lx2160a_SD1_8.rcwi
++++ b/lx2160acex7/configs/lx2160a_SD1_8.rcwi
+@@ -1,4 +1,18 @@
+-SRDS_PRTCL_S1=8 /* should be 8 */
+-SRDS_INTRA_REF_CLK_S1 = 1 /* PLLF used for PLLS */
+-SRDS_PLL_REF_CLK_SEL_S1=2
++/* Serdes 1 Protocol 8: 8x10Gbps */
++SRDS_PRTCL_S1=8
++
++/* Disable Serdes 1 PLLF */
+ SRDS_PLL_PD_PLL1=1
++
++/* Use Serdes 1 PLLF for PLLS */
++SRDS_INTRA_REF_CLK_S1=1
++
++/* Enable Serdes 1 PLLS */
++SRDS_PLL_PD_PLL2=0
++
++/*
++ * Select Serdes 1 PLLF frequency 100MHz (don't care): Bit 0 = 0
++ * Select Serdes 1 PLLS frequency 161.1328125MHz (not documented in RM): Bit 1 = 1
++ * (See QorIQ LX2162A Reference Manual, Rev. 1, 12/2021, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 932-933)
++ */
++SRDS_PLL_REF_CLK_SEL_S1=2
+diff --git a/lx2160acex7/configs/lx2160a_SD1_8S.rcwi b/lx2160acex7/configs/lx2160a_SD1_8S.rcwi
+index a5eea0e..3ecc86b 100644
+--- a/lx2160acex7/configs/lx2160a_SD1_8S.rcwi
++++ b/lx2160acex7/configs/lx2160a_SD1_8S.rcwi
+@@ -1,2 +1,18 @@
++/* Serdes 1 Protocol 8: 8x10Gbps */
+ SRDS_PRTCL_S1=8
++
++/* Enable Serdes 1 PLLF */
++SRDS_PLL_PD_PLL1=0
++
++/* Don't Use Serdes 1 PLLF for PLLS */
++SRDS_INTRA_REF_CLK_S1=0
++
++/* Enable Serdes 1 PLLS */
++SRDS_PLL_PD_PLL2=0
++
++/*
++ * Select Serdes 1 PLLF frequency 100MHz: Bit 0 = 0
++ * Select Serdes 1 PLLS frequency 161.1328125MHz (not documented in RM): Bit 1 = 1
++ * (See QorIQ LX2162A Reference Manual, Rev. 1, 12/2021, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 932-933)
++ */
+ SRDS_PLL_REF_CLK_SEL_S1=2
+-- 
+2.35.3
+
