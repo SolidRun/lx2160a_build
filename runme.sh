@@ -74,6 +74,12 @@ case "${SERDES}" in
 		DPC=dpc-8_x_usxgmii.dtb
 		DPL=dpl-eth.8x10g.19.dtb
 	;;
+	4_5_2)
+		DPC=dpc-8_x_usxgmii.dtb
+		DPL=dpl-eth.8x10g.19.dtb
+		MC_FORCE=patches/mc_lx2160a_10.32.0.itb
+		DEFAULT_FDT_FILE="fsl-lx2160a-clearfog-cx.dtb"
+	;;
 	4_*)
 		DPC=dpc-backplane.dtb
 		DPL=dpl-eth.8x10g.19.dtb
