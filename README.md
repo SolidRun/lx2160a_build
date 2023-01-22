@@ -21,7 +21,7 @@ A docker image providing a consistent build environment can be used as below:
    ```
 2. invoke build script in working directory
    ```
-   docker run -i -t -v "$PWD":/work lx2160a_build -u $(id -u) -g $(id -g)
+   docker run --rm -i -t -v "$PWD":/work lx2160a_build -u $(id -u) -g $(id -g)
    ```
 
 ### rootless Podman
