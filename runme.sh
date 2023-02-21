@@ -559,6 +559,10 @@ make INSTALL_MOD_PATH=$ROOTDIR/images/tmp/ INSTALL_MOD_STRIP=1 modules_install
 cp $ROOTDIR/build/linux/arch/arm64/boot/Image $ROOTDIR/images/tmp/boot
 cp $ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx216*.dtb $ROOTDIR/images/tmp/boot
 
+#Make deb-packeges linux-headers, linux-image, linux-image-dbg, linux-libc-dev
+git branch | grep ^* | cut -d' ' -f2
+make -j${PARALLEL} headers_install INSTALL_HDR_PATH=$ROOTDIR/build/headers -C $ROOTDIR/build/linux O=$ROOTDIR/images/tmp/headers
+make -j${PARALLEL} bindeb-pkg -C $ROOTDIR/build/linux $ROOTDIR/images/tmp/headers
 
 
 echo "Building DPDK"
