@@ -1,0 +1,72 @@
+From 099ec94964d839e672ab6cbcf0f3f5d0ac0beff8 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 26 Mar 2023 11:42:59 +0300
+Subject: [PATCH 47/50] arm64: dts: lx2160a-clearfog-itx: add dpmac3..6 with
+ serdes and pcs
+
+Since introduction of the new serdes driver, and after configuring the
+network coprocessor with phy support - explicit definitions of dpmac
+nodes linking to serdes lanes & pcs nodes are required for probe.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../freescale/fsl-lx2160a-clearfog-itx.dtsi   | 36 +++++++++++++++++++
+ 1 file changed, 36 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+index e1c900b71f7d..b201512c7382 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+@@ -60,6 +60,26 @@ sfp3: sfp-3 {
+ 	};
+ };
+ 
++&dpmac3 {
++	managed = "in-band-status";
++	phys = <&serdes_1 7>;
++};
++
++&dpmac4 {
++	managed = "in-band-status";
++	phys = <&serdes_1 6>;
++};
++
++&dpmac5 {
++	managed = "in-band-status";
++	phys = <&serdes_1 5>;
++};
++
++&dpmac6 {
++	managed = "in-band-status";
++	phys = <&serdes_1 4>;
++};
++
+ &dpmac7 {
+ 	sfp = <&sfp0>;
+ 	managed = "in-band-status";
+@@ -108,6 +128,22 @@ carrier_flash: w25q32@1 {
+         };
+ };
+ 
++&pcs_mdio3 {
++	status = "okay";
++};
++
++&pcs_mdio4 {
++	status = "okay";
++};
++
++&pcs_mdio5 {
++	status = "okay";
++};
++
++&pcs_mdio6 {
++	status = "okay";
++};
++
+ &pcs_mdio7 {
+ 	status = "okay";
+ };
+-- 
+2.35.3
+
