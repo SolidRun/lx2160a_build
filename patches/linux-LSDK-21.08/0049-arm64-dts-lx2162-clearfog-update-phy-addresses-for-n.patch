@@ -1,0 +1,33 @@
+From 996bafe64c3f69cc6bcb63003db2cafb2a121896 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 19 Mar 2023 15:01:42 +0200
+Subject: [PATCH 49/50] arm64: dts: lx2162-clearfog: update phy addresses for
+ new carrier
+
+Early prototypes were offsetting the Marvell 8-port PHY addresses for
+the lower half by +8 to avoid a conflict with on-SoM phy@1.
+The final design offsets both parts by 8 to avoid confusion with
+upper/lower naming in phy documentation - and special firmware
+procedures.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+index c949d260e3ae..961c9a6dac0f 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+@@ -10,7 +10,7 @@
+ 
+ /* work-around for phy address 1 conflict on mdio bus */
+ #define OCTOPHY_ADDR_OFFSET_LOWER 0x08
+-#define OCTOPHY_ADDR_OFFSET_UPPER 0x00
++#define OCTOPHY_ADDR_OFFSET_UPPER 0x08
+ #define OCTOPHY_ADDR_LOWER(index) (OCTOPHY_ADDR_OFFSET_LOWER + index)
+ #define OCTOPHY_ADDR_UPPER(index) (OCTOPHY_ADDR_OFFSET_UPPER + index)
+ 
+-- 
+2.35.3
+
