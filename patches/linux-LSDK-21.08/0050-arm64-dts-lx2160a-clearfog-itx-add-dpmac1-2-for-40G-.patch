@@ -1,0 +1,54 @@
+From dd33a19abb61f56ce74a16e4cad842949e45276c Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 3 Apr 2023 13:25:50 +0300
+Subject: [PATCH] arm64: dts: lx2160a-clearfog-itx: add dpmac1&2 for 40G/100G
+ NICs
+
+network interfaces bundling multiple serdes lanes for either 40G or 100G
+use dpmac numbers 1 & 2. Enable the corresponding pcs nodes, but do not
+configure any sfp or serdes runtime configuration.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../dts/freescale/fsl-lx2160a-clearfog-itx.dtsi | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+index 86036bd39b6a..3aa8a1fe50d0 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+@@ -67,7 +67,16 @@ sfp3: sfp-3 {
+ 	};
+ };
+ 
++&dpmac1 {
++	managed = "in-band-status";
++};
++
++&dpmac2 {
++	managed = "in-band-status";
++};
++
+ &dpmac3 {
++	sfp = <&qsfp0>;
+ 	managed = "in-band-status";
+ 	phys = <&serdes_1 7>;
+ };
+@@ -135,6 +144,14 @@ carrier_flash: w25q32@1 {
+         };
+ };
+ 
++&pcs_mdio1 {
++	status = "okay";
++};
++
++&pcs_mdio2 {
++	status = "okay";
++};
++
+ &pcs_mdio3 {
+ 	status = "okay";
+ };
+-- 
+2.35.3
+

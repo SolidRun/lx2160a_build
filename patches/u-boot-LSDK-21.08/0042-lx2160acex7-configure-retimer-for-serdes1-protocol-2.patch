@@ -1,0 +1,35 @@
+From 7666610c11ea33aba76070d2cfa142276d23066d Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 3 Apr 2023 13:19:07 +0300
+Subject: [PATCH] lx2160acex7: configure retimer for serdes1 protocol 20
+ (40Gbps)
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ board/solidrun/lx2160a/eth_lx2160acex7.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/board/solidrun/lx2160a/eth_lx2160acex7.c b/board/solidrun/lx2160a/eth_lx2160acex7.c
+index 6a696deafe..d7a1d76619 100644
+--- a/board/solidrun/lx2160a/eth_lx2160acex7.c
++++ b/board/solidrun/lx2160a/eth_lx2160acex7.c
+@@ -330,6 +330,7 @@ int fsl_board_late_init(void) {
+ 	if (get_svr() & 0x800) { /* LX2162A SOM variants */
+ 		switch (srds_s1) {
+ 			case 8:
++				/* Setup 10g retimer on lanes e,f,g,h */
+ 				setup_retimer_lx2162_25g(0);
+ 				break;
+ 			case 15:
+@@ -353,6 +354,8 @@ int fsl_board_late_init(void) {
+ 	} else {
+ 		switch (srds_s1) {
+ 			case 8:
++			case 20:
++				/* Setup 10g retimer on lanes e,f,g,h */
+ 				setup_retimer_25g(0);
+ 				break;
+ 			case 13:
+-- 
+2.35.3
+
