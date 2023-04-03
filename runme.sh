@@ -228,7 +228,7 @@ cd $ROOTDIR
 QORIQ_COMPONENTS="u-boot atf rcw restool mc-utils linux dpdk cst"
 for i in $QORIQ_COMPONENTS; do
 	if [[ ! -d $ROOTDIR/build/$i ]]; then
-		echo "Cloing https://source.codeaurora.org/external/qoriq/qoriq-components/$i release $RELEASE"
+		echo "Cloning https://github.com/nxp-qoriq/$i release $RELEASE"
 		cd $ROOTDIR/build
 		CHECKOUT=$RELEASE
 		# Release LSDK-20.12
@@ -248,7 +248,7 @@ for i in $QORIQ_COMPONENTS; do
 		if [ "x$i" == "xrcw" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
 			CHECKOUT=LSDK-20.04-update-290520
 		fi
-		git clone $SHALLOW_FLAG https://source.codeaurora.org/external/qoriq/qoriq-components/$i -b $CHECKOUT
+		git clone $SHALLOW_FLAG https://github.com/nxp-qoriq/$i -b $CHECKOUT
 		cd $i
 		if [ "x$i" == "xatf" ]; then
 			cd $ROOTDIR/build/atf/tools/fiptool
