@@ -1,0 +1,34 @@
+From d22414cf7e596d4dc2584c2e468d900e57a3eec7 Mon Sep 17 00:00:00 2001
+From: Ioana Ciornei <ioana.ciornei@nxp.com>
+Date: Wed, 5 Apr 2023 15:33:13 +0300
+Subject: [PATCH 55/61] net: phylink: extend phylink_mii_c45_pcs_get_state also
+ for PHY_INTERFACE_MODE_25GBASER
+
+Extend the phylink_mii_c45_pcs_get_state() to also support
+PHY_INTERFACE_MODE_25GBASER. The same C45 access to the
+MMD_PCS:MDIO_STAT1 register is made to determine the link status.
+
+Signed-off-by: Ioana Ciornei <ioana.ciornei@nxp.com>
+---
+ drivers/net/phy/phylink.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/phy/phylink.c b/drivers/net/phy/phylink.c
+index ba0148edd04f..5fd81243beac 100644
+--- a/drivers/net/phy/phylink.c
++++ b/drivers/net/phy/phylink.c
+@@ -2602,7 +2602,10 @@ void phylink_mii_c45_pcs_get_state(struct mdio_device *pcs,
+ 		state->speed = SPEED_10000;
+ 		state->duplex = DUPLEX_FULL;
+ 		break;
+-
++	case PHY_INTERFACE_MODE_25GBASER:
++		state->speed = SPEED_25000;
++		state->duplex = DUPLEX_FULL;
++		break;
+ 	default:
+ 		break;
+ 	}
+-- 
+2.35.3
+

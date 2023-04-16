@@ -1,0 +1,36 @@
+From a28487fff2de7bfcf6dec2f79ce5ce32c59baea9 Mon Sep 17 00:00:00 2001
+From: Steen Hegelund <steen.hegelund@microchip.com>
+Date: Fri, 11 Jun 2021 14:54:53 +0200
+Subject: [PATCH 54/61] net: phylink: Add 25G BASE-R support
+
+Add 25gbase-r interface type and speed to phylink.
+This is needed for the Sparx5 switch.
+
+Signed-off-by: Steen Hegelund <steen.hegelund@microchip.com>
+Signed-off-by: Bjarni Jonasson <bjarni.jonasson@microchip.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Reviewed-by: Russell King (Oracle) <rmk+kernel@armlinux.org.uk>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/phy/phylink.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/net/phy/phylink.c b/drivers/net/phy/phylink.c
+index 1d84bb849895..ba0148edd04f 100644
+--- a/drivers/net/phy/phylink.c
++++ b/drivers/net/phy/phylink.c
+@@ -307,6 +307,11 @@ static int phylink_parse_mode(struct phylink *pl, struct fwnode_handle *fwnode)
+ 			phylink_set(pl->supported, 2500baseX_Full);
+ 			break;
+ 
++		case PHY_INTERFACE_MODE_25GBASER:
++			phylink_set(pl->supported, 25000baseCR_Full);
++			phylink_set(pl->supported, 25000baseKR_Full);
++			phylink_set(pl->supported, 25000baseSR_Full);
++			fallthrough;
+ 		case PHY_INTERFACE_MODE_USXGMII:
+ 		case PHY_INTERFACE_MODE_10GKR:
+ 		case PHY_INTERFACE_MODE_10GBASER:
+-- 
+2.35.3
+

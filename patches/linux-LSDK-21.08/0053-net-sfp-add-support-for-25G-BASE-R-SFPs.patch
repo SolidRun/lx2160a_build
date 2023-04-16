@@ -1,0 +1,35 @@
+From 5676c7a3d807e51fdd455ae20035343b80837b43 Mon Sep 17 00:00:00 2001
+From: Steen Hegelund <steen.hegelund@microchip.com>
+Date: Fri, 11 Jun 2021 14:54:52 +0200
+Subject: [PATCH 53/61] net: sfp: add support for 25G BASE-R SFPs
+
+Add support for 25gbase-r modules. This is needed for the Sparx5 switch.
+
+Signed-off-by: Steen Hegelund <steen.hegelund@microchip.com>
+Signed-off-by: Bjarni Jonasson <bjarni.jonasson@microchip.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+Reviewed-by: Russell King (Oracle) <rmk+kernel@armlinux.org.uk>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/phy/sfp-bus.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/net/phy/sfp-bus.c b/drivers/net/phy/sfp-bus.c
+index 4cf874fb5c5b..59f924d77443 100644
+--- a/drivers/net/phy/sfp-bus.c
++++ b/drivers/net/phy/sfp-bus.c
+@@ -381,6 +381,11 @@ EXPORT_SYMBOL_GPL(sfp_parse_support);
+ phy_interface_t sfp_select_interface(struct sfp_bus *bus,
+ 				     unsigned long *link_modes)
+ {
++	if (phylink_test(link_modes, 25000baseCR_Full) ||
++	    phylink_test(link_modes, 25000baseKR_Full) ||
++	    phylink_test(link_modes, 25000baseSR_Full))
++		return PHY_INTERFACE_MODE_25GBASER;
++
+ 	if (phylink_test(link_modes, 10000baseCR_Full) ||
+ 	    phylink_test(link_modes, 10000baseSR_Full) ||
+ 	    phylink_test(link_modes, 10000baseLR_Full) ||
+-- 
+2.35.3
+

@@ -1,0 +1,79 @@
+From 673e9c8f857169f226d3056e81726778c2bdd8b7 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 23 Nov 2022 13:23:03 +0200
+Subject: [PATCH 60/61] phy: add of_phy_get_by_index
+
+Support getting a phy by index directly.
+This is mostly useful for hardware specifying multiple similar
+generic phys using the "phys" and "phy-names" properties.
+
+Current user is dpaa2 driver that can have a phy object for each serdes
+lane, and additionally 2 retimer channels (tx&rx).
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/phy/phy-core.c  | 11 +++++++++--
+ include/linux/phy/phy.h |  6 ++++++
+ 2 files changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/phy/phy-core.c b/drivers/phy/phy-core.c
+index 71cb10826326..7662c2cc02cd 100644
+--- a/drivers/phy/phy-core.c
++++ b/drivers/phy/phy-core.c
+@@ -546,12 +546,19 @@ static struct phy *_of_phy_get(struct device_node *np, int index)
+  */
+ struct phy *of_phy_get(struct device_node *np, const char *con_id)
+ {
+-	struct phy *phy = NULL;
+ 	int index = 0;
+ 
+ 	if (con_id)
+ 		index = of_property_match_string(np, "phy-names", con_id);
+ 
++	return of_phy_get_by_index(np, index);
++}
++EXPORT_SYMBOL_GPL(of_phy_get);
++
++struct phy *of_phy_get_by_index(struct device_node *np, int index)
++{
++	struct phy *phy = NULL;
++
+ 	phy = _of_phy_get(np, index);
+ 	if (IS_ERR(phy))
+ 		return phy;
+@@ -563,7 +570,7 @@ struct phy *of_phy_get(struct device_node *np, const char *con_id)
+ 
+ 	return phy;
+ }
+-EXPORT_SYMBOL_GPL(of_phy_get);
++EXPORT_SYMBOL_GPL(of_phy_get_by_index);
+ 
+ /**
+  * of_phy_put() - release the PHY
+diff --git a/include/linux/phy/phy.h b/include/linux/phy/phy.h
+index e435bdb0bab3..25038eb5aa8b 100644
+--- a/include/linux/phy/phy.h
++++ b/include/linux/phy/phy.h
+@@ -245,6 +245,7 @@ void of_phy_put(struct phy *phy);
+ void phy_put(struct device *dev, struct phy *phy);
+ void devm_phy_put(struct device *dev, struct phy *phy);
+ struct phy *of_phy_get(struct device_node *np, const char *con_id);
++struct phy *of_phy_get_by_index(struct device_node *np, int index);
+ struct phy *of_phy_simple_xlate(struct device *dev,
+ 	struct of_phandle_args *args);
+ struct phy *phy_create(struct device *dev, struct device_node *node,
+@@ -444,6 +445,11 @@ static inline struct phy *of_phy_get(struct device_node *np, const char *con_id)
+ 	return ERR_PTR(-ENOSYS);
+ }
+ 
++static inline struct phy *of_phy_get_by_index(struct device_node *np, int index)
++{
++	return ERR_PTR(-ENOSYS);
++}
++
+ static inline struct phy *of_phy_simple_xlate(struct device *dev,
+ 	struct of_phandle_args *args)
+ {
+-- 
+2.35.3
+

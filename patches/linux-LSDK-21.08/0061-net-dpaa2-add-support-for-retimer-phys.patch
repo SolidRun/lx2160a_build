@@ -1,0 +1,138 @@
+From 4f57e6a9e4b8a9b1e440459ce574a1f4921e1473 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 16 Apr 2023 14:32:28 +0300
+Subject: [PATCH] net: dpaa2: add support for retimer phys
+
+To support network speeds greater than 10Gbps retimers may be connected
+on tx & rx lines between the SoC and external phy.
+
+Add support for dynamic configuration of retimers modeles as generic phy
+ojects, and reconfigure them on interface type change.
+
+In order to extract multiple different types of phy objects, i.e. serdes
+& retimer, the existing code using of_phy_get is replaced by a loop
+handling both serdes & retimer phys.
+
+In the future to support 40G & 100G interface speeds, the number of
+supported phys might need to be increased from the current maximum of
+one serdes and 2 retimer phys.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.c  | 63 +++++++++++++++----
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.h  |  1 +
+ 2 files changed, 51 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index 2302e9c11186..a4aad5431e82 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -266,6 +266,7 @@ static void dpaa2_mac_config(struct phylink_config *config, unsigned int mode,
+ 	struct dpaa2_mac *mac = phylink_to_dpaa2_mac(config);
+ 	struct dpmac_link_state *dpmac_state = &mac->state;
+ 	int err;
++	int i;
+ 
+ 	if (state->an_enabled)
+ 		dpmac_state->options |= DPMAC_LINK_OPT_AUTONEG;
+@@ -290,6 +291,15 @@ static void dpaa2_mac_config(struct phylink_config *config, unsigned int mode,
+ 	err = phy_set_mode_ext(mac->serdes_phy, PHY_MODE_ETHERNET, state->interface);
+ 	if (err)
+ 		netdev_err(mac->net_dev, "phy_set_mode_ext() = %d\n", err);
++
++	for (i = 0; i < sizeof(mac->retimer_phys)/sizeof(mac->retimer_phys[0]); i++) {
++		if (!mac->retimer_phys[i])
++			continue;
++
++		err = phy_set_mode_ext(mac->retimer_phys[i], PHY_MODE_ETHERNET, state->interface);
++		if (err)
++			netdev_err(mac->net_dev, "phy_set_mode_ext() on retimer = %d\n", err);
++	}
+ }
+ 
+ static void dpaa2_mac_link_up(struct phylink_config *config,
+@@ -419,9 +429,13 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ {
+ 	struct net_device *net_dev = mac->net_dev;
+ 	struct fwnode_handle *dpmac_node;
+-	struct phy *serdes_phy = NULL;
++	struct phy *phy = NULL;
+ 	struct phylink *phylink;
++	const char *phy_name;
+ 	int err;
++	int phy_count;
++	int retimer_phy_count = 0;
++	int i;
+ 
+ 	mac->if_link_type = mac->attr.link_type;
+ 
+@@ -436,19 +450,42 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ 		return -EINVAL;
+ 	mac->if_mode = err;
+ 
+-	if (mac->features & DPAA2_MAC_FEATURE_PROTOCOL_CHANGE &&
+-	    !phy_interface_mode_is_rgmii(mac->if_mode) &&
+-	    is_of_node(dpmac_node)) {
+-		serdes_phy = of_phy_get(to_of_node(dpmac_node), NULL);
+-
+-		if (serdes_phy == ERR_PTR(-ENODEV))
+-			serdes_phy = NULL;
+-		else if (IS_ERR(serdes_phy))
+-			return PTR_ERR(serdes_phy);
+-		else
+-			phy_init(serdes_phy);
++	/* parse serdes & retimer phys, if any */
++	phy_count = of_count_phandle_with_args(to_of_node(dpmac_node), "phys", "#phy-cells");
++	if (phy_count >= 0) {
++		for (i = 0; i < phy_count; i++) {
++			phy = of_phy_get_by_index(to_of_node(dpmac_node), i);
++			if (IS_ERR(phy))
++				return PTR_ERR(phy);
++
++			err = of_property_read_string_index(to_of_node(dpmac_node), "phy-names", i, &phy_name);
++			if (err || !strcmp("serdes", phy_name)) {
++				if (!(mac->features & DPAA2_MAC_FEATURE_PROTOCOL_CHANGE)
++					|| phy_interface_mode_is_rgmii(mac->if_mode)) {
++					printk("dpaa2_mac_connect: should maybe not enable serdes phy?\n");
++					continue;
++				}
++
++				if (mac->serdes_phy) {
++					netdev_warn(net_dev, "unsupported number of serdes phys\n");
++					continue;
++				}
++
++				phy_init(phy);
++				mac->serdes_phy = phy;
++			} else if (!strcmp("retimer", phy_name)) {
++				if (retimer_phy_count >= sizeof(mac->retimer_phys)/sizeof(mac->retimer_phys[0])) {
++					netdev_warn(net_dev, "unsupported number of retimer phys\n");
++					continue;
++				}
++
++				phy_init(phy);
++				mac->retimer_phys[retimer_phy_count++] = phy;
++			} else {
++				netdev_warn(net_dev, "unsupported phy \"%s\"\n", phy_name);
++			}
++		}
+ 	}
+-	mac->serdes_phy = serdes_phy;
+ 
+ 	/* The MAC does not have the capability to add RGMII delays so
+ 	 * error out if the interface mode requests them and there is no PHY
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
+index 09163dd210be..0bc767248f6c 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.h
+@@ -29,6 +29,7 @@ struct dpaa2_mac {
+ 	struct lynx_pcs *pcs;
+ 	struct fwnode_handle *fw_node;
+ 	struct phy *serdes_phy;
++	struct phy *retimer_phys[2];
+ 
+ 	struct led_classdev *link_status_led;
+ };
+-- 
+2.35.3
+

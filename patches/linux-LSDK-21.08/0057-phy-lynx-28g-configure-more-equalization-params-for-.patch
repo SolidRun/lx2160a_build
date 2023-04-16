@@ -1,0 +1,31 @@
+From a9d89550d5dc789b575077e38e857e02a3b97a6c Mon Sep 17 00:00:00 2001
+From: Ioana Ciornei <ioana.ciornei@nxp.com>
+Date: Wed, 5 Apr 2023 16:32:49 +0300
+Subject: [PATCH 57/61] phy: lynx-28g: configure more equalization params for
+ 10GBASER
+
+We discovered that not all the equalization parameters for a lane were
+configured upon an interface change. Configure the extra 2 registers
+with the appropriate values for 10GBASE-R.
+
+Signed-off-by: Ioana Ciornei <ioana.ciornei@nxp.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index a2b060e9e284..08417c0098bd 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -325,6 +325,8 @@ static void lynx_28g_lane_set_10gbaser(struct lynx_28g_lane *lane)
+ 	iowrite32(0x001f0000, priv->base + LYNX_28G_LNaRECR1(lane->id));
+ 	iowrite32(0x81000020, priv->base + LYNX_28G_LNaRECR2(lane->id));
+ 	iowrite32(0x00002000, priv->base + LYNX_28G_LNaRSCCR0(lane->id));
++	iowrite32(0x80000000, priv->base + LYNX_28G_LNaRCCR0(lane->id));
++	iowrite32(0x00408000, priv->base + LYNX_28G_LNaTTLCR0(lane->id));
+ }
+ 
+ static int lynx_28g_power_off(struct phy *phy)
+-- 
+2.35.3
+

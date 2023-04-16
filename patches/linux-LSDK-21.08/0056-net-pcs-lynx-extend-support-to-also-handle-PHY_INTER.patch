@@ -1,0 +1,37 @@
+From b95f4d73bf91780785f092b2ecf2ae41f4477a79 Mon Sep 17 00:00:00 2001
+From: Ioana Ciornei <ioana.ciornei@nxp.com>
+Date: Wed, 5 Apr 2023 15:41:48 +0300
+Subject: [PATCH 56/61] net: pcs: lynx: extend support to also handle
+ PHY_INTERFACE_MODE_25GBASER
+
+Extend the Lynx PCS driver in order to be able to handle the
+PHY_INTERFACE_MODE_25GBASER interface type.
+
+Signed-off-by: Ioana Ciornei <ioana.ciornei@nxp.com>
+---
+ drivers/net/pcs/pcs-lynx.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/net/pcs/pcs-lynx.c b/drivers/net/pcs/pcs-lynx.c
+index af36cd647bf5..2916be7da089 100644
+--- a/drivers/net/pcs/pcs-lynx.c
++++ b/drivers/net/pcs/pcs-lynx.c
+@@ -96,6 +96,7 @@ static void lynx_pcs_get_state(struct phylink_pcs *pcs,
+ 		lynx_pcs_get_state_usxgmii(lynx->mdio, state);
+ 		break;
+ 	case PHY_INTERFACE_MODE_10GBASER:
++	case PHY_INTERFACE_MODE_25GBASER:
+ 		phylink_mii_c45_pcs_get_state(lynx->mdio, state);
+ 		break;
+ 	default:
+@@ -204,6 +205,7 @@ static int lynx_pcs_config(struct phylink_pcs *pcs, unsigned int mode,
+ 	case PHY_INTERFACE_MODE_USXGMII:
+ 		return lynx_pcs_config_usxgmii(lynx->mdio, mode, advertising);
+ 	case PHY_INTERFACE_MODE_10GBASER:
++	case PHY_INTERFACE_MODE_25GBASER:
+ 		/* Nothing to do here for 10GBASER */
+ 		break;
+ 	default:
+-- 
+2.35.3
+
