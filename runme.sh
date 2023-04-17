@@ -152,11 +152,19 @@ case "${SERDES}" in
 		DPC=LX2162-USOM/clearfog-s1_3-s2_0-dpc.dtb
 		DPL=LX2162-USOM/clearfog-s1_3-s2_0-dpl.dtb
 		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
+		MC_FORCE=patches/mc_lx2160a_10.32.0.itb
 	;;
 	LX2162A_CLEARFOG_3_9_*)
 		DPC=LX2162-USOM/clearfog-s1_3-s2_9-dpc.dtb
 		DPL=LX2162-USOM/clearfog-s1_3-s2_9-dpl.dtb
 		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
+		MC_FORCE=patches/mc_lx2160a_10.32.0.itb
+	;;
+	LX2162A_CLEARFOG_18_0_*)
+		DPC=LX2162-USOM/clearfog-s1_3-s2_0-dpc.dtb
+		DPL=LX2162-USOM/clearfog-s1_3-s2_0-dpl.dtb
+		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
+		MC_FORCE=patches/mc_lx2160a_10.36.100.itb
 	;;
 	*)
 		echo "Please define SERDES configuration"

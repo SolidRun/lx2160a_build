@@ -1,0 +1,126 @@
+From f54f49af359f8208f2ba1780ec6ac8ef587310c9 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 16 Apr 2023 13:24:31 +0300
+Subject: [PATCH 63/63] arm64: dts: lx2162-clearfog: add description for
+ retimer
+
+LX2162 Clearfog has a retimer on 2x SFP+ connectors.
+Add a node for the retimer and link it to the appropriate mac nodes.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../dts/freescale/fsl-lx2162a-clearfog.dts    | 20 +++++++++++++++----
+ 1 file changed, 16 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+index 961c9a6dac0f..25975bb64f12 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+@@ -75,9 +75,10 @@ sfp_bb: sfp-bb {
+ };
+ 
+ &i2c2 {
+-	retimer@30 {
++	retimer: ds250df410@18 {
+ 		compatible = "ti,ds250df410";
+-		reg = <0x30>;
++		reg = <0x18>;
++		#phy-cells = <1>;
+ 	};
+ 
+ 	i2c-switch@70 {
+@@ -191,6 +192,7 @@ pcieclk@6b {
+ &dpmac3 {
+ 	status = "okay";
+ 	phys = <&serdes_1 7>;
++	phy-names = "serdes";
+ 	managed = "in-band-status";
+ 	sfp = <&sfp_at>;
+ 	link-status-led = <&led_sfp_at>;
+@@ -204,6 +206,7 @@ &pcs_mdio3 {
+ &dpmac4 {
+ 	status = "okay";
+ 	phys = <&serdes_1 6>;
++	phy-names = "serdes";
+ 	managed = "in-band-status";
+ 	sfp = <&sfp_ab>;
+ 	link-status-led = <&led_sfp_ab>;
+@@ -215,7 +218,8 @@ &pcs_mdio4 {
+ 
+ &dpmac5 {
+ 	status = "okay";
+-	phys = <&serdes_1 5>;
++	phys = <&serdes_1 5>, <&retimer 2>, <&retimer 3>;
++	phy-names = "serdes", "retimer", "retimer";
+ 	managed = "in-band-status";
+ 	sfp = <&sfp_bt>;
+ 	link-status-led = <&led_sfp_bt>;
+@@ -227,7 +231,8 @@ &pcs_mdio5 {
+ 
+ &dpmac6 {
+ 	status = "okay";
+-	phys = <&serdes_1 4>;
++	phys = <&serdes_1 4>, <&retimer 0>, <&retimer 1>;
++	phy-names = "serdes", "retimer", "retimer";
+ 	managed = "in-band-status";
+ 	sfp = <&sfp_bb>;
+ 	link-status-led = <&led_sfp_bb>;
+@@ -300,6 +305,7 @@ &pcs_mdio11 {
+ &dpmac12 {
+ 	status = "okay";
+ 	phys = <&serdes_2 1>;
++	phy-names = "serdes";
+ 	phy-handle = <&ethernet_phy0>;
+ 	phy-mode = "rgmii";
+ };
+@@ -315,6 +321,7 @@ &dpmac17 {
+ 
+ 	status = "okay";
+ 	phys = <&serdes_2 2>;
++	phy-names = "serdes";
+ 	phy-handle = <&ethernet_phy4>;
+ 	phy-mode = "rgmii";
+ };
+@@ -326,6 +333,7 @@ &pcs_mdio17 {
+ &dpmac18 {
+ 	status = "okay";
+ 	phys = <&serdes_2 3>;
++	phy-names = "serdes";
+ 	phy-handle = <&ethernet_phy6>;
+ 	phy-mode = "rgmii";
+ };
+@@ -337,6 +345,7 @@ &pcs_mdio18 {
+ &dpmac15 {
+ 	status = "okay";
+ 	phys = <&serdes_2 4>;
++	phy-names = "serdes";
+ 	phy-handle = <&ethernet_phy3>;
+ 	phy-mode = "rgmii";
+ };
+@@ -348,6 +357,7 @@ &pcs_mdio15 {
+ &dpmac16 {
+ 	status = "okay";
+ 	phys = <&serdes_2 5>;
++	phy-names = "serdes";
+ 	phy-handle = <&ethernet_phy1>;
+ 	phy-mode = "rgmii";
+ };
+@@ -359,6 +369,7 @@ &pcs_mdio16 {
+ &dpmac13 {
+ 	status = "okay";
+ 	phys = <&serdes_2 6>;
++	phy-names = "serdes";
+ 	phy-handle = <&ethernet_phy5>;
+ 	phy-mode = "rgmii";
+ };
+@@ -370,6 +381,7 @@ &pcs_mdio13 {
+ &dpmac14 {
+ 	status = "okay";
+ 	phys = <&serdes_2 7>;
++	phy-names = "serdes";
+ 	phy-handle = <&ethernet_phy7>;
+ 	phy-mode = "rgmii";
+ };
+-- 
+2.35.3
+
