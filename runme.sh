@@ -328,7 +328,7 @@ case "\$1" in
 		echo "127.0.0.1 localhost" > /mnt/etc/hosts
 		export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C
 		chroot /mnt apt update
-		chroot /mnt apt install --no-install-recommends -y systemd-sysv apt locales less wget procps openssh-server ifupdown net-tools isc-dhcp-client ntpdate lm-sensors i2c-tools psmisc less sudo htop iproute2 iputils-ping kmod network-manager iptables rng-tools apt-utils ethtool
+		chroot /mnt apt install --no-install-recommends -y systemd-sysv apt locales less wget procps openssh-server ifupdown net-tools isc-dhcp-client ntpdate lm-sensors i2c-tools psmisc less sudo htop iproute2 iputils-ping kmod network-manager iptables rng-tools apt-utils ethtool fdisk e2fsprogs
 		echo -e "root\nroot" | chroot /mnt passwd
 		sed -i "s;[# ]*RuntimeWatchdogSec=.*\$;RuntimeWatchdogSec=30;g" /etc/systemd/system.conf
 		umount /mnt/var/lib/apt/
@@ -567,7 +567,11 @@ make INSTALL_MOD_PATH=$ROOTDIR/images/tmp/ INSTALL_MOD_STRIP=1 modules_install
 cp $ROOTDIR/build/linux/arch/arm64/boot/Image $ROOTDIR/images/tmp/boot
 cp $ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx216*.dtb $ROOTDIR/images/tmp/boot
 
-
+echo "Building the kernel DEB packets."
+cd $ROOTDIR/build/linux
+make -j${PARALLEL} bindeb-pkg -C $ROOTDIR/build/linux $ROOTDIR/images
+cp $ROOTDIR/build/linux-* $ROOTDIR/images
+rm $ROOTDIR/build/linux-*
 
 echo "Building DPDK"
 cd $ROOTDIR/build/dpdk
