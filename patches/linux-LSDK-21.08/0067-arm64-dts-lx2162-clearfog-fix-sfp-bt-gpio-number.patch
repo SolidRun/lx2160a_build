@@ -1,0 +1,26 @@
+From 312efec66665738375e50b4521a0f0c151ce6d88 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 20 Apr 2023 17:05:54 +0300
+Subject: [PATCH] arm64: dts: lx2162-clearfog: fix sfp-bt gpio number
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+index 25975bb64f12..9323c0fc8937 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+@@ -62,7 +62,7 @@ sfp_ab: sfp-ab {
+ 	sfp_bt: sfp-bt {
+ 		compatible = "sff,sfp";
+ 		i2c-bus = <&sfp_i2c2>;
+-		mod-def0-gpio = <&gpio2 0 GPIO_ACTIVE_LOW>; /* PROC_IRQ0 */
++		mod-def0-gpio = <&gpio2 10 GPIO_ACTIVE_LOW>; /* PROC_IRQ10 */
+ 		maximum-power-milliwatt = <2000>;
+ 	};
+ 
+-- 
+2.35.3
+
