@@ -1,0 +1,75 @@
+From 531dfd92649bf52a97f086c0462313b6f4eea8f8 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 20 Apr 2023 16:17:23 +0300
+Subject: [PATCH 64/66] net: dpaa2: properly cleanup resources when dpmac probe
+ fails
+
+dpmac probe function allocates several resources dynamically such as
+IRQs and dpmac objects. If probe fails for any reason, the next probe
+can no longer succeed.
+Add additional labels to the return path to free all resources.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index a4aad5431e82..69b6c2ebaaa2 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -1006,18 +1006,18 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
+ 	err = dpmac_get_attributes(mc_dev->mc_io, 0, mc_dev->mc_handle, &priv->attr);
+ 	if (err) {
+ 		dev_err(dev, "dpmac_get_attributes() = %d\n", err);
+-		goto free_portal;
++		goto free_dpmac;
+ 	}
+ 
+ 	err = dpaa2_mac_setup_irqs(mc_dev);
+ 	if (err) {
+ 		err = -EFAULT;
+-		goto free_portal;
++		goto free_dpmac;
+ 	}
+ 
+ 	err = dpaa2_mac_open(priv);
+ 	if (err)
+-		goto free_portal;
++		goto free_irqs;
+ 
+ 	if (is_of_node(priv->fw_node)) {
+ 		struct device_node *np;
+@@ -1036,7 +1036,8 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
+ 					dev_err(dev, "failed to get link-status led from 'link-status-led' property: %pe\n", priv->link_status_led);
+ 					fallthrough;
+ 				case -EPROBE_DEFER:
+-					goto free_portal;
++					dev_err(dev, "link-status-led defer\n");
++					goto free_irqs;
+ 			};
+ 		}
+ 	}
+@@ -1045,7 +1046,7 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
+ 		err = dpaa2_mac_connect(priv);
+ 		if (err) {
+ 			dev_err(dev, "Error connecting to the MAC endpoint\n");
+-			goto free_portal;
++			goto free_irqs;
+ 		}
+ 	}
+ 
+@@ -1065,6 +1066,10 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
+ 	}
+ 
+ 	return 0;
++free_irqs:
++	fsl_mc_free_irqs(mc_dev);
++free_dpmac:
++	dpaa2_mac_close(priv);
+ free_portal:
+ 	fsl_mc_portal_free(mc_dev->mc_io);
+ unregister_netdev:
+-- 
+2.35.3
+

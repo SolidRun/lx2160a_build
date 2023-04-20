@@ -1,0 +1,73 @@
+From bd365fe9e953053b59aa08591e58887701ca833a Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 20 Apr 2023 16:13:43 +0300
+Subject: [PATCH 65/66] leds: core: fix of_led_get_hack to return error on
+ invalid dts node
+
+When unchecked, class_find_device_by_of_node will just return the first
+registered led in the system. This can cause binding to unintentional
+LEDs, such as the mmc host-controller led.
+
+Check value of device-tree pointer and return -ENOENT when NULL.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/leds/led-class.c                         | 3 +++
+ drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c | 1 +
+ drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c | 1 +
+ drivers/net/phy/sfp.c                            | 1 +
+ 4 files changed, 6 insertions(+)
+
+diff --git a/drivers/leds/led-class.c b/drivers/leds/led-class.c
+index 3198ebb5cfaf..e2591a491c48 100644
+--- a/drivers/leds/led-class.c
++++ b/drivers/leds/led-class.c
+@@ -261,6 +261,9 @@ struct led_classdev *of_led_get_hack(struct device_node *led_node)
+ 	struct device *led_dev;
+ 	struct led_classdev *led_cdev;
+ 
++	if (!led_node)
++		return ERR_PTR(-ENOENT);
++
+ 	led_dev = class_find_device_by_of_node(leds_class, led_node);
+ 	if (!led_dev)
+ 		return ERR_PTR(-EPROBE_DEFER);
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c
+index 430ab61f71dc..f20396e305ea 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.c
+@@ -4176,6 +4176,7 @@ static int dpaa2_eth_connect_mac(struct dpaa2_eth_priv *priv)
+ 			err = PTR_ERR(mac->link_status_led);
+ 			switch (err) {
+ 				case -ENODEV:
++				case -ENOENT:
+ 					mac->link_status_led = NULL;
+ 					break;
+ 				default:
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index 69b6c2ebaaa2..531ece326d5d 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -1030,6 +1030,7 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
+ 			err = PTR_ERR(priv->link_status_led);
+ 			switch (err) {
+ 				case -ENODEV:
++				case -ENOENT:
+ 					priv->link_status_led = NULL;
+ 					break;
+ 				default:
+diff --git a/drivers/net/phy/sfp.c b/drivers/net/phy/sfp.c
+index 0f18e77b8b68..085d7c265e44 100644
+--- a/drivers/net/phy/sfp.c
++++ b/drivers/net/phy/sfp.c
+@@ -2439,6 +2439,7 @@ static int sfp_probe(struct platform_device *pdev)
+ 		if (IS_ERR(sfp->link_status_led)) {
+ 			switch (PTR_ERR(sfp->link_status_led)) {
+ 				case -ENODEV:
++				case -ENOENT:
+ 					sfp->link_status_led = NULL;
+ 					break;
+ 				default:
+-- 
+2.35.3
+

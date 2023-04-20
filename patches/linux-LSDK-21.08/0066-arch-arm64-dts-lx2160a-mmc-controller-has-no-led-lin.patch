@@ -1,0 +1,63 @@
+From 0cd0483c5b5414050d5b558f77ed925b4b38aff5 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 20 Nov 2022 17:59:15 +0200
+Subject: [PATCH 66/66] arch: arm64: dts: lx2160a: mmc controller has no led
+ line, enable quirk
+
+At runtime we can by default see 2 LEDs - mmc:0, mmc:1 - created in
+/sys/class/leds/. This is unexpected for 2 reasons:
+
+1. LX2160A has no mention of mmc led functionality for the pads
+2. LX2160A reference manual describes the relevant bit in control
+   register as reserved.
+
+Add a new soc-specific compatible string "fsl,lx2160a-esdhc" and enable
+the existing SDHCI_QUIRK_NO_LED.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi | 4 ++--
+ drivers/mmc/host/sdhci-of-esdhc.c              | 5 +++++
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+index d4c73170c0a0..c83ff74ec9b6 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+@@ -866,7 +866,7 @@ dspi2: spi@2120000 {
+ 		};
+ 
+ 		esdhc0: esdhc@2140000 {
+-			compatible = "fsl,esdhc";
++			compatible = "fsl,lx2160a-esdhc", "fsl,esdhc";
+ 			reg = <0x0 0x2140000 0x0 0x10000>;
+ 			interrupts = <0 28 0x4>; /* Level high type */
+ 			clocks = <&clockgen 4 1>;
+@@ -879,7 +879,7 @@ esdhc0: esdhc@2140000 {
+ 		};
+ 
+ 		esdhc1: esdhc@2150000 {
+-			compatible = "fsl,esdhc";
++			compatible = "fsl,lx2160a-esdhc", "fsl,esdhc";
+ 			reg = <0x0 0x2150000 0x0 0x10000>;
+ 			interrupts = <0 63 0x4>; /* Level high type */
+ 			clocks = <&clockgen 4 1>;
+diff --git a/drivers/mmc/host/sdhci-of-esdhc.c b/drivers/mmc/host/sdhci-of-esdhc.c
+index 83a28e5c9a93..e6d1d5c8a2a9 100644
+--- a/drivers/mmc/host/sdhci-of-esdhc.c
++++ b/drivers/mmc/host/sdhci-of-esdhc.c
+@@ -1504,6 +1504,11 @@ static int sdhci_esdhc_probe(struct platform_device *pdev)
+ 		esdhc->quirk_ignore_data_inhibit = true;
+ 	}
+ 
++	if (of_device_is_compatible(np, "fsl,lx2160a-esdhc")) {
++		/* no led line, reference manual marks register 0x28 bit 0 reserved */
++		host->quirks |= SDHCI_QUIRK_NO_LED;
++	}
++
+ 	/* call to generic mmc_of_parse to support additional capabilities */
+ 	ret = mmc_of_parse(host->mmc);
+ 	if (ret)
+-- 
+2.35.3
+
