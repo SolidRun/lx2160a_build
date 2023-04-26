@@ -364,7 +364,7 @@ case "\$1" in
 		mount /dev/vda /mnt
 		cd /tmp
 		cat /proc/net/pnp > /etc/resolv.conf
-		wget http://deb.debian.org/debian/pool/main/d/debootstrap/debootstrap_1.0.123.tar.gz
+		wget http://deb.debian.org/debian/pool/main/d/debootstrap/debootstrap_1.0.128+nmu2~bpo11+1.tar.gz
 		tar zxf debootstrap*.tar.gz
 		cd debootstrap
 		mkdir -p /usr/share/debootstrap/scripts
