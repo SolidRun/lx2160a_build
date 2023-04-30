@@ -1,0 +1,37 @@
+From 144f50d861ed4cd8e926ae78813b4145780b61fe Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 16 Apr 2023 16:06:02 +0300
+Subject: [PATCH 69/69] arm64: dts: lx2160a-clearfog-itx: add explicit status
+ to serdes nodes
+
+Clearfog-CX / Honeycomb use only serdes 1 for networking. Explicitly
+enable the serdes_1 node as it is now linked to dpmac instances,
+and disable serdes 2.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi      | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+index 3aa8a1fe50d0..9c4f4cc3fc50 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+@@ -184,6 +184,14 @@ &pcs_mdio10 {
+ 	status = "okay";
+ };
+ 
++&serdes_1 {
++	status = "okay";
++};
++
++&serdes_2 {
++	status = "disabled";
++};
++
+ &sata0 {
+ 	status = "okay";
+ };
+-- 
+2.35.3
+
