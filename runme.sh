@@ -14,6 +14,7 @@ BUILDROOT_VERSION=2020.02.1
 # Misc
 ###############################################################################
 : ${RELEASE:=LSDK-21.08}
+: ${MC_RELEASE:=mc_release_10.37.0}
 : ${DDR_SPEED:=3200}
 : ${SERDES:=8_5_2}
 : ${UEFI_RELEASE:=RELEASE}
@@ -65,7 +66,6 @@ case "${SERDES}" in
 	8_9_*|8S_9_*)
 		DPC=dpc-8_x_usxgmii_8_x_sgmii.dtb
 		DPL=dpl-eth.8x10g.8x1g.dtb
-		MC_FORCE=patches/mc_lx2160a_10.36.0.itb
 	;;
 	2_*)
 		DPC=dpc-8_x_usxgmii.dtb
@@ -74,7 +74,6 @@ case "${SERDES}" in
 	4_5_2)
 		DPC=dpc-8_x_usxgmii.dtb
 		DPL=dpl-eth.8x10g.19.dtb
-		MC_FORCE=patches/mc_lx2160a_10.32.0.itb
 		DEFAULT_FDT_FILE="fsl-lx2160a-clearfog-cx.dtb"
 	;;
 	4_*)
@@ -84,7 +83,6 @@ case "${SERDES}" in
 	8_*|8S_*)
 		DPC=dpc-8_x_usxgmii.dtb
 		DPL=dpl-eth.8x10g.19.dtb
-		MC_FORCE=patches/mc_lx2160a_10.32.0.itb
 	;;
 	10S_*)
 		DPC=dpc-S1_10-S2_0-6x_usxgmii.dtb
@@ -126,31 +124,26 @@ case "${SERDES}" in
 		DPC=LX2162-USOM/clearfog-s1_0-s2_0-dpc.dtb
 		DPL=LX2162-USOM/clearfog-s1_0-s2_0-dpl.dtb
 		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
-		MC_FORCE=patches/mc_lx2160a_10.36.0.itb
 	;;
 	LX2162A_CLEARFOG_3_7_*)
 		DPC=LX2162-USOM/clearfog-s1_3-s2_7-dpc.dtb
 		DPL=LX2162-USOM/clearfog-s1_3-s2_7-dpl.dtb
 		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
-		MC_FORCE=patches/mc_lx2160a_10.36.0.itb
 	;;
 	LX2162A_CLEARFOG_3_9_*)
 		DPC=LX2162-USOM/clearfog-s1_3-s2_9-dpc.dtb
 		DPL=LX2162-USOM/clearfog-s1_3-s2_9-dpl.dtb
 		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
-		MC_FORCE=patches/mc_lx2160a_10.36.0.itb
 	;;
 	LX2162A_CLEARFOG_3_11_*)
 		DPC=LX2162-USOM/clearfog-s1_3-s2_7-dpc.dtb
 		DPL=LX2162-USOM/clearfog-s1_3-s2_7-dpl.dtb
 		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
-		MC_FORCE=patches/mc_lx2160a_10.36.0.itb
 	;;
 	LX2162A_CLEARFOG_18_9_*)
 		DPC=LX2162-USOM/clearfog-s1_3-s2_9-dpc.dtb
 		DPL=LX2162-USOM/clearfog-s1_3-s2_9-dpl.dtb
 		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
-		MC_FORCE=patches/mc_lx2160a_10.36.100.itb
 	;;
 	*)
 		echo "Please define SERDES configuration"
@@ -402,7 +395,7 @@ fi
 
 if [[ ! -d $ROOTDIR/build/qoriq-mc-binary ]]; then
 	cd $ROOTDIR/build
-	git clone $SHALLOW_FLAG https://github.com/NXP/qoriq-mc-binary.git -b $RELEASE
+	git clone $SHALLOW_FLAG https://github.com/NXP/qoriq-mc-binary.git -b $MC_RELEASE
 fi
 
 ###############################################################################
