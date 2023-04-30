@@ -1,0 +1,55 @@
+From 41eead769fa208124644533fb76577d802bef516 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 20 Apr 2023 18:36:36 +0300
+Subject: [PATCH 68/69] arm64: dts: lx2160a-clearfog-itx: fix phy 2500
+ max-speed indication
+
+Reassign the 2500Mbps limit to the correct PHYs - connected to dpmacs
+13&14, that can support USXGMII.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+index 9323c0fc8937..3496697c7e36 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+@@ -414,13 +414,13 @@ ethernet_phy1: mv88e3580-p1@1 {
+ 	ethernet_phy2: mv88e3580-p2@2 {
+ 		reg = <OCTOPHY_ADDR_LOWER(2)>;
+ 		compatible = "ethernet-phy-ieee802.3-c45";
+-		max-speed = <2500>;
++		max-speed = <1000>;
+ 	};
+ 
+ 	ethernet_phy3: mv88e3580-p3@3 {
+ 		reg = <OCTOPHY_ADDR_LOWER(3)>;
+ 		compatible = "ethernet-phy-ieee802.3-c45";
+-		max-speed = <2500>;
++		max-speed = <1000>;
+ 	};
+ 
+ 	ethernet_phy4: mv88e3580-p4@4 {
+@@ -432,7 +432,7 @@ ethernet_phy4: mv88e3580-p4@4 {
+ 	ethernet_phy5: mv88e3580-p5@5 {
+ 		reg = <OCTOPHY_ADDR_UPPER(5)>;
+ 		compatible = "ethernet-phy-ieee802.3-c45";
+-		max-speed = <1000>;
++		max-speed = <2500>;
+ 	};
+ 
+ 	ethernet_phy6: mv88e3580-p6@6 {
+@@ -444,7 +444,7 @@ ethernet_phy6: mv88e3580-p6@6 {
+ 	ethernet_phy7: mv88e3580-p7@7 {
+ 		reg = <OCTOPHY_ADDR_UPPER(7)>;
+ 		compatible = "ethernet-phy-ieee802.3-c45";
+-		max-speed = <1000>;
++		max-speed = <2500>;
+ 	};
+ };
+ 
+-- 
+2.35.3
+
