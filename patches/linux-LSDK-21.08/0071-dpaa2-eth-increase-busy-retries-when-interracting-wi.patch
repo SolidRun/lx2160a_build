@@ -1,0 +1,55 @@
+From 374083918c5220f01ab6c1324516f471e73ff398 Mon Sep 17 00:00:00 2001
+From: Ioana Ciornei <ioana.ciornei@nxp.com>
+Date: Tue, 24 May 2022 15:07:31 +0300
+Subject: [PATCH 71/72] dpaa2-eth: increase busy retries when interracting with
+ QBMAN
+
+It seems that there are circumstances when access to QBMAN through the
+software portals will be delayed. Accessing some lower speeds interfaces
+while also QBMAN commands are issued from the kernel will lead to
+software timeouts happening in the dpaa2-eth driver.
+
+What we have observed is that management commands like re-arming the
+interrupts on a specific channel, waiting for a dequeue response to be
+available etc, will take a longer time to complete.
+All these commands have to wait for a valid bit to be set for the
+command to be interpreted as successfully completed.
+
+Increase the maximum number of times the Linux kernel drivers will busy
+poll for a successful result of one of these commands.
+
+Signed-off-by: Ioana Ciornei <ioana.ciornei@nxp.com>
+---
+ drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.h | 2 +-
+ drivers/soc/fsl/dpio/qbman-portal.h              | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.h b/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.h
+index dbfd9c60b9da..5ccefdd020d9 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.h
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth.h
+@@ -347,7 +347,7 @@ static inline struct dpaa2_faead *dpaa2_get_faead(void *buf_addr, bool swa)
+  * hardware becomes unresponsive, but not give up too easily if
+  * the portal really is busy for valid reasons
+  */
+-#define DPAA2_ETH_SWP_BUSY_RETRIES	1000
++#define DPAA2_ETH_SWP_BUSY_RETRIES	10000
+ 
+ /* Driver statistics, other than those in struct rtnl_link_stats64.
+  * These are usually collected per-CPU and aggregated by ethtool.
+diff --git a/drivers/soc/fsl/dpio/qbman-portal.h b/drivers/soc/fsl/dpio/qbman-portal.h
+index b6b79e3bb526..0370be1de533 100644
+--- a/drivers/soc/fsl/dpio/qbman-portal.h
++++ b/drivers/soc/fsl/dpio/qbman-portal.h
+@@ -536,7 +536,7 @@ static inline int qbman_swp_CDAN_set_context_enable(struct qbman_swp *s,
+ static inline void *qbman_swp_mc_complete(struct qbman_swp *swp, void *cmd,
+ 					  u8 cmd_verb)
+ {
+-	int loopvar = 2000;
++	int loopvar = 10000;
+ 
+ 	qbman_swp_mc_submit(swp, cmd, cmd_verb);
+ 
+-- 
+2.35.3
+

@@ -1,0 +1,71 @@
+From ea0b7fa03ee483a97e22c8219fc01cfd04b424af Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 13 May 2023 17:50:48 +0300
+Subject: [PATCH 72/72] [HACK] net: dpaa2: never power-off serdes phy
+
+When network interfaces are bound to DPDK rather than the Linux kernel,
+it has been observed that the serdes phy is powered off, and never
+powered on again.
+
+As a workaround replace all occurencs of phy_power_off with phy_power_on,
+and re-add prepare and finish callbacks to power on serdes.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.c  | 28 ++++++++++++++++++-
+ 1 file changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index baf7dfbba079..295c62b6ba21 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -394,11 +394,37 @@ static void dpaa2_mac_link_down(struct phylink_config *config,
+ 		led_set_brightness(mac->link_status_led, LED_OFF);
+ }
+ 
++static int dpaa2_mac_prepare(struct phylink_config *config, unsigned int mode,
++			     phy_interface_t interface)
++{
++	struct dpaa2_mac *mac = phylink_to_dpaa2_mac(config);
++
++	dpaa2_mac_link_down(config, mode, interface);
++
++	if (mac->serdes_phy)
++		phy_power_on(mac->serdes_phy);
++
++	return 0;
++}
++
++static int dpaa2_mac_finish(struct phylink_config *config, unsigned int mode,
++			    phy_interface_t interface)
++{
++	struct dpaa2_mac *mac = phylink_to_dpaa2_mac(config);
++
++	if (mac->serdes_phy)
++		phy_power_on(mac->serdes_phy);
++
++	return 0;
++}
++
+ static const struct phylink_mac_ops dpaa2_mac_phylink_ops = {
+ 	.validate = dpaa2_mac_validate,
+ 	.mac_config = dpaa2_mac_config,
+ 	.mac_link_up = dpaa2_mac_link_up,
+ 	.mac_link_down = dpaa2_mac_link_down,
++	.mac_prepare = dpaa2_mac_prepare,
++	.mac_finish = dpaa2_mac_finish,
+ };
+ 
+ static int dpaa2_pcs_create(struct dpaa2_mac *mac,
+@@ -457,7 +483,7 @@ void dpaa2_mac_start(struct dpaa2_mac *mac)
+ void dpaa2_mac_stop(struct dpaa2_mac *mac)
+ {
+ 	if (mac->serdes_phy)
+-		phy_power_off(mac->serdes_phy);
++		phy_power_on(mac->serdes_phy);
+ }
+ 
+ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+-- 
+2.35.3
+
