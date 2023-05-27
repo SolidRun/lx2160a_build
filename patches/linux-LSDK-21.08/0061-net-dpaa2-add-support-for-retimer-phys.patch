@@ -1,4 +1,4 @@
-From 4f57e6a9e4b8a9b1e440459ce574a1f4921e1473 Mon Sep 17 00:00:00 2001
+From 2c6770fb3ff78aecb8b4ed04ff3a8e54bf0f3531 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sun, 16 Apr 2023 14:32:28 +0300
 Subject: [PATCH] net: dpaa2: add support for retimer phys
@@ -19,12 +19,12 @@ one serdes and 2 retimer phys.
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---
- .../net/ethernet/freescale/dpaa2/dpaa2-mac.c  | 63 +++++++++++++++----
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.c  | 62 +++++++++++++++----
  .../net/ethernet/freescale/dpaa2/dpaa2-mac.h  |  1 +
- 2 files changed, 51 insertions(+), 13 deletions(-)
+ 2 files changed, 50 insertions(+), 13 deletions(-)
 
 diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
-index 2302e9c11186..a4aad5431e82 100644
+index 2302e9c11186..aadceeb0ca12 100644
 --- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
 +++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
 @@ -266,6 +266,7 @@ static void dpaa2_mac_config(struct phylink_config *config, unsigned int mode,
@@ -66,7 +66,7 @@ index 2302e9c11186..a4aad5431e82 100644
  
  	mac->if_link_type = mac->attr.link_type;
  
-@@ -436,19 +450,42 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+@@ -436,19 +450,41 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
  		return -EINVAL;
  	mac->if_mode = err;
  
@@ -93,7 +93,6 @@ index 2302e9c11186..a4aad5431e82 100644
 +			if (err || !strcmp("serdes", phy_name)) {
 +				if (!(mac->features & DPAA2_MAC_FEATURE_PROTOCOL_CHANGE)
 +					|| phy_interface_mode_is_rgmii(mac->if_mode)) {
-+					printk("dpaa2_mac_connect: should maybe not enable serdes phy?\n");
 +					continue;
 +				}
 +
