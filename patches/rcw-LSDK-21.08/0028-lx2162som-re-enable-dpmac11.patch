@@ -1,0 +1,41 @@
+From c43d4af3735fce5265b5f91de5bf26d5abeb2220 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 27 May 2023 17:20:22 +0300
+Subject: [PATCH] lx2162som: re-enable dpmac11
+
+dpmac11 was unintentionally disabled along with dpmac7-10.
+Fix the initially value to DEVDISR2 to only disable dpmac7-10.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2160acex7/configs/lx2160a_defaults.rcwi | 2 +-
+ lx2162aqds/disable_mac7_10.rcw            | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/lx2160acex7/configs/lx2160a_defaults.rcwi b/lx2160acex7/configs/lx2160a_defaults.rcwi
+index e22fbef..e048d8b 100644
+--- a/lx2160acex7/configs/lx2160a_defaults.rcwi
++++ b/lx2160acex7/configs/lx2160a_defaults.rcwi
+@@ -66,7 +66,7 @@ write 0x1e00078,0x00000032
+ /* Disabled second USB controller */
+ write 0x1e00070,0x00002000
+ /* MAC7 to MAC10 clock disable*/
+-write 0x1e00074,0x00007c0
++write 0x1e00074,0x00003c0
+ /* Disable second DDR controller */
+ write 0x1e00080,0x00000002
+ .end
+diff --git a/lx2162aqds/disable_mac7_10.rcw b/lx2162aqds/disable_mac7_10.rcw
+index ef3edba..d52589c 100644
+--- a/lx2162aqds/disable_mac7_10.rcw
++++ b/lx2162aqds/disable_mac7_10.rcw
+@@ -11,5 +11,5 @@
+ */
+ 
+ .pbi
+-write 0x1e00074,0x00007c0
++write 0x1e00074,0x00003c0
+ .end
+-- 
+2.35.3
+
