@@ -1,0 +1,66 @@
+From 6e41cf32c6390042550c3e6d6a80edcd03a8edf7 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 4 Jun 2023 13:07:56 +0300
+Subject: [PATCH] lx2162-clearfog: add phy-mode property to dpmacs 3-6
+
+U-Boot expects all enabled dpmac nodes to specify phy-mode, otherwise
+boot will fail with following error:
+
+ldpaa_eth dpmac@3: incorrect phy mode
+Error binding driver 'ldpaa_eth': -22
+ldpaa_eth dpmac@4: incorrect phy mode
+Error binding driver 'ldpaa_eth': -22
+ldpaa_eth dpmac@5: incorrect phy mode
+Error binding driver 'ldpaa_eth': -22
+ldpaa_eth dpmac@6: incorrect phy mode
+Error binding driver 'ldpaa_eth': -22
+Some drivers failed to bind
+Error binding driver 'simple_bus': -22
+Some drivers failed to bind
+Error binding driver 'simple_bus': -22
+Some drivers failed to bind
+initcall sequence 00000000fbdcd688 failed at call 000000008201d3f4 (err=-22)
+### ERROR ### Please RESET the board ###
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm/dts/fsl-lx2162a-clearfog.dts | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm/dts/fsl-lx2162a-clearfog.dts b/arch/arm/dts/fsl-lx2162a-clearfog.dts
+index 9764305a84..b23a578d7e 100644
+--- a/arch/arm/dts/fsl-lx2162a-clearfog.dts
++++ b/arch/arm/dts/fsl-lx2162a-clearfog.dts
+@@ -168,6 +168,7 @@
+ 	status = "okay";
+ 	managed = "in-band-status";
+ 	sfp = <&sfp_at>;
++	phy-mode = "usxgmii";
+ };
+ 
+ /* lower 10G connector */
+@@ -175,18 +176,21 @@
+ 	status = "okay";
+ 	managed = "in-band-status";
+ 	sfp = <&sfp_ab>;
++	phy-mode = "usxgmii";
+ };
+ 
+ &dpmac5 {
+ 	status = "okay";
+ 	managed = "in-band-status";
+ 	sfp = <&sfp_bt>;
++	phy-mode = "25g-aui";
+ };
+ 
+ &dpmac6 {
+ 	status = "okay";
+ 	managed = "in-band-status";
+ 	sfp = <&sfp_bb>;
++	phy-mode = "25g-aui";
+ };
+ 
+ /*
+-- 
+2.35.3
+
