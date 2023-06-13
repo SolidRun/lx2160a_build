@@ -14,7 +14,7 @@ RUN set -e; \
 	apt-get -y upgrade; \
 	:
 
-RUN apt-get update ; apt-get -y install acpica-tools bc bison build-essential cpio device-tree-compiler dosfstools e2tools flex fuseext2 g++ gcc git kmod libssl-dev make meson mtools multistrap ninja-build p7zip p7zip-full pandoc parted python python2 python3 qemu-system-arm rsync squashfs-tools sudo tar u-boot-tools unzip wget xz-utils
+RUN apt-get update ; apt-get -y install --no-install-recommends acpica-tools bc bison build-essential ca-certificates cpio debian-archive-keyring debootstrap device-tree-compiler dosfstools e2tools fakeroot flex fuseext2 g++ gcc git kmod libssl-dev make meson mtools multistrap ninja-build p7zip p7zip-full pandoc parted python python2 python3 qemu-system-arm rsync squashfs-tools sudo tar u-boot-tools unzip wget xz-utils
 
 # build environment
 WORKDIR /work

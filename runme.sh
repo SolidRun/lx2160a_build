@@ -4,7 +4,6 @@ set -e
 ###############################################################################
 # General configurations
 ###############################################################################
-BUILDROOT_VERSION=2020.02.1
 #DDR_SPEED=3200
 #SERDES=8_5_2 # 8x10g
 #SERDES=13_5_2 # dual 100g
@@ -29,8 +28,13 @@ BUILDROOT_VERSION=2020.02.1
 # - focal (20.04)
 # - jammy (22.04)
 : ${UBUNTU_VERSION:=focal}
+: ${UBUNTU_ROOTFS_SIZE:=350M}
 : ${DEBIAN_VERSION:=bullseye}
-: ${BR2_PRIMARY_SITE:=} # custom buildroot mirror
+# Debian Version
+# - bullseye (11)
+# - bookworm (12)
+: ${DEBIAN_ROOTFS_SIZE:=350M}
+: ${APTPROXY:=}
 
 if [ "x$SHALLOW" == "xtrue" ]; then
 	SHALLOW_FLAG="--depth 1000"
@@ -43,6 +47,15 @@ else
 	ATF_DEBUG=""
 	ATF_BUILD="release"
 fi
+
+# we don't have status code checks for each step - use "-e" with a trap instead
+function error() {
+	status=$?
+	printf "ERROR: Line %i failed with status %i: %s\n" $BASH_LINENO $status "$BASH_COMMAND" >&2
+	exit $status
+}
+trap error ERR
+set -e
 
 mkdir -p build images
 ROOTDIR=`pwd`
@@ -161,13 +174,8 @@ case "${DDR_SPEED}" in
 esac
 
 case "${DISTRO}" in
-	ubuntu)
-		ROOTFS=ubuntu-core
-		ROOTFS_SIZE=350M
-	;;
-	debian)
-		ROOTFS=debian-bullseye
-		ROOTFS_SIZE=350M
+	debian|ubuntu)
+		:
 	;;
 	*)
 		echo "Please use one of the supported distros"
@@ -258,140 +266,6 @@ for i in $QORIQ_COMPONENTS; do
 	fi
 done
 
-
-if [[ ! -f $ROOTDIR/build/ubuntu-core.ext4 ]] && [ "x$DISTRO" == "xubuntu" ]; then
-	if [[ $UBUNTU_VERSION == focal ]]; then
-		UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.5-base-arm64.tar.gz
-	fi
-	if [[ $UBUNTU_VERSION == jammy ]]; then
-		UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/ubuntu-base-22.04.1-base-arm64.tar.gz
-	fi
-	if [[ -z $UBUNTU_BASE_URL ]]; then
-		echo "Error: Unknown URL for Ubuntu Version \"\${UBUNTU_VERSION}\"! Please provide UBUNTU_BASE_URL."
-		exit 1
-	fi
-	cd $ROOTDIR/build
-	mkdir -p ubuntu
-	cd ubuntu
-	if [ ! -d buildroot ]; then
-		git clone $SHALLOW_FLAG https://github.com/buildroot/buildroot -b $BUILDROOT_VERSION
-	fi
-	cd buildroot
-	if [ $UID -eq 0 ]; then
-		export FORCE_UNSAFE_CONFIGURE=1
-	fi
-	cp $ROOTDIR/configs/buildroot/lx2160acex7_defconfig configs/
-	printf 'BR2_PRIMARY_SITE="%s"\n' "${BR2_PRIMARY_SITE}" >> configs/lx2160acex7_defconfig
-	make lx2160acex7_defconfig
-	mkdir -p overlay/etc/init.d/
-	cat > overlay/etc/init.d/S99bootstrap-ubuntu.sh << EOF
-#!/bin/sh
-
-case "\$1" in
-	start)
-		resize
-		mkfs.ext4 -F /dev/vda -b 4096
-		mount /dev/vda /mnt
-		cd /mnt/
-		cat /proc/net/pnp > /etc/resolv.conf
-		wget -c -P /tmp/ -O /tmp/ubuntu-base.dl "${UBUNTU_BASE_URL}"
-		tar -C /mnt -xf /tmp/ubuntu-base.dl
-		mount -o bind /proc /mnt/proc/
-		mount -o bind /sys/ /mnt/sys/
-		mount -o bind /dev/ /mnt/dev/
-		mount -o bind /dev/pts /mnt/dev/pts
-		mount -t tmpfs tmpfs /mnt/var/lib/apt/
-		mount -t tmpfs tmpfs /mnt/var/cache/apt/
-		cat /proc/net/pnp > /mnt/etc/resolv.conf
-		echo "localhost" > /mnt/etc/hostname
-		echo "127.0.0.1 localhost" > /mnt/etc/hosts
-		export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C
-		chroot /mnt apt update
-		chroot /mnt apt install --no-install-recommends -y systemd-sysv apt locales less wget procps openssh-server ifupdown net-tools isc-dhcp-client ntpdate lm-sensors i2c-tools psmisc less sudo htop iproute2 iputils-ping kmod network-manager iptables rng-tools apt-utils ethtool
-		echo -e "root\nroot" | chroot /mnt passwd
-		sed -i "s;[# ]*RuntimeWatchdogSec=.*\$;RuntimeWatchdogSec=30;g" /etc/systemd/system.conf
-		umount /mnt/var/lib/apt/
-		umount /mnt/var/cache/apt
-		chroot /mnt apt clean
-		chroot /mnt apt autoclean
-		reboot
-		;;
-esac
-EOF
-	chmod +x overlay/etc/init.d/S99bootstrap-ubuntu.sh
-	make
-	IMG=ubuntu-core.ext4.tmp
-	truncate -s $ROOTFS_SIZE $IMG
-	qemu-system-aarch64 -m 1G -M virt -cpu cortex-a57 -nographic -smp 1 -kernel output/images/Image -append "console=ttyAMA0 ip=dhcp" -netdev user,id=eth0 -device virtio-net-device,netdev=eth0 -initrd output/images/rootfs.cpio.gz -drive file=$IMG,if=none,format=raw,id=hd0 -device virtio-blk-device,drive=hd0 -no-reboot
-	mv $IMG $ROOTDIR/build/ubuntu-core.ext4
-fi
-
-if [[ ! -f $ROOTDIR/build/debian-bullseye.ext4 ]] && [ "x$DISTRO" == "xdebian" ]; then
-	if [[ $DEBIAN_VERSION == bullseye ]]; then
-		:
-	else
-		echo "Error: Unsupported Debian Version \"\${DEBIAN_VERSION}\"! To proceed please add support to runme.sh."
-		exit 1
-	fi
-	cd $ROOTDIR/build
-	mkdir -p debian
-	cd debian
-	if [ ! -d buildroot ]; then
-		git clone $SHALLOW_FLAG https://github.com/buildroot/buildroot -b $BUILDROOT_VERSION
-	fi
-	cd buildroot
-	if [ $UID -eq 0 ]; then
-		export FORCE_UNSAFE_CONFIGURE=1
-	fi
-	cp $ROOTDIR/configs/buildroot/lx2160acex7_defconfig configs/
-	printf 'BR2_PRIMARY_SITE="%s"\n' "${BR2_PRIMARY_SITE}" >> configs/lx2160acex7_defconfig
-	make lx2160acex7_defconfig
-	mkdir -p overlay/etc/init.d/
-	cat > overlay/etc/init.d/S99bootstrap-debian.sh << EOF
-#!/bin/sh
-
-case "\$1" in
-	start)
-		resize
-		mkfs.ext4 -F /dev/vda -b 4096
-		mount /dev/vda /mnt
-		cd /tmp
-		cat /proc/net/pnp > /etc/resolv.conf
-		wget http://deb.debian.org/debian/pool/main/d/debootstrap/debootstrap_1.0.123.tar.gz
-		tar zxf debootstrap*.tar.gz
-		cd debootstrap
-		mkdir -p /usr/share/debootstrap/scripts
-		mkdir -p /usr/sbin
-		cp -a scripts/* /usr/share/debootstrap/scripts
-		install -o root -g root -m 0644 functions /usr/share/debootstrap
-		sed 's/@VERSION@/\$(VERSION)/g' debootstrap > /usr/sbin/debootstrap
-		chown root:root /usr/sbin/debootstrap
-		chmod 0755 /usr/sbin/debootstrap
-		mkdir -p /tmp/cache
-		mkdir -p /mnt/var/lib/apt
-		mkdir -p /mnt/var/cache/apt
-		mount -t tmpfs tmpfs /mnt/var/lib/apt/
-		mount -t tmpfs tmpfs /mnt/var/cache/apt/
-		debootstrap --no-check-certificate --verbose --arch arm64 --cache-dir=/tmp/cache --include=fdisk,e2fsprogs,isc-dhcp-client,ntpdate,sudo "${DEBIAN_VERSION}" /mnt
-		#debootstrap --no-check-certificate --verbose --arch arm64 --cache-dir=/tmp/cache --include=locales,less,wget,procps,openssh-server,ifupdown,net-tools,isc-dhcp-client,ntpdate,lm-sensors,i2c-tools,psmisc,sudo,htop,iproute2,iputils-ping,kmod,network-manager,iptables,rng-tools,apt-utils "${DEBIAN_VERSION}" /mnt
-		cat /proc/net/pnp > /mnt/etc/resolv.conf
-		echo "localhost" > /mnt/etc/hostname
-		echo "127.0.0.1 localhost" > /mnt/etc/hosts
-		echo -e "root\nroot" | chroot /mnt passwd
-		sed -i "s;[# ]*RuntimeWatchdogSec=.*\$;RuntimeWatchdogSec=30;g" /etc/systemd/system.conf
-		umount /mnt/var/lib/apt/
-		umount /mnt/var/cache/apt/
-		reboot
-		;;
-esac
-EOF
-	chmod +x overlay/etc/init.d/S99bootstrap-debian.sh
-	make
-	IMG=debian-bullseye.ext4.tmp
-	truncate -s 350M $IMG
-	qemu-system-aarch64 -m 1G -M virt -cpu cortex-a57 -nographic -smp 1 -kernel output/images/Image -append "console=ttyAMA0 ip=dhcp" -netdev user,id=eth0 -device virtio-net-device,netdev=eth0 -initrd output/images/rootfs.cpio.gz -drive file=$IMG,if=none,format=raw,id=hd0 -device virtio-blk-device,drive=hd0 -no-reboot
-	mv $IMG $ROOTDIR/build/debian-bullseye.ext4
-fi
 
 if [[ ! -d $ROOTDIR/build/qoriq-mc-binary ]]; then
 	cd $ROOTDIR/build
@@ -548,6 +422,266 @@ cp $ROOTDIR/build/linux/arch/arm64/boot/Image.gz $ROOTDIR/images/tmp/boot
 cp $ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx216*.dtb $ROOTDIR/images/tmp/boot
 
 
+if [[ $DISTRO == ubuntu ]]; then
+	mkdir -p $ROOTDIR/build/ubuntu
+	cd $ROOTDIR/build/ubuntu
+
+	case "${UBUNTU_VERSION}" in
+		focal)
+			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.5-base-arm64.tar.gz
+		;;
+		jammy)
+			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/ubuntu-base-22.04.2-base-arm64.tar.gz
+		;;
+		*)
+			echo "Error: Unsupported Ubuntu Version \"\${UBUNTU_VERSION}\"! To proceed please add support to runme.sh."
+			exit 1
+		;;
+	esac
+
+	if [ ! -f "$ROOTDIR/build/ubuntu/$UBUNTU_VERSION.ext4" ]; then
+		echo Building Ubuntu rootfs
+
+		rm -f ubuntu-base.dl
+		wget -c -O ubuntu-base.dl "${UBUNTU_BASE_URL}"
+
+		rm -rf rootfs
+		mkdir rootfs
+		fakeroot -- tar -C rootfs -xpf ubuntu-base.dl
+
+cat > rootfs/stage2.sh << EOF
+#!/bin/sh
+
+# mount pseudo-filesystems
+mount -vt proc proc /proc
+mount -vt sysfs sysfs /sys
+
+# mount tmpfs for apt caches
+mount -t tmpfs tmpfs /var/lib/apt/
+mount -t tmpfs tmpfs /var/cache/apt/
+
+# configure dns
+cat /proc/net/pnp > /etc/resolv.conf
+
+# configure hostname
+echo "localhost" > /etc/hostname
+echo "127.0.0.1 localhost" > /etc/hosts
+
+# configure apt proxy
+test -n "$APTPROXY" && printf 'Acquire::http { Proxy "%s"; }\n' $APTPROXY | tee -a /etc/apt/apt.conf.d/proxy || true
+
+apt-get update
+env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C \
+	apt-get install --no-install-recommends -y apt apt-utils ethtool htop i2c-tools ifupdown iproute2 iptables iputils-ping isc-dhcp-client kmod less lm-sensors locales net-tools network-manager ntpdate openssh-server pciutils procps psmisc rng-tools sudo systemd-sysv wget
+apt-get clean
+
+# set root password
+echo "root\nroot" | passwd
+
+# populate fstab
+printf "/dev/root / ext4 defaults 0 1\\n" > /etc/fstab
+
+# enable watchdog service
+sed -i "s;[# ]*RuntimeWatchdogSec=.*\$;RuntimeWatchdogSec=30;g" /etc/systemd/system.conf
+
+# wipe machine-id (regenerates during first boot)
+echo uninitialized > /etc/machine-id
+
+# remove apt proxy
+rm -f /etc/apt/apt.conf.d/proxy
+
+# delete self
+rm -f /stage2.sh
+
+# flush disk
+sync
+
+# power-off
+reboot -f
+EOF
+		chmod +x rootfs/stage2.sh
+
+		rm -f rootfs.ext4
+		truncate -s $UBUNTU_ROOTFS_SIZE rootfs.ext4
+		fakeroot mkfs.ext4 -L rootfs -d rootfs rootfs.ext4
+
+		qemu-system-aarch64 \
+			-m 1G \
+			-M virt \
+			-cpu cortex-a53 \
+			-smp 1 \
+			-netdev user,id=eth0 \
+			-device virtio-net-device,netdev=eth0 \
+			-drive file=rootfs.ext4,if=none,format=raw,cache=unsafe,id=hd0 \
+			-device virtio-blk-device,drive=hd0 \
+			-device virtio-rng-device \
+			-nographic \
+			-no-reboot \
+			-kernel "${ROOTDIR}/images/tmp/boot/Image" \
+			-append "console=ttyAMA0 root=/dev/vda rootfstype=ext4 ip=dhcp rw init=/stage2.sh"
+		:
+
+		# fix errors
+		s=0
+		e2fsck -fy rootfs.ext4 || s=$?
+		if [ $s -ge 4 ]; then
+			echo "Error: Couldn't repair generated rootfs."
+			exit 1
+		fi
+
+		mv rootfs.ext4 $UBUNTU_VERSION.ext4
+	fi
+
+	ROOTFS=ubuntu-core
+	cp $ROOTDIR/build/ubuntu/$UBUNTU_VERSION.ext4 $ROOTDIR/images/tmp/$ROOTFS.ext4
+fi
+
+if [[ $DISTRO == debian ]]; then
+	mkdir -p $ROOTDIR/build/debian
+	cd $ROOTDIR/build/debian
+
+	case "${DEBIAN_VERSION}" in
+		bullseye)
+			EXCLUDE=--exclude=gcc-9-base
+		;;
+		bookworm)
+			EXCLUDE=
+		;;
+		*)
+			echo "Error: Unsupported Debian Version \"\${DEBIAN_VERSION}\"! To proceed please add support to runme.sh."
+			exit 1
+		;;
+	esac
+
+	if [ ! -f "$ROOTDIR/build/debian/$DEBIAN_VERSION.ext4" ]; then
+		echo Building Debian rootfs
+
+		# use apt mirror, if available
+		URL="https://deb.debian.org/debian"
+		if [ ! -z "$APTPROXY" ]; then
+			MIRROR="$APTPROXY/debian"
+		else
+			MIRROR="$URL"
+		fi
+
+		# bootstrap a first-stage rootfs
+		rm -rf stage1
+		fakeroot debootstrap --variant=minbase \
+			--arch=arm64 --components=main,contrib,non-free \
+			--foreign \
+			--include=apt-transport-https,busybox,ca-certificates,curl,e2fsprogs,ethtool,fdisk,haveged,i2c-tools,ifupdown,iputils-ping,isc-dhcp-client,iw,initramfs-tools,lm-sensors,localepurge,nano,net-tools,ntpdate,openssh-server,pciutils,psmisc,rfkill,sudo,systemd-sysv,tio,usbutils,wget,wpasupplicant,xz-utils \
+			${EXCLUDE} \
+			$DEBIAN_VERSION \
+			stage1 \
+			$MIRROR
+
+		# prepare init-script for second stage inside VM
+cat > stage1/stage2.sh << EOF
+#!/bin/sh
+
+# run second-stage bootstrap
+/debootstrap/debootstrap --second-stage
+
+# mount pseudo-filesystems
+mount -vt proc proc /proc
+mount -vt sysfs sysfs /sys
+
+# configure dns
+cat /proc/net/pnp > /etc/resolv.conf
+
+# configure default locale
+echo en_GB.UTF-8 UTF-8 >> /etc/locale.gen
+echo "locales locales/default_environment_locale string en_GB.UTF-8" | debconf-set-selections
+dpkg-reconfigure -f noninteractive locales
+
+# clean all other locales to save space
+sed -i "s;#\?\(USE_DPKG\)$;#\1;g" /etc/locale.nopurge
+sed -i "s;#\?\(DONTBOTHERNEWLOCALE\)$;\1;g" /etc/locale.nopurge
+sed -i "s;#\?\(NEEDSCONFIGFIRST\);en\nen_GB\nen_GB.UTF-8;g" /etc/locale.nopurge
+localepurge
+sed -i "s;#\?\(USE_DPKG\)$;\1;g" /etc/locale.nopurge
+dpkg-reconfigure -f noninteractive localepurge
+
+# clean documentation to save more space
+find /usr/share/doc/ -type f ! -name changelog -delete
+
+# set root password
+echo "root\nroot" | passwd
+
+# populate fstab
+printf "/dev/root / ext4 defaults 0 1\\n" > /etc/fstab
+
+# enable watchdog service
+sed -i "s;[# ]*RuntimeWatchdogSec=.*\$;RuntimeWatchdogSec=30;g" /etc/systemd/system.conf
+
+# wipe machine-id (regenerates during first boot)
+echo uninitialized > /etc/machine-id
+
+# remove apt proxy from sources.list
+sed -i "s;$MIRROR;$URL;g" /etc/apt/sources.list
+
+# clean caches
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+
+# delete self
+rm -f /stage2.sh
+
+# flush disk
+sync
+
+# power-off
+reboot -f
+EOF
+		chmod +x stage1/stage2.sh
+
+		stagesize=$(LANG=C du -B 1048576 -s stage1 | cut -f1)
+
+		rm -f rootfs.ext4
+		truncate -s $DEBIAN_ROOTFS_SIZE rootfs.ext4
+		truncate -s +${stagesize}M rootfs.ext4
+		fakeroot mkfs.ext4 -L rootfs -d stage1 rootfs.ext4
+
+		qemu-system-aarch64 \
+			-m 1G \
+			-M virt \
+			-cpu cortex-a53 \
+			-smp 2 \
+			-netdev user,id=eth0 \
+			-device virtio-net-device,netdev=eth0 \
+			-drive file=rootfs.ext4,if=none,format=raw,cache=unsafe,id=hd0 \
+			-device virtio-blk-device,drive=hd0 \
+			-device virtio-rng-device \
+			-nographic \
+			-no-reboot \
+			-kernel "${ROOTDIR}/images/tmp/boot/Image" \
+			-append "console=ttyAMA0 root=/dev/vda rootfstype=ext4 ip=dhcp rw init=/stage2.sh"
+		:
+
+		# fix errors
+		s=0
+		e2fsck -fy rootfs.ext4 || s=$?
+		if [ $s -ge 4 ]; then
+			echo "Error: Couldn't repair generated rootfs."
+			exit 1
+		fi
+
+		# shrink to desired size
+		resize2fs rootfs.ext4 $DEBIAN_ROOTFS_SIZE
+		truncate -s $DEBIAN_ROOTFS_SIZE rootfs.ext4
+
+		mv rootfs.ext4 $DEBIAN_VERSION.ext4
+	fi
+
+	ROOTFS=debian
+	cp $ROOTDIR/build/debian/$DEBIAN_VERSION.ext4 $ROOTDIR/images/tmp/$ROOTFS.ext4
+fi
+
+if [ -z "$ROOTFS" ] || [ ! -f "$ROOTDIR/images/tmp/$ROOTFS.ext4" ]; then
+	echo "Internal Error: No rootfs was generated!"
+	exit 1
+fi
+
 
 echo "Building DPDK"
 cd $ROOTDIR/build/dpdk
@@ -576,7 +710,6 @@ cat > $ROOTDIR/images/tmp/extlinux/extlinux.conf << EOF
     APPEND console=ttyAMA0,115200 earlycon=pl011,mmio32,0x21c0000 default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf root=PARTUUID=30303030-01 rw rootwait
 EOF
 
-cp $ROOTDIR/build/$ROOTFS.ext4 $ROOTDIR/images/tmp/
 e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:extlinux
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/extlinux/extlinux.conf $ROOTDIR/images/tmp/$ROOTFS.ext4:extlinux/
 e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:boot
