@@ -544,6 +544,7 @@ mkdir -p $ROOTDIR/images/tmp/
 mkdir -p $ROOTDIR/images/tmp/boot
 make INSTALL_MOD_PATH=$ROOTDIR/images/tmp/ INSTALL_MOD_STRIP=1 modules_install
 cp $ROOTDIR/build/linux/arch/arm64/boot/Image $ROOTDIR/images/tmp/boot
+cp $ROOTDIR/build/linux/arch/arm64/boot/Image.gz $ROOTDIR/images/tmp/boot
 cp $ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx216*.dtb $ROOTDIR/images/tmp/boot
 
 
@@ -570,7 +571,7 @@ cat > $ROOTDIR/images/tmp/extlinux/extlinux.conf << EOF
   menu title linux-lx2160a boot options
   label primary
     menu label primary kernel
-    linux /boot/Image
+    linux /boot/Image.gz
     fdtdir /boot/
     APPEND console=ttyAMA0,115200 earlycon=pl011,mmio32,0x21c0000 default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf root=PARTUUID=30303030-01 rw rootwait
 EOF
@@ -579,7 +580,7 @@ cp $ROOTDIR/build/$ROOTFS.ext4 $ROOTDIR/images/tmp/
 e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:extlinux
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/extlinux/extlinux.conf $ROOTDIR/images/tmp/$ROOTFS.ext4:extlinux/
 e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:boot
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/Image $ROOTDIR/images/tmp/$ROOTFS.ext4:boot/
+e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/Image.gz $ROOTDIR/images/tmp/$ROOTFS.ext4:boot/
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/fsl-lx216*.dtb $ROOTDIR/images/tmp/$ROOTFS.ext4:boot/
 
 # Copy over kernel image

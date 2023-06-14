@@ -1,0 +1,27 @@
+From 133c1f2434a6b8583feff488afda3dad10b1031c Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 14 Jun 2023 19:31:49 +0300
+Subject: [PATCH] lx2160a_common: add kernel decompress workspace to default
+ environment
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ include/configs/lx2160a_common.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/configs/lx2160a_common.h b/include/configs/lx2160a_common.h
+index 556879375a..d0342b94a1 100644
+--- a/include/configs/lx2160a_common.h
++++ b/include/configs/lx2160a_common.h
+@@ -248,6 +248,8 @@ int select_i2c_ch_pca9547_n(int busnum, unsigned char ch);
+ #define EXTRA_ENV_SETTINGS			\
+ 	DEFAULT_FDT_FILE_ENV		\
+ 	"hwconfig=fsl_ddr:bank_intlv=auto\0"	\
++	"kernel_comp_addr_r=0x9f000000\0" \
++	"kernel_comp_size=0x10000000\0" \
+ 	"ramdisk_addr=0x85100000\0"		\
+ 	"ramdisk_addr_r=0x85100000\0"		\
+ 	"ramdisk_size=0x2000000\0"		\
+-- 
+2.35.3
+
