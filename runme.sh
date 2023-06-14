@@ -681,6 +681,7 @@ if [ -z "$ROOTFS" ] || [ ! -f "$ROOTDIR/images/tmp/$ROOTFS.ext4" ]; then
 	echo "Internal Error: No rootfs was generated!"
 	exit 1
 fi
+ROOTFS_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/$ROOTFS.ext4)
 
 
 echo "Building DPDK"
@@ -742,21 +743,28 @@ e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-addsw
 e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-listmac
 e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-listni
 
-truncate -s 420M $ROOTDIR/images/tmp/$ROOTFS.img
-parted --script $ROOTDIR/images/tmp/$ROOTFS.img mklabel msdos mkpart primary 64MiB 417MiB
+
+truncate -s 64M $ROOTDIR/images/tmp/$ROOTFS.img
+truncate -s +$ROOTFS_SIZE $ROOTDIR/images/tmp/$ROOTFS.img
+parted --script $ROOTDIR/images/tmp/$ROOTFS.img mklabel msdos mkpart primary 64MiB $((64*1024*1024+ROOTFS_SIZE-1))B
 # Generate the above partuuid 3030303030 which is the 4 characters of '0' in ascii
 echo "0000" | dd of=$ROOTDIR/images/tmp/$ROOTFS.img bs=1 seek=440 conv=notrunc
 dd if=$ROOTDIR/images/tmp/$ROOTFS.ext4 of=$ROOTDIR/images/tmp/$ROOTFS.img bs=1M seek=64 conv=notrunc
 
 echo "Assembling Boot Image"
 cd $ROOTDIR/
+truncate -s 49M $ROOTDIR/images/tmp/boot.part
+truncate -s +64M $ROOTDIR/images/tmp/boot.part
+truncate -s +$ROOTFS_SIZE $ROOTDIR/images/tmp/boot.part
+mkfs.ext4 -b 4096 -F $ROOTDIR/images/tmp/boot.part
+BOOTPART_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/boot.part)
+
 IMG=lx2160acex7_${SPEED}_${SERDES}-${REPO_PREFIX}.img
 rm -rf $ROOTDIR/images/${IMG}
-truncate -s 528M $ROOTDIR/images/${IMG}
-#dd if=/dev/zero of=$ROOTDIR/images/${IMG} bs=1M count=1
-parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB 527MiB
-truncate -s 463M $ROOTDIR/images/tmp/boot.part
-mkfs.ext4 -b 4096 -F $ROOTDIR/images/tmp/boot.part
+truncate -s 64M $ROOTDIR/images/${IMG}
+truncate -s +$BOOTPART_SIZE $ROOTDIR/images/${IMG}
+parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB $((64*1024*1024+BOOTPART_SIZE-1))B
+
 \rm -rf $ROOTDIR/images/tmp/xspi_header.img
 truncate -s 128K $ROOTDIR/images/tmp/xspi_header.img
 dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/${BL2}.pbl of=$ROOTDIR/images/tmp/xspi_header.img bs=512 conv=notrunc
@@ -826,3 +834,5 @@ dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/${BL2}.pbl of=images/${I
 dd if=images/${IMG} of=$ROOTDIR/images/tmp/$ROOTFS.img bs=512 seek=1 skip=1 count=131071 conv=notrunc
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.img $ROOTDIR/images/tmp/boot.part:/
 dd if=$ROOTDIR/images/tmp/boot.part of=$ROOTDIR/images/${IMG} bs=1M seek=64
+
+echo "Generated images/${IMG}"
