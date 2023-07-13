@@ -220,7 +220,7 @@ cd $ROOTDIR
 ###############################################################################
 # source code cloning
 ###############################################################################
-QORIQ_COMPONENTS="u-boot atf rcw restool mc-utils linux dpdk cst"
+QORIQ_COMPONENTS="u-boot atf rcw restool mc-utils linux dpdk cst mdio-proxy-module"
 for i in $QORIQ_COMPONENTS; do
 	if [[ ! -d $ROOTDIR/build/$i ]]; then
 		echo "Cloning https://github.com/nxp-qoriq/$i release $RELEASE"
@@ -355,6 +355,7 @@ echo "Building the kernel"
 cd $ROOTDIR/build/linux
 ./scripts/kconfig/merge_config.sh arch/arm64/configs/defconfig arch/arm64/configs/lsdk.config $ROOTDIR/configs/linux/lx2k_additions.config
 make -j${PARALLEL} all #Image dtbs
+KRELEASE=`make kernelrelease`
 
 cat > kernel2160cex7.its << EOF
 /dts-v1/;
@@ -420,6 +421,18 @@ make INSTALL_MOD_PATH=$ROOTDIR/images/tmp/ INSTALL_MOD_STRIP=1 modules_install
 cp $ROOTDIR/build/linux/arch/arm64/boot/Image $ROOTDIR/images/tmp/boot
 cp $ROOTDIR/build/linux/arch/arm64/boot/Image.gz $ROOTDIR/images/tmp/boot
 cp $ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx216*.dtb $ROOTDIR/images/tmp/boot
+
+
+# Build mdio-proxy kernel module
+if [[ -d ${ROOTDIR}/build/mdio-proxy-module ]]; then
+	cd "${ROOTDIR}/build/mdio-proxy-module"
+
+	make -C "${ROOTDIR}/build/linux" CROSS_COMPILE="$CROSS_COMPILE" ARCH=arm64 M="$PWD" modules
+	install -v -m644 -D mdio-proxy.ko "${ROOTDIR}/images/tmp/lib/modules/${KRELEASE}/kernel/extra/mdio-proxy.ko"
+fi
+
+# regenerate modules dependencies
+depmod -b "${ROOTDIR}/images/tmp" -F "${ROOTDIR}/build/linux/System.map" ${KRELEASE}
 
 
 if [[ $DISTRO == ubuntu ]]; then
