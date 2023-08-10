@@ -1,0 +1,39 @@
+From 4cdd6f256d7e450b38ca8421fe56ce750c8b7968 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 10 Aug 2023 10:41:16 +0200
+Subject: [PATCH] net: sfp: handle 100G/25G active optical cables in
+ sfp_parse_support
+
+Handle extended compliance code 0x1 (SFF8024_ECC_100G_25GAUI_C2M_AOC)
+for active optical cables supporting 25G and 100G speeds.
+
+Since the specification makes no statement about transmitter range, and
+as the specific sfp module that had been tested features only 2m fiber -
+short-range (SR) modes are selected.
+
+sfp_parse_support already handles SFF8024_ECC_100GBASE_SR4_25GBASE_SR
+with compatible properties: 100000baseSR4; 25000baseSR; protocol 25gbase-r.
+Add SFF8024_ECC_100G_25GAUI_C2M_AOC to the same case.
+
+Tested with fs.com S28-AO02 AOC SFP28 module.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/phy/sfp-bus.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/net/phy/sfp-bus.c b/drivers/net/phy/sfp-bus.c
+index 59f924d77443..b626ed86e4f4 100644
+--- a/drivers/net/phy/sfp-bus.c
++++ b/drivers/net/phy/sfp-bus.c
+@@ -306,6 +306,7 @@ void sfp_parse_support(struct sfp_bus *bus, const struct sfp_eeprom_id *id,
+ 	switch (id->base.extended_cc) {
+ 	case SFF8024_ECC_UNSPEC:
+ 		break;
++	case SFF8024_ECC_100G_25GAUI_C2M_AOC:
+ 	case SFF8024_ECC_100GBASE_SR4_25GBASE_SR:
+ 		phylink_set(modes, 100000baseSR4_Full);
+ 		phylink_set(modes, 25000baseSR_Full);
+-- 
+2.35.3
+
