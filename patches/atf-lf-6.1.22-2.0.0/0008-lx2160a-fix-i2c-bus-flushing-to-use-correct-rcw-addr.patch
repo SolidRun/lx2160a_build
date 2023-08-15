@@ -1,0 +1,46 @@
+From 4851fc962e3c9cafa8ec519cda345656e820676b Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 22 Jan 2023 16:05:38 +0200
+Subject: [PATCH 8/8] lx2160a: fix i2c bus flushing to use correct rcw
+ addresses for pinmux
+
+0x700000000 appears to be an overlay or override area which can not be
+used for reading the original value of rcw.
+
+Change to 0x01e00100 which can both read and write.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/common/setup/ls_i2c_init.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/plat/nxp/common/setup/ls_i2c_init.c b/plat/nxp/common/setup/ls_i2c_init.c
+index 202fe2e6d..76dfd3376 100644
+--- a/plat/nxp/common/setup/ls_i2c_init.c
++++ b/plat/nxp/common/setup/ls_i2c_init.c
+@@ -17,7 +17,7 @@
+ #define NXP_IIC7_ADDR	0x02060000
+ #define NXP_IIC8_ADDR	0x02070000
+ 
+-#define RCWSR12				0x70010012c
++#define RCWSR12				0x01e0012c
+ #define RCWSR12_IIC2_PMUX_MASK		0x00000007 /* [0..2] */
+ #define RCWSR12_IIC2_PMUX_IIC2		0x00000000
+ #define RCWSR12_IIC2_PMUX_GPIO		0x00000001
+@@ -33,11 +33,11 @@
+ #define RCWSR12_IIC6_PMUX_MASK		0x00007000 /* [12..14] */
+ #define RCWSR12_IIC6_PMUX_IIC6		0x00000000
+ #define RCWSR12_IIC6_PMUX_GPIO		0x00001000
+-#define RCWSR13				0x700100130
++#define RCWSR13				0x01e00130
+ #define RCWSR12_SDHC2_DAT74_PMUX_MASK	0x00000003
+ #define RCWSR12_SDHC2_DAT74_PMUX_SDHC2	0x00000000
+ #define RCWSR12_SDHC2_DAT74_PMUX_IIC78	0x00000001
+-#define RCWSR14				0x700100134
++#define RCWSR14				0x01e00134
+ #define RCWSR14_IIC1_PMUX_MASK		0x00000400 /* [10] */
+ #define RCWSR14_IIC1_PMUX_IIC1		0x00000000
+ #define RCWSR14_IIC1_PMUX_GPIO		0x00000400
+-- 
+2.35.3
+

@@ -213,53 +213,92 @@ if [[ ! -d $ROOTDIR/build/toolchain ]]; then
 	tar -xvf gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu.tar.xz
 fi
 
-echo "Building boot loader"
+echo "Downloading Sources"
 cd $ROOTDIR
 
 ###############################################################################
 # source code cloning
 ###############################################################################
-QORIQ_COMPONENTS="u-boot atf rcw restool mc-utils linux dpdk cst mdio-proxy-module"
+QORIQ_COMPONENTS="u-boot atf ddr-phy-binary rcw restool mc-utils linux dpdk cst mdio-proxy-module"
 for i in $QORIQ_COMPONENTS; do
 	if [[ ! -d $ROOTDIR/build/$i ]]; then
 		echo "Cloning https://github.com/nxp-qoriq/$i release $RELEASE"
 		cd $ROOTDIR/build
 		CHECKOUT=$RELEASE
+		PATCHES=$RELEASE
+		CLONE=https://github.com/nxp-qoriq/$i
+		# Release lf-6.1.22-2.0.0
+		if [ "x$RELEASE" == "xlf-6.1.22-2.0.0" ]; then
+			case $i in
+			u-boot)
+				CHECKOUT=lf_v2023.04
+				;;
+			atf)
+				CHECKOUT=lf_v2.8
+				;;
+			rcw)
+				CHECKOUT=LSDK-21.08
+				PATCHES=LSDK-21.08
+				;;
+			mc-utils)
+				CHECKOUT=LSDK-21.08
+				PATCHES=LSDK-21.08
+				;;
+			esac
+		fi
 		# Release LSDK-20.12
-		if [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-20.12" ]; then
-			CHECKOUT=LSDK-20.12-V5.4
+		if [ "x$RELEASE" == "xLSDK-20.12" ]; then
+			case $i in
+			ddr-phy-binary)
+				CHECKOUT=LSDK-21.08
+				;;
+			linux)
+				CHECKOUT=LSDK-20.12-V5.4
+				;;
+			esac
 		fi
 		# Release LSDK-20.4
-		if [ "x$i" == "xu-boot" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
-			CHECKOUT=LSDK-20.04-update-290520
+		if [ "x$RELEASE" == "xLSDK-20.04" ]; then
+			case $i in
+			u-boot)
+				CHECKOUT=LSDK-20.04-update-290520
+				;;
+			atf)
+				CHECKOUT=LSDK-20.04-update-290520
+				;;
+			ddr-phy-binary)
+				CHECKOUT=LSDK-21.08
+				;;
+			rcw)
+				CHECKOUT=LSDK-20.04-update-290520
+				;;
+			linux)
+				CHECKOUT=LSDK-20.04-V5.4-update-290520
+				;;
+			esac
 		fi
-		if [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
-			CHECKOUT=LSDK-20.04-V5.4-update-290520
-		fi
-		if [ "x$i" == "xatf" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
-			CHECKOUT=LSDK-20.04-update-290520
-		fi
-		if [ "x$i" == "xrcw" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
-			CHECKOUT=LSDK-20.04-update-290520
-		fi
-		git clone $SHALLOW_FLAG https://github.com/nxp-qoriq/$i -b $CHECKOUT
+		echo "Cloning $CLONE release $CHECKOUT"
+		git clone $SHALLOW_FLAG $CLONE -b $CHECKOUT
 		cd $i
-		if [ "x$i" == "xatf" ]; then
-			cd $ROOTDIR/build/atf/tools/fiptool
-			git clone $SHALLOW_FLAG https://github.com/NXP/ddr-phy-binary.git
-			make
-			./fiptool create --ddr-immem-udimm-1d ddr-phy-binary/lx2160a/ddr4_pmu_train_imem.bin --ddr-immem-udimm-2d ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_imem.bin --ddr-dmmem-udimm-1d ddr-phy-binary/lx2160a/ddr4_pmu_train_dmem.bin --ddr-dmmem-udimm-2d ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_dmem.bin --ddr-immem-rdimm-1d ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_imem.bin --ddr-immem-rdimm-2d ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_imem.bin --ddr-dmmem-rdimm-1d ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_dmem.bin --ddr-dmmem-rdimm-2d ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_dmem.bin fip_ddr_all.bin
-		fi
-		if [[ -d $ROOTDIR/patches/$i-$RELEASE/ ]]; then
-			git am $ROOTDIR/patches/$i-$RELEASE/*.patch
+		if [[ -d $ROOTDIR/patches/$i-$PATCHES/ ]]; then
+			echo "Applying patches/$i-$PATCHES/*.patch"
+			for patch in $ROOTDIR/patches/$i-$PATCHES/*.patch; do
+				test -e $patch || continue
+				git am $patch
+			done
 		elif [[ -d $ROOTDIR/patches/$i/ ]]; then
-			git am $ROOTDIR/patches/$i/*.patch
+			echo "Applying patches/$i/*.patch"
+			for patch in $ROOTDIR/patches/$i/*.patch; do
+				test -e $patch || continue
+				git am $patch
+			done
 		fi
 		if [[ $RELEASE == *"-update"* ]]; then
 			# Check extract the LSDK name up to the '-update-...'
 			SUB_RELEASE=`echo $RELEASE | cut -f-2 -d'-'`
-			if [[ -d $ROOTDIR/patches/$i-$RELEASE/ ]]; then
-				git am $ROOTDIR/patches/$i-$RELEASE/*.patch
+			if [[ -d $ROOTDIR/patches/$i-$SUB_RELEASE/ ]]; then
+				echo "Applying patches/$i-$SUB_RELEASE/*.patch"
+				git am $ROOTDIR/patches/$i-$SUB_RELEASE/*.patch
 			fi
 		fi
 	fi
@@ -279,7 +318,9 @@ cd $ROOTDIR/build/restool
 CC=${CROSS_COMPILE}gcc DESTDIR=./install prefix=/usr make install
 
 echo "Building RCW"
+# LSDK-21.08 or older
 cd $ROOTDIR/build/rcw/lx2160acex7
+
 mkdir -p RCW
 OLDIFS=$IFS
 IFS="_" arr=($SERDES)
@@ -305,6 +346,8 @@ fi
 IFS=$OLDIFS
 make clean
 make -j${PARALLEL}
+RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin
+
 
 if [ "x$SECURE" == "xtrue" ]; then
 	echo "Building CST"
@@ -329,6 +372,7 @@ export BL33=$ROOTDIR/build/u-boot/u-boot.bin
 
 echo "Building atf"
 cd $ROOTDIR/build/atf/
+export DDR_PHY_BIN_PATH=$ROOTDIR/build/ddr-phy-binary/lx2160a
 make PLAT=lx2160acex7 distclean
 if [ "x$SECURE" == "xtrue" ]; then
 	if [ ! -f "srk.pub" ] || [ ! -f "srk.pri" ]; then
@@ -340,9 +384,9 @@ if [ "x$SECURE" == "xtrue" ]; then
 	# that are needed to be stated explicitly
 	BL2=bl2_flexspi_nor_sec; BOOT_MODE_VAR=flexspi_nor
 	cp tools/fiptool/ddr-phy-binary/lx2160a/*.bin .
-	make -j${PARALLEL} PLAT=lx2160acex7 all fip fip_ddr_sec fip_fuse pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin TRUSTED_BOARD_BOOT=1 CST_DIR=$ROOTDIR/build/cst/ GENERATE_COT=0 BOOT_MODE=${BOOT_MODE_VAR} SECURE_BOOT=yes FUSE_PROG=1 FUSE_PROV_FILE=$ROOTDIR/build/cst/fuse_scr.bin $ATF_DEBUG
+	make -j${PARALLEL} PLAT=lx2160acex7 all fip fip_ddr_sec fip_fuse pbl RCW=$RCW TRUSTED_BOARD_BOOT=1 CST_DIR=$ROOTDIR/build/cst/ GENERATE_COT=0 BOOT_MODE=${BOOT_MODE_VAR} SECURE_BOOT=yes FUSE_PROG=1 FUSE_PROV_FILE=$ROOTDIR/build/cst/fuse_scr.bin $ATF_DEBUG
 else
-	make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=auto SECURE_BOOT=false $ATF_DEBUG
+	make -j${PARALLEL} PLAT=lx2160acex7 all fip fip_ddr pbl RCW=$RCW TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=auto SECURE_BOOT=false $ATF_DEBUG
        #	DDR_PHY_DEBUG=yes DDR_DEBUG=yes # DEBUG_PHY_IO=yes
 fi
 
@@ -791,7 +835,7 @@ dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/fip.bin of=images/${IMG}
 if [ "x$SECURE" == "xtrue" ]; then
 	dd if=$ROOTDIR/build/atf/fip_ddr_sec.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
 else
-	dd if=$ROOTDIR/build/atf/tools/fiptool/fip_ddr_all.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
+	dd if=$ROOTDIR/build/atf/build/lx2160acex7/$ATF_BUILD/ddr_fip.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
 fi
 
 # Env variables at 0x2800
