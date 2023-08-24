@@ -92,6 +92,76 @@ generates *images/lx2160acex7_2000_700_3200_8_5_2.img* which is an image ready t
   - arbitrary sizes supported in unit `M`, 350M recommended minimum
 - `APTPROXY`: specify url to a local apt cache, e.g. apt-cacher-ng
 
+### Adding a new Configuration
+
+The easiest way to start development is reuse of an existing configuration `SERDES` setting and make changes where required.
+It comes however at the cost of merging future upstream changes not having customer boards in mind.
+
+The intended method is as follows:
+
+1. Define a specific configuration for the `SERDES` setting. The variable is a combination of multiple parameters: `<SOC>_<BOARD>_<SERDES-1>_<SERDES-2>_<SERDES-3>`
+
+   For example a ficticious board called "Waffle" using LX2160A CEX-7 with Serdes 1 Protocol 1, Serdes 2 Protocol 13 and Serdes 3 Protocol 3 should be named: `LX2160A_WAFFLE_1_13_3`
+
+2. Create configuration files DPL & DPC for the network coprocessor:
+
+   - `build/mc-utils/config/lx2160a/CEX7/waffle-s1_1-s2_13-dpc.dts`
+   - `build/mc-utils/config/lx2160a/CEX7/waffle-s1_1-s2_13-dpl.dts`
+
+   Safe starting points are configurations that disable all network interfaces:
+
+   - `build/mc-utils/config/lx2160a/LX2162-USOM/clearfog-s1_0-s2_0-dpc.dts`
+   - `build/mc-utils/config/lx2160a/LX2162-USOM/clearfog-s1_0-s2_0-dpl.dts`
+
+   DPC must be edited by hand. DPL can be auto-generated with `restool` command after booting linux and manually instantiating dpmac and optionally dpni objects.
+
+3. Create Linux device-tree file: `build/linux/arch/arm64/boot/dts/freescale/fsl-lx2160a-waffle.dts`
+
+   And add it to the `build/linux/arch/arm64/boot/dts/freescale/Makefile`.
+
+4. Add configuration to `runme.sh`:
+
+   Within the `case "${SERDES}" in` block, add a new entry:
+
+   ```
+   	LX2160A_WAFFLE_1_13_3)
+   		DPC=CEX7/waffle-s1_1-s2_13-dpc.dtb
+   		DPL=CEX7/waffle-s1_1-s2_13-dpl.dtb
+   		DEFAULT_FDT_FILE="fsl-lx2160a-waffle.dtb"
+   	;;
+   ```
+
+5. Configure U-Boot device-tree filename:
+
+   `DEFAULT_FDT_FILE` makes the default of u-boot `fdtfile` variable. Note however that U-Boot generates different names in most cases.
+   Currently (see `build/u-boot/board/solidrun/lx2160a/eth_lx2160acex7.c:fsl_board_late_init`) LX2160 defaults to "fsl-lx2160a-clearfog-cx.dtb", and LX2162 defaults to "fsl-lx2162a-som-\<SD1>-\<SD2>.dtb".
+   Therefore it is recommended to add a match for selected serdes protocol in this function and force the correct filename.
+
+6. Create RCW Configuration Files:
+
+   Based on the configuration name the build system generates reset configuration for the SoC from the following files (lower-case names):
+
+   - `build/rcw/lx2160acex7/configs/lx2160a_defaults.rcwi`: SolidRun defaults for LX2160A CEX-7 / LX2162A SoM
+   - `build/rcw/lx2160acex7/configs/lx2160a_<SPEED>.rcwi`: DDR Frequency Selection
+   - `build/rcw/lx2160acex7/configs/<SOC>_<BOARD>.rcwi`: Board-specific configuration, e.g. pinmux
+   - `build/rcw/lx2160acex7/configs/<SOC>_<BOARD>_SD1_<Serdes-1 Protocol>.rcwi`: Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
+   - `build/rcw/lx2160acex7/configs/<SOC>_<BOARD>_SD2_<Serdes-2 Protocol>.rcwi`: Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
+   - `build/rcw/lx2160acex7/configs/<SOC>_<BOARD>_SD3_<Serdes-3 Protocol>.rcwi`: Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
+
+   For the Waffle example:
+
+   - `build/rcw/lx2160acex7/configs/lx2160a_defaults.rcwi`
+   - `build/rcw/lx2160acex7/configs/lx2160a_<SPEED>.rcwi`
+   - `build/rcw/lx2160acex7/configs/lx2160a_waffle.rcwi`
+   - `build/rcw/lx2160acex7/configs/lx2160a_waffle_SD1_1.rcwi`
+   - `build/rcw/lx2160acex7/configs/lx2160a_waffle_SD2_13.rcwi`
+   - `build/rcw/lx2160acex7/configs/lx2160a_waffle_SD3_3.rcwi`
+
+   For examples see `build/rcw/lx2160acex7/configs/lx2162a_clearfog*.rcwi` as these include comments with explanations.
+
+   Safe reference points in case uart stays silent are protocols `0` (`SRDS_PRTCL_S1=0`, `SRDS_PRTCL_S2=0`, `SRDS_PRTCL_S3=0`).
+
+
 ## Deploying
 For SD card bootable images, plug in a micro SD into your machine and run the following, where sdX is the location of the SD card got probed into your machine -
 
