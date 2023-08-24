@@ -35,23 +35,62 @@ Simply running ./runme.sh will check for required tools, clone and build images 
 We enhanced the NXP PBI scripting tools to accomodate auto detection of boot device, due to that the boot images are now unified for SD, eMMC and SPI.
 
 ## Customize
-By default the script will create an image bootable from SD (ready to use .img file) with DDR4 SO-DIMMs 3200Mtps, SERDES configuration 8/5/2 (SERDES1 = 8, SERDES2 = 5, SERDES = 2) and u-boot as boot loader.
 
-Following are the environment variables that can be modified -
+### Configure Build Options
 
-Selecting DDR4 SO-DIMM speed - *DDR_SPEED=2400,2600,2900,3200*
+By default the script will create an image bootable from SD (ready to use .img file) with DDR4 SO-DIMMs 3200Mtps, SERDES configuration `8_5_2` (SERDES1 = 8, SERDES2 = 5, SERDES = 2) suitable for Clearfog CX and Honeycomb.
 
-Selecting SERDES configuration - *SERDES=SD1_SD2_SD3*
+Build options can be customised by passing environment variables to the runme script / docker/
+For example:
 
-Selecting boot loader - *BOOT_LOADER=u-boot,uefi*
-
-
-### Examples:
-- `./runme.sh` **or**
-- `docker run -i -t -v "$PWD":/work lx2160a_build -u $(id -u) -g $(id -g)`
+- `./runme.sh SERDES=LX2162A_CLEARFOG_18_9_0` **or**
+- `docker run --rm -i -t -v "$PWD":/work -e SERDES=LX2162A_CLEARFOG_18_9_0 lx2160a_build -u $(id -u) -g $(id -g)`
 
 generates *images/lx2160acex7_2000_700_3200_8_5_2.img* which is an image ready to be deployed on micro SD card and *images/lx2160acex7_xspi_2000_700_3200_8_5_2.img* which is an image ready to be deployed on the COM SPI flash.
 
+#### Available Options:
+
+- `RELEASE`: select nxp bsp version
+  - `LSDK-21.08` (default)
+  - `LSDK-20.12`
+  - `LSDK-20.04`
+- `MC_RELEASE`: force specific version of Network Coprocessor Firmware
+  - `mc_release_10.37.0`: full release supporting serdes protocol change USXGMII/CAUI (default)
+  - `mc_lx2160a_10.36.100.itb`: prerelease supporting serdes protocol change USXGMII/CAUI
+  - `mc_lx2160a_10.36.0.itb`
+  - `mc_lx2160a_10.32.0.itb`: full release supporting serdes protocol change SGMII/USXGMII
+  - `mc_10.28.100_lx2160a.itb`: prerelease supporting serdes protocol change SGMII/USXGMII
+- `DDR_SPEED`: DDR speed in MHz increments
+  - `3200`
+  - `2900`
+  - `2600`
+  - `2400`
+- `SERDES`: Select Board and Serdes Protocols (for list of valid choices see `runme.sh`)
+- `SHALLOW`: enable shallow git clone to save space and bandwidth
+  - `false` (default)
+  - `true`
+- `SECURE`: enable secure-boot
+  - `false` (default)
+  - `true`
+- `ATF_DEBUG`: enable debug build of atf
+  - `false` (default)
+  - `true`
+- `DISTRO`: Distribution for rootfs
+  - `debian`
+  - `ubuntu` (default)
+- `UBUNTU_VERSION`: Ubuntu Version
+  - focal (20.04, default)
+  - jammy (22.04)
+- `UBUNTU_ROOTFS_SIZE`: rootfs / partition size
+  - `350M` (default)
+  - arbitrary sizes supported in unit `M`, 350M recommended minimum
+- `DEBIAN_VERSION`: Debian Version
+  - bullseye (11, default)
+  - bookworm (12)
+- `DEBIAN_ROOTFS_SIZE`: rootfs / partition size
+  - `350M` (default)
+  - arbitrary sizes supported in unit `M`, 350M recommended minimum
+- `APTPROXY`: specify url to a local apt cache, e.g. apt-cacher-ng
 
 ## Deploying
 For SD card bootable images, plug in a micro SD into your machine and run the following, where sdX is the location of the SD card got probed into your machine -

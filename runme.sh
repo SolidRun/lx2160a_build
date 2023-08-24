@@ -16,7 +16,6 @@ set -e
 : ${MC_RELEASE:=mc_release_10.37.0}
 : ${DDR_SPEED:=3200}
 : ${SERDES:=8_5_2}
-: ${UEFI_RELEASE:=RELEASE}
 : ${SHALLOW:=false}
 : ${SECURE:=false}
 : ${ATF_DEBUG:=false}
