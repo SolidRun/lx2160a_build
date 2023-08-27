@@ -132,6 +132,11 @@ case "${SERDES}" in
 		DPC=dpc-6x25g.dtb
 		DPL=dpl-eth.6x25g.21.dtb
 	;;
+	LX2160ACEX6_EVB_3_3_2)
+		DPC=LX2160-CEX6/evb-s1_3-s2-3-dpc.dtb
+		DPL=LX2160-CEX6/evb-s1_3-s2-3-dpl.dtb
+		DEFAULT_FDT_FILE="fsl-lx2160a-cex6.dtb"
+	;;
 	LX2162A_CLEARFOG_0_0_*)
 		DPC=LX2162-USOM/clearfog-s1_0-s2_0-dpc.dtb
 		DPL=LX2162-USOM/clearfog-s1_0-s2_0-dpl.dtb

@@ -1,0 +1,118 @@
+From fd36f76e50577fbf3f4bb3bc6fce3ce2ad91b0ae Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 27 Aug 2023 13:19:59 +0200
+Subject: [PATCH] add lx2160a cex6 evb configuration 3_3_2
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2160acex7/configs/lx2160acex6_evb.rcwi      | 20 +++++++++++++++++++
+ .../configs/lx2160acex6_evb_SD1_3.rcwi        | 18 +++++++++++++++++
+ .../configs/lx2160acex6_evb_SD2_3.rcwi        | 18 +++++++++++++++++
+ .../configs/lx2160acex6_evb_SD3_2.rcwi        | 18 +++++++++++++++++
+ 4 files changed, 74 insertions(+)
+ create mode 100644 lx2160acex7/configs/lx2160acex6_evb.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160acex6_evb_SD1_3.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160acex6_evb_SD2_3.rcwi
+ create mode 100644 lx2160acex7/configs/lx2160acex6_evb_SD3_2.rcwi
+
+diff --git a/lx2160acex7/configs/lx2160acex6_evb.rcwi b/lx2160acex7/configs/lx2160acex6_evb.rcwi
+new file mode 100644
+index 0000000..9daf8fd
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160acex6_evb.rcwi
+@@ -0,0 +1,20 @@
++/* Configure Ethernet Controller 2 Pins as GPIOs */
++EC2_PMUX=1
++
++/* Configure IIC4 for i2c */
++IIC4_PMUX=0
++
++/* Configure IIC5 for spi */
++IIC5_PMUX=3
++
++/* Configure UART1 for uart-1 */
++UART1_SOUTSIN_PMUX=0
++
++/* Configure UART1 RTS/CTS for uart-3
++UART1_RTSCTS_PMUX=2
++
++/* Configure UART2 for uart-2 */
++UART2_SOUTSIN_PMUX=0
++
++/* Configure UART1 RTS/CTS for uart-4 */
++UART2_RTSCTS_PMUX=2
+diff --git a/lx2160acex7/configs/lx2160acex6_evb_SD1_3.rcwi b/lx2160acex7/configs/lx2160acex6_evb_SD1_3.rcwi
+new file mode 100644
+index 0000000..7f5f35f
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160acex6_evb_SD1_3.rcwi
+@@ -0,0 +1,18 @@
++/* Serdes 1 Protocol 3: 4x10Gbps + 1xPCI-e-x4 */
++SRDS_PRTCL_S1=3
++
++/* Enable Serdes 1 PLLF */
++SRDS_PLL_PD_PLL1=0
++
++/* Don't use Serdes 1 PLLF for PLLS */
++SRDS_INTRA_REF_CLK_S1=0
++
++/* Enable Serdes 1 PLLS */
++SRDS_PLL_PD_PLL2=0
++
++/*
++ * Select Serdes 1 PLLF frequency 100MHz for pcie: Bit 0 = 0
++ * Select Serdes 1 PLLS frequency 161.1328125MHz (not documented in RM) for usxgmii: Bit 1 = 1
++ * (See QorIQ LX2160A Reference Manual, Rev. 0, 07/2020, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 932-933)
++ */
++SRDS_PLL_REF_CLK_SEL_S1=2
+diff --git a/lx2160acex7/configs/lx2160acex6_evb_SD2_3.rcwi b/lx2160acex7/configs/lx2160acex6_evb_SD2_3.rcwi
+new file mode 100644
+index 0000000..d5f2acb
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160acex6_evb_SD2_3.rcwi
+@@ -0,0 +1,18 @@
++/* Serdes 2 Protocol 3: 2xPCI-e-x4 */
++SRDS_PRTCL_S2=3
++
++/* Enable Serdes 2 PLLF */
++SRDS_PLL_PD_PLL3=0
++
++/* Don't use Serdes 2 PLLF for PLLS */
++SRDS_INTRA_REF_CLK_S2=0
++
++/* Enable Serdes 2 PLLS */
++SRDS_PLL_PD_PLL4=0
++
++/*
++ * Select Serdes 2 PLLF frequency 100MHz (Bit 0)
++ * Select Serdes 2 PLLS frequency 100MHz (Bit 1)
++ * (See QorIQ LX2160A Reference Manual, Rev. 0, 07/2020, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 932-933)
++ */
++SRDS_PLL_REF_CLK_SEL_S2=0
+diff --git a/lx2160acex7/configs/lx2160acex6_evb_SD3_2.rcwi b/lx2160acex7/configs/lx2160acex6_evb_SD3_2.rcwi
+new file mode 100644
+index 0000000..568fa4d
+--- /dev/null
++++ b/lx2160acex7/configs/lx2160acex6_evb_SD3_2.rcwi
+@@ -0,0 +1,18 @@
++/* Serdes 3 Protocol 2: 1xPCI-e-x8 */
++SRDS_PRTCL_S3=2
++
++/* Disable Serdes 3 PLLF */
++SRDS_PLL_PD_PLL5=1
++
++/* Don't use Serdes 3 PLLF as reference for PLLS */
++SRDS_INTRA_REF_CLK_S3=0
++
++/* Enable Serdes 3 PLLS */
++SRDS_PLL_PD_PLL6=0
++
++/*
++ * Select Serdes 2 PLLF frequency 100MHz (don't care) (Bit 0)
++ * Select Serdes 2 PLLS frequency 100MHz for pcie (Bit 1)
++ * (See QorIQ LX2160A Reference Manual, Rev. 0, 07/2020, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 932-933)
++ */
++SRDS_PLL_REF_CLK_SEL_S3=0
+-- 
+2.35.3
+
