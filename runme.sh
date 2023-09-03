@@ -438,6 +438,31 @@ fi
 # regenerate modules dependencies
 depmod -b "${ROOTDIR}/images/tmp" -F "${ROOTDIR}/build/linux/System.map" ${KRELEASE}
 
+function pkg_kernel() {
+# package kernel individually
+	rm -f "${ROOTDIR}/images/linux/linux.tar*"
+	cd "${ROOTDIR}/images/tmp"; tar -c --owner=root:0 -f "${ROOTDIR}/images/linux-${REPO_PREFIX}.tar" boot/* lib/modules/*; cd "${ROOTDIR}"
+}
+pkg_kernel
+
+function pkg_kernel_headers() {
+	# Build external Linux Headers package for compiling modules
+	cd "${ROOTDIR}/build/linux"
+	rm -rf "${ROOTDIR}/images/tmp/linux-headers"
+	mkdir -p ${ROOTDIR}/images/tmp/linux-headers
+	tempfile=$(mktemp)
+	find . -name Makefile\* -o -name Kconfig\* -o -name \*.pl > $tempfile
+	find arch/arm64/include include scripts -type f >> $tempfile
+	tar -c -f - -T $tempfile | tar -C "${ROOTDIR}/images/tmp/linux-headers" -xf -
+	cd "${ROOTDIR}/build/linux"
+	find arch/arm64/include .config Module.symvers include scripts -type f > $tempfile
+	tar -c -f - -T $tempfile | tar -C "${ROOTDIR}/images/tmp/linux-headers" -xf -
+	rm -f $tempfile
+	unset tempfile
+	cd "${ROOTDIR}/images/tmp/linux-headers"
+	tar cpf "${ROOTDIR}/images/linux-headers-${REPO_PREFIX}.tar" *
+}
+pkg_kernel_headers
 
 if [[ $DISTRO == ubuntu ]]; then
 	mkdir -p $ROOTDIR/build/ubuntu
