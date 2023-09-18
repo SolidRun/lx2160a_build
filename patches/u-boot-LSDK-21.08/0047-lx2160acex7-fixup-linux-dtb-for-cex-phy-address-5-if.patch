@@ -1,0 +1,90 @@
+From a6252877a2de18180c81a9424cdb03a751cc6fb7 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 18 Sep 2023 11:13:25 +0200
+Subject: [PATCH] lx2160acex7: fixup linux dtb for cex phy address 5 if
+ detected
+
+It has been discovered that the cex ethernet phy activity led signal has
+the wrong polarity.
+It can only be corrected by removing a pull-down resistor which changes
+mdio address form 1 to 5.
+
+Add runtime detection for phy address, and patch Linux DTB accordingly.
+
+For its own networking, U-Boot still expects phy at address 1.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ board/solidrun/lx2160a/eth_lx2160acex7.c | 52 ++++++++++++++++++++++--
+ 1 file changed, 49 insertions(+), 3 deletions(-)
+
+diff --git a/board/solidrun/lx2160a/eth_lx2160acex7.c b/board/solidrun/lx2160a/eth_lx2160acex7.c
+index 9bc43a5ed7..b001f43737 100644
+--- a/board/solidrun/lx2160a/eth_lx2160acex7.c
++++ b/board/solidrun/lx2160a/eth_lx2160acex7.c
+@@ -180,13 +180,59 @@ void reset_phy(void)
+ }
+ #endif /* CONFIG_RESET_PHY_R */
+ 
++#define AR8035_PHY_ID 0x004dd072
++
++static inline int cex7_find_1g_phy() {
++	const char *mii_bus_name = "mdio@8b96000";
++	struct mii_dev *bus;
++	struct phy_device *phydev;
++
++	bus = miiphy_get_dev_by_name(mii_bus_name);
++	if (!bus) {
++		printf("Warning: Failed to get \"%s\", can't configure phy for eth0!\n", mii_bus_name);
++		return -EINVAL;
++	}
++
++	/* find PHY at addresses 0x01 or 0x05 */
++	phydev = phy_find_by_mask(bus, (1 << 1) | (1 << 5), PHY_INTERFACE_MODE_RGMII);
++	if (!phydev) {
++		printf("Warning: Failed to find phy at addresses 1,5 - can't configure phy for eth0!\n");
++		return -EINVAL;
++	}
++
++	if (phydev->phy_id == AR8035_PHY_ID) {
++		printf("found ar8035 ethernet phy at emdio1 address %d\n", phydev->addr);
++		return phydev->addr;
++	} else {
++		printf("Warning: unknown phy id 0x%x at address %xd - can't configure phy for eth0!\n", phydev->phy_id, phydev->addr);
++		return -EINVAL;
++	}
++}
++
+ int fdt_fixup_board_phy(void *fdt)
+ {
+-	int ret;
++	int node_phy, phy_addr;
++
++	/*
++	 * fix ethernet phy address:
++	 * based on assembly-option R89, PHY can be at 0x01 or 0x05.
++	 * 0x01 is the default but causes wrong activity-led polarity.
++	 *
++	 * If:
++	 * - phy is not detected at address 1
++	 * - and phy is detected at address 5
++	 * update address in device-tree.
++	 */
++	phy_addr = cex7_find_1g_phy();
++	if (phy_addr < 0)
++		return phy_addr;
++
+ 
+-	ret = 0;
++	node_phy = fdt_path_offset(fdt, "/soc/mdio@8b96000/ethernet-phy@1");
++	if (node_phy < 0)
++		return node_phy;
+ 
+-	return ret;
++	return fdt_setprop_u32(fdt, node_phy, "reg", (u32)phy_addr);
+ }
+ 
+ 
+-- 
+2.35.3
+
