@@ -314,6 +314,13 @@ make -j${PARALLEL}
 if [ "x$SECURE" == "xtrue" ]; then
 	echo "Building CST"
 	cd $ROOTDIR/build/cst
+
+	fusefilechanged=`git diff --numstat input_files/gen_fusescr/ls2088_1088/input_fuse_file`
+	if [[ -z  $fusefilechanged ]]; then
+	    echo "For Secure-Boot please modify \"build/cst/input_files/gen_fusescr/ls2088_1088/input_fuse_file\"!"
+	    exit 1
+	fi
+
 	make
 	./gen_fusescr input_files/gen_fusescr/ls2088_1088/input_fuse_file
 fi
@@ -330,6 +337,7 @@ if [ -n "${DEFAULT_FDT_FILE}" ]; then
 	printf "CONFIG_DEFAULT_FDT_FILE=\"%s\"\n" "${DEFAULT_FDT_FILE}" >> .config
 fi
 make -j${PARALLEL}
+make savedefconfig
 export BL33=$ROOTDIR/build/u-boot/u-boot.bin
 
 echo "Building atf"
@@ -344,10 +352,32 @@ if [ "x$SECURE" == "xtrue" ]; then
 	# With secure boot auto mode is not supported... yet.. only flexspi_nor or sd
 	# that are needed to be stated explicitly
 	BL2=bl2_flexspi_nor_sec; BOOT_MODE_VAR=flexspi_nor
-	cp tools/fiptool/ddr-phy-binary/lx2160a/*.bin .
-	make -j${PARALLEL} PLAT=lx2160acex7 all fip fip_ddr_sec fip_fuse pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin TRUSTED_BOARD_BOOT=1 CST_DIR=$ROOTDIR/build/cst/ GENERATE_COT=0 BOOT_MODE=${BOOT_MODE_VAR} SECURE_BOOT=yes FUSE_PROG=1 FUSE_PROV_FILE=$ROOTDIR/build/cst/fuse_scr.bin $ATF_DEBUG
+	make \
+		-j${PARALLEL} \
+		PLAT=lx2160acex7 \
+		DDR_PHY_BIN_PATH=$ROOTDIR/build/ddr-phy-binary/lx2160a \
+		RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin \
+		TRUSTED_BOARD_BOOT=1 \
+		CST_DIR=$ROOTDIR/build/cst/ \
+		SECURE_BOOT=yes \
+		FUSE_PROG=1 \
+		FUSE_PROV_FILE=$ROOTDIR/build/cst/fuse_scr.bin \
+		GENERATE_COT=0 \
+		BOOT_MODE=${BOOT_MODE_VAR} \
+		$ATF_DEBUG \
+		all fip fip_ddr fip_fuse pbl
 else
-	make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=auto SECURE_BOOT=false $ATF_DEBUG
+	make \
+		-j${PARALLEL} \
+		PLAT=lx2160acex7 \
+		DDR_PHY_BIN_PATH=$ROOTDIR/build/ddr-phy-binary/lx2160a \
+		RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin \
+		TRUSTED_BOARD_BOOT=0 \
+		SECURE_BOOT=false \
+		GENERATE_COT=0 \
+		BOOT_MODE=auto \
+		$ATF_DEBUG \
+		all fip fip_ddr pbl
        #	DDR_PHY_DEBUG=yes DDR_DEBUG=yes # DEBUG_PHY_IO=yes
 fi
 
@@ -819,9 +849,9 @@ dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/fip.bin of=images/${IMG}
 
 # DDR PHY FIP at 0x4000
 if [ "x$SECURE" == "xtrue" ]; then
-	dd if=$ROOTDIR/build/atf/fip_ddr_sec.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
+	dd if=$ROOTDIR/build/atf/build/lx2160acex7/$ATF_BUILD/ddr_fip_sec.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
 else
-	dd if=$ROOTDIR/build/atf/tools/fiptool/fip_ddr_all.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
+	dd if=$ROOTDIR/build/atf/build/lx2160acex7/$ATF_BUILD/ddr_fip.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
 fi
 
 # Env variables at 0x2800
