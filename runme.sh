@@ -224,7 +224,7 @@ cd $ROOTDIR
 ###############################################################################
 # source code cloning
 ###############################################################################
-QORIQ_COMPONENTS="u-boot atf rcw restool mc-utils linux dpdk cst mdio-proxy-module"
+QORIQ_COMPONENTS="u-boot atf ddr-phy-binary rcw restool mc-utils linux dpdk cst mdio-proxy-module"
 for i in $QORIQ_COMPONENTS; do
 	if [[ ! -d $ROOTDIR/build/$i ]]; then
 		echo "Cloning https://github.com/nxp-qoriq/$i release $RELEASE"
@@ -249,12 +249,6 @@ for i in $QORIQ_COMPONENTS; do
 		fi
 		git clone $SHALLOW_FLAG https://github.com/nxp-qoriq/$i -b $CHECKOUT
 		cd $i
-		if [ "x$i" == "xatf" ]; then
-			cd $ROOTDIR/build/atf/tools/fiptool
-			git clone $SHALLOW_FLAG https://github.com/NXP/ddr-phy-binary.git
-			make
-			./fiptool create --ddr-immem-udimm-1d ddr-phy-binary/lx2160a/ddr4_pmu_train_imem.bin --ddr-immem-udimm-2d ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_imem.bin --ddr-dmmem-udimm-1d ddr-phy-binary/lx2160a/ddr4_pmu_train_dmem.bin --ddr-dmmem-udimm-2d ddr-phy-binary/lx2160a/ddr4_2d_pmu_train_dmem.bin --ddr-immem-rdimm-1d ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_imem.bin --ddr-immem-rdimm-2d ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_imem.bin --ddr-dmmem-rdimm-1d ddr-phy-binary/lx2160a/ddr4_rdimm_pmu_train_dmem.bin --ddr-dmmem-rdimm-2d ddr-phy-binary/lx2160a/ddr4_rdimm2d_pmu_train_dmem.bin fip_ddr_all.bin
-		fi
 		if [[ -d $ROOTDIR/patches/$i-$RELEASE/ ]]; then
 			git am $ROOTDIR/patches/$i-$RELEASE/*.patch
 		elif [[ -d $ROOTDIR/patches/$i/ ]]; then
