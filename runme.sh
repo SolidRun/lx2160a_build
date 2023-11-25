@@ -78,6 +78,7 @@ case "${SERDES}" in
 	8_9_*|8S_9_*)
 		DPC=dpc-8_x_usxgmii_8_x_sgmii.dtb
 		DPL=dpl-eth.8x10g.8x1g.dtb
+		DEFAULT_FDT_FILE="fsl-lx2160a-half-twins.dtb"
 	;;
 	2_*)
 		DPC=dpc-8_x_usxgmii.dtb
@@ -86,7 +87,6 @@ case "${SERDES}" in
 	4_5_2)
 		DPC=dpc-8_x_usxgmii.dtb
 		DPL=dpl-eth.8x10g.19.dtb
-		DEFAULT_FDT_FILE="fsl-lx2160a-clearfog-cx.dtb"
 	;;
 	4_*)
 		DPC=dpc-backplane.dtb
@@ -167,6 +167,9 @@ case "${SERDES}" in
 		exit -1
 	;;
 esac
+
+# unless set above, fall back to default reference platform
+: ${DEFAULT_FDT_FILE:=fsl-lx2160a-clearfog-cx.dtb}
 
 case "${DDR_SPEED}" in
 	2400|2600|2900|3200)
