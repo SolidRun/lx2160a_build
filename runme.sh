@@ -192,9 +192,8 @@ esac
 
 echo "Checking all required tools are installed"
 
-set +e
 for i in $TOOLS; do
-	TOOL_PATH=`which $i`
+	TOOL_PATH=`which $i` || true
 	if [ "x$TOOL_PATH" == "x" ]; then
 		echo "Tool $i is not installed"
 		echo "If running under apt based package management you can run -"
@@ -202,7 +201,6 @@ for i in $TOOLS; do
 		exit -1
 	fi
 done
-set -e
 
 # Check if git is configured
 GIT_CONF=`git config user.name || true`
