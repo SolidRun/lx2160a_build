@@ -401,7 +401,7 @@ cat > kernel2160cex7.its << EOF
 			compression = "gzip";
 			load = <0x80080000>;
 			entry = <0x80080000>;
-			hash@1 {
+			hash {
 				algo = "crc32";
 			};
 		};
@@ -414,7 +414,7 @@ cat > kernel2160cex7.its << EOF
 			compression = "none";
 			load = <0x00000000>;
 			entry = <0x00000000>;
-			hash@1 {
+			hash {
 				algo = "crc32";
 			};
 		};
@@ -426,7 +426,7 @@ cat > kernel2160cex7.its << EOF
 			os = "linux";
 			compression = "none";
 			load = <0x90000000>;
-			hash@1 {
+			hash {
 				algo = "crc32";
 			};
 		};
