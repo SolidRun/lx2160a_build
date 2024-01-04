@@ -1,0 +1,105 @@
+From c3947cfb23ef52567ca9b37399220740d6b8e958 Mon Sep 17 00:00:00 2001
+From: yves <yves@securosys.ch>
+Date: Thu, 4 Jan 2024 11:17:14 +0100
+Subject: [PATCH 1/1] [HACK] lx2160a: add and enable a option to initalize both
+ UART 1 & 2 of lx2160a by configuring in u-boot since linux driver is missing
+ support
+
+---
+ configs/lx2160acex7_tfa_defconfig |  1 +
+ drivers/serial/Kconfig            | 14 ++++++++++++++
+ drivers/serial/serial-uclass.c    | 21 +++++++++++++++++++++
+ 3 files changed, 36 insertions(+)
+
+diff --git a/configs/lx2160acex7_tfa_defconfig b/configs/lx2160acex7_tfa_defconfig
+index 061934ae71..8a0d12f74b 100644
+--- a/configs/lx2160acex7_tfa_defconfig
++++ b/configs/lx2160acex7_tfa_defconfig
+@@ -100,6 +100,7 @@ CONFIG_RTC_MCP79411=y
+ CONFIG_CMD_POWEROFF=y
+ CONFIG_DM_SCSI=y
+ CONFIG_DM_SERIAL=y
++CONFIG_MULTIPLE_SERIAL=y
+ CONFIG_SPI=y
+ CONFIG_DM_SPI=y
+ CONFIG_FSL_DSPI=y
+diff --git a/drivers/serial/Kconfig b/drivers/serial/Kconfig
+index 24413d14f9..ea78f639ea 100644
+--- a/drivers/serial/Kconfig
++++ b/drivers/serial/Kconfig
+@@ -13,6 +13,20 @@ config BAUDRATE
+ 	  in the SPL stage (most drivers) or for choosing a default baudrate
+ 	  in the absence of an environment setting (serial_mxc.c).
+ 
++
++config BAUDRATE_2
++	int "Default baudrate for serial interface 2"
++	default 115200
++	help
++	  Select a default baudrate for the 2nd interface that is configured by u-boot.
++
++config MULTIPLE_SERIAL
++	bool "Initalize UART 1 & 2 for the LX2160a, UART1 will be used for serial console"
++	depends on DM_SERIAL
++	default n
++	help
++	  Initialize both serial ports for lx2160a in u-boot since linux driver does not support the SOC chip
++
+ config REQUIRE_SERIAL_CONSOLE
+ 	bool "Require a serial port for console"
+ 	# Running without a serial console is not supported by the
+diff --git a/drivers/serial/serial-uclass.c b/drivers/serial/serial-uclass.c
+index 95d18420e5..eedc54113c 100644
+--- a/drivers/serial/serial-uclass.c
++++ b/drivers/serial/serial-uclass.c
+@@ -75,7 +75,11 @@ static int serial_check_stdout(const void *blob, struct udevice **devp)
+ 	return -ENODEV;
+ }
+ 
++#ifdef CONFIG_MULTIPLE_SERIAL
++static void serial_find_console_or_panic(int idx)
++#else
+ static void serial_find_console_or_panic(void)
++#endif
+ {
+ 	const void *blob = gd->fdt_blob;
+ 	struct udevice *dev;
+@@ -140,9 +144,14 @@ static void serial_find_console_or_panic(void)
+ 				return;
+ 			}
+ 		}
++#else
++#ifdef CONFIG_MULTIPLE_SERIAL
++		if (!uclass_get_device_by_seq(UCLASS_SERIAL, idx, &dev) ||
++		    !uclass_get_device(UCLASS_SERIAL, idx, &dev) ||
+ #else
+ 		if (!uclass_get_device_by_seq(UCLASS_SERIAL, INDEX, &dev) ||
+ 		    !uclass_get_device(UCLASS_SERIAL, INDEX, &dev) ||
++#endif
+ 		    (!uclass_first_device(UCLASS_SERIAL, &dev) && dev)) {
+ 			gd->cur_serial_dev = dev;
+ 			return;
+@@ -162,9 +171,21 @@ static void serial_find_console_or_panic(void)
+ int serial_init(void)
+ {
+ #if CONFIG_IS_ENABLED(SERIAL_PRESENT)
++#ifdef CONFIG_MULTIPLE_SERIAL
++	for(int i = 2; i > 0; --i) {
++		serial_find_console_or_panic(i);
++		gd->flags |= GD_FLG_SERIAL_READY;
++		if(i == 1) {
++			struct dm_serial_ops *ops;
++			ops = serial_get_ops(gd->cur_serial_dev);
++			ops->setbrg(gd->cur_serial_dev, CONFIG_BAUDRATE_2);
++		} else serial_setbrg();
++	}
++#else
+ 	serial_find_console_or_panic();
+ 	gd->flags |= GD_FLG_SERIAL_READY;
+ 	serial_setbrg();
++#endif
+ #endif
+ 
+ 	return 0;
+-- 
+2.39.2
