@@ -1,0 +1,42 @@
+From c619817ae4f2b6aa3e6b11e323628ddeac6af3ed Mon Sep 17 00:00:00 2001
+From: Noel Kuntze <noel.kuntze@thermi.consulting>
+Date: Thu, 4 Mar 2021 22:54:26 +0100
+Subject: [PATCH] lx2160a: load dpl into 0x80001000 instead of 0x80d00000
+
+---
+ include/configs/lx2160a_common.h | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/include/configs/lx2160a_common.h b/include/configs/lx2160a_common.h
+index a18490c286..cb0ae523f0 100644
+--- a/include/configs/lx2160a_common.h
++++ b/include/configs/lx2160a_common.h
+@@ -317,21 +317,21 @@ int select_i2c_ch_pca9547_sec(unsigned char ch);
+ 
+ #define SD_BOOTCOMMAND						\
+ 		"env exists mcinitcmd && mmcinfo; "		\
+-		"mmc read 0x80d00000 0x6800 0x800; "		\
++		"mmc read 0x80001000 0x6800 0x1000; "		\
+ 		"env exists mcinitcmd && env exists secureboot "	\
+ 		" && mmc read 0x806C0000 0x3600 0x20 "		\
+ 		"&& esbc_validate 0x806C0000;env exists mcinitcmd "	\
+-		"&& fsl_mc lazyapply dpl 0x80d00000;"		\
++		"&& fsl_mc lazyapply dpl 0x80001000;"		\
+ 		"run distro_bootcmd;run sd_bootcmd;"		\
+ 		"env exists secureboot && esbc_halt;"
+ 
+ #define SD2_BOOTCOMMAND						\
+ 		"mmc dev 1; env exists mcinitcmd && mmcinfo; "	\
+-		"mmc read 0x80d00000 0x6800 0x800; "		\
++		"mmc read 0x80001000 0x6800 0x1000; "		\
+ 		"env exists mcinitcmd && env exists secureboot "	\
+ 		" && mmc read 0x806C0000 0x3600 0x20 "		\
+ 		"&& esbc_validate 0x806C0000;env exists mcinitcmd "	\
+-		"&& fsl_mc lazyapply dpl 0x80d00000;"		\
++		"&& fsl_mc lazyapply dpl 0x80001000;"		\
+ 		"run distro_bootcmd;run sd2_bootcmd;"		\
+ 		"env exists secureboot && esbc_halt;"
+ 
+-- 
+2.30.1
+
