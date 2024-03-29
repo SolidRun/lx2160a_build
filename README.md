@@ -5,12 +5,49 @@ Main intention of this repository is to provide build scripts that are easy to h
 
 They are used in SolidRun to quickly build images for development where those images can be SD or SPI booted or network TFTP (kernel) or used for root NFS
 
-The sources are pulled from NXP's codeaurora repository and patched after being clone using the patches in the patches/ directory
+The sources are pulled from NXP's GitHub repository and patched after being clone using the patches in the patches/ directory
 
 The build script builds the u-boot, atf, rcw and linux components, integrate it with Ubuntu rootfs bootstrapped with multistrap. Buildroot is also built aside for future use.
 
+Automatic binary releases are available on [our website](https://images.solid-run.com/LX2k/lx2160a_build) for download (latest versions are in subfolders named by build date).
 
-## Build with Docker
+## Get Started
+
+For basic usage refer to our various quick-start guides:
+
+- [LX2160A HoneyComb / ClearFog CX Quick Start Guide](https://solidrun.atlassian.net/wiki/spaces/developer/pages/197494288/HoneyComb+LX2+ClearFog+CX+LX2+Quick+Start+Guide)
+- [LX2162A ClearFog Quick Start Guide](https://solidrun.atlassian.net/wiki/spaces/developer/pages/199131187/ClearFog+LX2162A+Quick+Start+Guide)
+
+This document provides development resources only.
+
+## Compiling External Kernel Modules
+
+Kernel modules can be built using the "linux-headers" package for a specific image.
+It is available in the same place as binary images on [our website](https://images.solid-run.com/LX2k/lx2160a_build).
+
+Modules should be compiled in the same environment as the original images:
+x86_64 host, Debian 10, `apt-get install crossbuild-essential-arm64`.
+
+A ficticious module may be compiled for binary images `20240328-ec11295/lx2160acex7_2000_700_*_*-ec11295.img.xz` using the steps below:
+
+```
+wget https://images.solid-run.com/LX2k/lx2160a_build/20240328-ec11295/linux-headers-ec11295.tar.xz
+mkdir linux-headers-ec11295
+tar -C linux-headers-ec11295 -xf linux-headers-ec11295.tar.xz
+
+cd kernel-mod-src
+
+make -C ../linux-headers-abcdefg/ CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 M="$PWD" modules
+ls *.ko
+```
+
+In case the module requires access to kernel private headers not included in -headers package,
+it must be built as part of a full image. See [runme.sh](https://github.com/SolidRun/ti_am64x_build/blob/main/runme.sh) function `build_atemsys` for an example.
+
+## Build Full Image from Source with Docker
+
+### Build Full Image from Source with Docker
+
 A docker image providing a consistent build environment can be used as below:
 
 1. build container image (first time only)
@@ -24,17 +61,16 @@ A docker image providing a consistent build environment can be used as below:
    docker run --rm -i -t -v "$PWD":/work lx2160a_build -u $(id -u) -g $(id -g)
    ```
 
-### rootless Podman
+#### rootless Podman
 
 Due to the way podman performs user-id mapping, the root user inside the container (uid=0, gid=0) will be mapped to the user running podman (e.g. 1000:100).
 Therefore in order for the build directory to be owned by current user, `-u 0 -g 0` have to be passed to *docker run*.
 
-## Build with host tools
+### Build Full Image from Source with host tools
+
 Simply running ./runme.sh will check for required tools, clone and build images and place results in images/ directory.
 
 We enhanced the NXP PBI scripting tools to accomodate auto detection of boot device, due to that the boot images are now unified for SD, eMMC and SPI.
-
-## Customize
 
 ### Configure Build Options
 
@@ -91,6 +127,8 @@ generates *images/lx2160acex7_2000_700_3200_8_5_2.img* which is an image ready t
   - `350M` (default)
   - arbitrary sizes supported in unit `M`, 350M recommended minimum
 - `APTPROXY`: specify url to a local apt cache, e.g. apt-cacher-ng
+
+## Customize
 
 ### Adding a new Configuration
 
