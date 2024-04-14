@@ -1,0 +1,34 @@
+From 1742cdc4202d873af30ae3e4d3879092a7aead07 Mon Sep 17 00:00:00 2001
+From: Masami Hiramatsu <masami.hiramatsu@linaro.org>
+Date: Fri, 16 Apr 2021 14:53:46 -0700
+Subject: [PATCH 50/52] pci: Update the highest subordinate bus number for
+ bridge setup
+
+Update the highest subordinate bus number after probing the devices
+under the bus for setting up the bridge correctly.
+The commit 42f3663a3f67 ("pci: Update to use new sequence numbers")
+removed this but it is required if a PCIe bridge is under the bus.
+
+Fixes: 42f3663a3f67 ("pci: Update to use new sequence numbers")
+Signed-off-by: Masami Hiramatsu <masami.hiramatsu@linaro.org>
+---
+ drivers/pci/pci-uclass.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/pci/pci-uclass.c b/drivers/pci/pci-uclass.c
+index dfd54b339f..f463ef3550 100644
+--- a/drivers/pci/pci-uclass.c
++++ b/drivers/pci/pci-uclass.c
+@@ -646,6 +646,9 @@ int dm_pci_hose_probe_bus(struct udevice *bus)
+ 		return log_msg_ret("probe", ret);
+ 	}
+ 
++	if (!ea_pos)
++		sub_bus = pci_get_bus_max();
++
+ 	dm_pciauto_postscan_setup_bridge(bus, sub_bus);
+ 
+ 	return sub_bus;
+-- 
+2.35.3
+
