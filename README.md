@@ -25,10 +25,35 @@ This document provides development resources only.
 Kernel modules can be built using the "linux-headers" package for a specific image.
 It is available in the same place as binary images on [our website](https://images.solid-run.com/LX2k/lx2160a_build).
 
+### Preparations for Cross-Build on x86_64 Host
+
 Modules should be compiled in the same environment as the original images:
 x86_64 host, Debian 10, `apt-get install crossbuild-essential-arm64`.
 
-A ficticious module may be compiled for binary images `20240328-ec11295/lx2160acex7_2000_700_*_*-ec11295.img.xz` using the steps below:
+### Preparations for Native Build on LX2160
+
+The kernel headers package includes binary programs built for x86_64.
+For a native build QEMU user-mode emulation packages must be installed and configured,
+to allow transparent execution of these programs:
+
+    apt-get update
+    apt-get install qemu-user-binfmt
+
+Install amd64 library dependencies:
+
+       apt-get install libc6-amd64-cross
+       ln -sv /lib /lib64
+       ln -sv /usr/x86_64-linux-gnu/lib/ld-linux-x86-64.so.2 /lib/ld-linux-x86-64.so.2
+       ln -sv /usr/x86_64-linux-gnu/lib /usr/lib/x86_64-linux-gnu
+
+Install native toolchain:
+
+    apt-get install build-essential ca-certificates
+
+### Compiling the Module
+
+After configuration of the build host according to the previous steps,
+a ficticious module may be compiled for binary images `20240328-ec11295/lx2160acex7_2000_700_*_*-ec11295.img.xz` using the steps below:
 
 ```
 wget https://images.solid-run.com/LX2k/lx2160a_build/20240328-ec11295/linux-headers-ec11295.tar.xz
@@ -37,12 +62,13 @@ tar -C linux-headers-ec11295 -xf linux-headers-ec11295.tar.xz
 
 cd kernel-mod-src
 
-make -C ../linux-headers-abcdefg/ CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 M="$PWD" modules
+make -C ../linux-headers-ec11295/ CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 M="$PWD" modules
 ls *.ko
 ```
 
 In case the module requires access to kernel private headers not included in -headers package,
 it must be built as part of a full image. See [runme.sh](https://github.com/SolidRun/ti_am64x_build/blob/main/runme.sh) function `build_atemsys` for an example.
+
 
 ## Build Full Image from Source with Docker
 
