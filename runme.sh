@@ -192,9 +192,8 @@ esac
 
 echo "Checking all required tools are installed"
 
-set +e
 for i in $TOOLS; do
-	TOOL_PATH=`which $i`
+	TOOL_PATH=`which $i` || true
 	if [ "x$TOOL_PATH" == "x" ]; then
 		echo "Tool $i is not installed"
 		echo "If running under apt based package management you can run -"
@@ -202,7 +201,6 @@ for i in $TOOLS; do
 		exit -1
 	fi
 done
-set -e
 
 # Check if git is configured
 GIT_CONF=`git config user.name || true`
@@ -403,7 +401,7 @@ cat > kernel2160cex7.its << EOF
 			compression = "gzip";
 			load = <0x80080000>;
 			entry = <0x80080000>;
-			hash@1 {
+			hash {
 				algo = "crc32";
 			};
 		};
@@ -416,7 +414,7 @@ cat > kernel2160cex7.its << EOF
 			compression = "none";
 			load = <0x00000000>;
 			entry = <0x00000000>;
-			hash@1 {
+			hash {
 				algo = "crc32";
 			};
 		};
@@ -428,7 +426,7 @@ cat > kernel2160cex7.its << EOF
 			os = "linux";
 			compression = "none";
 			load = <0x90000000>;
-			hash@1 {
+			hash {
 				algo = "crc32";
 			};
 		};
