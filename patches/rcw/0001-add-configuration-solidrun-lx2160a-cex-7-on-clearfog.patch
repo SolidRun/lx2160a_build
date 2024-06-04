@@ -1,0 +1,950 @@
+From 5a5ec65c0eb53efbcb69894576d7d04f671a730e Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 12 Jun 2024 15:19:39 +0200
+Subject: [PATCH] add configuration solidrun lx2160a-cex-7 on clearfog-cx board
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2160acex7/Makefile                          |  1 +
+ lx2160acex7/README                            |  0
+ .../clearfog-cx/rcw_2000_700_2400_8_5_2.rcw   | 23 +++++
+ .../clearfog-cx/rcw_2000_700_2600_8_5_2.rcw   | 23 +++++
+ .../clearfog-cx/rcw_2000_700_2900_8_5_2.rcw   | 23 +++++
+ .../clearfog-cx/rcw_2000_700_3200_8_5_2.rcw   | 23 +++++
+ .../clearfog-cx/rcw_2200_700_2400_8_5_2.rcw   | 23 +++++
+ .../clearfog-cx/rcw_2200_700_2600_8_5_2.rcw   | 23 +++++
+ .../clearfog-cx/rcw_2200_700_2900_8_5_2.rcw   | 23 +++++
+ .../clearfog-cx/rcw_2200_700_3200_8_5_2.rcw   | 23 +++++
+ lx2160acex7/clearfog-cx/sd1_8_eq.rcwi         | 39 ++++++++
+ lx2160acex7/include/SD1_8.rcwi                | 24 +++++
+ lx2160acex7/include/SD2_5.rcwi                | 27 ++++++
+ lx2160acex7/include/SD3_2.rcwi                | 27 ++++++
+ lx2160acex7/include/common.rcwi               | 90 +++++++++++++++++++
+ lx2160acex7/include/common_pbi.rcwi           | 55 ++++++++++++
+ lx2160acex7/include/pll_2000_700_xxxx.rcwi    | 14 +++
+ lx2160acex7/include/pll_2200_700_xxxx.rcwi    | 14 +++
+ lx2160acex7/include/pll_xxxx_xxx_2400.rcwi    |  7 ++
+ lx2160acex7/include/pll_xxxx_xxx_2600.rcwi    |  7 ++
+ lx2160acex7/include/pll_xxxx_xxx_2900.rcwi    |  7 ++
+ lx2160acex7/include/pll_xxxx_xxx_3200.rcwi    |  7 ++
+ lx2160acex7_rev2/Makefile                     |  1 +
+ lx2160acex7_rev2/README                       |  0
+ .../clearfog-cx/rcw_2000_700_2400_8_5_2.rcw   | 23 +++++
+ .../clearfog-cx/rcw_2000_700_2600_8_5_2.rcw   | 23 +++++
+ .../clearfog-cx/rcw_2000_700_2900_8_5_2.rcw   | 23 +++++
+ .../clearfog-cx/rcw_2000_700_3200_8_5_2.rcw   | 23 +++++
+ .../clearfog-cx/rcw_2200_700_2400_8_5_2.rcw   | 23 +++++
+ .../clearfog-cx/rcw_2200_700_2600_8_5_2.rcw   | 23 +++++
+ .../clearfog-cx/rcw_2200_700_2900_8_5_2.rcw   | 23 +++++
+ .../clearfog-cx/rcw_2200_700_3200_8_5_2.rcw   | 23 +++++
+ 32 files changed, 688 insertions(+)
+ create mode 100644 lx2160acex7/Makefile
+ create mode 100644 lx2160acex7/README
+ create mode 100644 lx2160acex7/clearfog-cx/rcw_2000_700_2400_8_5_2.rcw
+ create mode 100644 lx2160acex7/clearfog-cx/rcw_2000_700_2600_8_5_2.rcw
+ create mode 100644 lx2160acex7/clearfog-cx/rcw_2000_700_2900_8_5_2.rcw
+ create mode 100644 lx2160acex7/clearfog-cx/rcw_2000_700_3200_8_5_2.rcw
+ create mode 100644 lx2160acex7/clearfog-cx/rcw_2200_700_2400_8_5_2.rcw
+ create mode 100644 lx2160acex7/clearfog-cx/rcw_2200_700_2600_8_5_2.rcw
+ create mode 100644 lx2160acex7/clearfog-cx/rcw_2200_700_2900_8_5_2.rcw
+ create mode 100644 lx2160acex7/clearfog-cx/rcw_2200_700_3200_8_5_2.rcw
+ create mode 100644 lx2160acex7/clearfog-cx/sd1_8_eq.rcwi
+ create mode 100644 lx2160acex7/include/SD1_8.rcwi
+ create mode 100644 lx2160acex7/include/SD2_5.rcwi
+ create mode 100644 lx2160acex7/include/SD3_2.rcwi
+ create mode 100644 lx2160acex7/include/common.rcwi
+ create mode 100644 lx2160acex7/include/common_pbi.rcwi
+ create mode 100644 lx2160acex7/include/pll_2000_700_xxxx.rcwi
+ create mode 100644 lx2160acex7/include/pll_2200_700_xxxx.rcwi
+ create mode 100644 lx2160acex7/include/pll_xxxx_xxx_2400.rcwi
+ create mode 100644 lx2160acex7/include/pll_xxxx_xxx_2600.rcwi
+ create mode 100644 lx2160acex7/include/pll_xxxx_xxx_2900.rcwi
+ create mode 100644 lx2160acex7/include/pll_xxxx_xxx_3200.rcwi
+ create mode 100644 lx2160acex7_rev2/Makefile
+ create mode 100644 lx2160acex7_rev2/README
+ create mode 100644 lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_8_5_2.rcw
+ create mode 100644 lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_8_5_2.rcw
+ create mode 100644 lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_8_5_2.rcw
+ create mode 100644 lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_8_5_2.rcw
+ create mode 100644 lx2160acex7_rev2/clearfog-cx/rcw_2200_700_2400_8_5_2.rcw
+ create mode 100644 lx2160acex7_rev2/clearfog-cx/rcw_2200_700_2600_8_5_2.rcw
+ create mode 100644 lx2160acex7_rev2/clearfog-cx/rcw_2200_700_2900_8_5_2.rcw
+ create mode 100644 lx2160acex7_rev2/clearfog-cx/rcw_2200_700_3200_8_5_2.rcw
+
+diff --git a/lx2160acex7/Makefile b/lx2160acex7/Makefile
+new file mode 100644
+index 0000000..f77e46b
+--- /dev/null
++++ b/lx2160acex7/Makefile
+@@ -0,0 +1 @@
++include ../Makefile.inc
+diff --git a/lx2160acex7/README b/lx2160acex7/README
+new file mode 100644
+index 0000000..e69de29
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2400_8_5_2.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2400_8_5_2.rcw
+new file mode 100644
+index 0000000..ba0f82c
+--- /dev/null
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2400_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2400 MT/s
++ *
++ * Silicon 1.0
++ */
++
++#define LX_SR 1
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2400.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2600_8_5_2.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2600_8_5_2.rcw
+new file mode 100644
+index 0000000..b1723d3
+--- /dev/null
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2600_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2600 MT/s
++ *
++ * Silicon 1.0
++ */
++
++#define LX_SR 1
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2600.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2900_8_5_2.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2900_8_5_2.rcw
+new file mode 100644
+index 0000000..fa59785
+--- /dev/null
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2900_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2900 MT/s
++ *
++ * Silicon 1.0
++ */
++
++#define LX_SR 1
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_3200_8_5_2.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_3200_8_5_2.rcw
+new file mode 100644
+index 0000000..90ac8a4
+--- /dev/null
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_3200_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 3200 MT/s
++ *
++ * Silicon 1.0
++ */
++
++#define LX_SR 1
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_3200.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_700_2400_8_5_2.rcw b/lx2160acex7/clearfog-cx/rcw_2200_700_2400_8_5_2.rcw
+new file mode 100644
+index 0000000..464a285
+--- /dev/null
++++ b/lx2160acex7/clearfog-cx/rcw_2200_700_2400_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2200 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2400 MT/s
++ *
++ * Silicon 1.0
++ */
++
++#define LX_SR 1
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2200_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2400.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_700_2600_8_5_2.rcw b/lx2160acex7/clearfog-cx/rcw_2200_700_2600_8_5_2.rcw
+new file mode 100644
+index 0000000..1ef7db6
+--- /dev/null
++++ b/lx2160acex7/clearfog-cx/rcw_2200_700_2600_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2200 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2600 MT/s
++ *
++ * Silicon 1.0
++ */
++
++#define LX_SR 1
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2200_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2600.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_700_2900_8_5_2.rcw b/lx2160acex7/clearfog-cx/rcw_2200_700_2900_8_5_2.rcw
+new file mode 100644
+index 0000000..d021306
+--- /dev/null
++++ b/lx2160acex7/clearfog-cx/rcw_2200_700_2900_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2200 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2900 MT/s
++ *
++ * Silicon 1.0
++ */
++
++#define LX_SR 1
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2200_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_700_3200_8_5_2.rcw b/lx2160acex7/clearfog-cx/rcw_2200_700_3200_8_5_2.rcw
+new file mode 100644
+index 0000000..bfef1d4
+--- /dev/null
++++ b/lx2160acex7/clearfog-cx/rcw_2200_700_3200_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2200 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 3200 MT/s
++ *
++ * Silicon 1.0
++ */
++
++#define LX_SR 1
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2200_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_3200.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/sd1_8_eq.rcwi b/lx2160acex7/clearfog-cx/sd1_8_eq.rcwi
+new file mode 100644
+index 0000000..44961c1
+--- /dev/null
++++ b/lx2160acex7/clearfog-cx/sd1_8_eq.rcwi
+@@ -0,0 +1,39 @@
++/*
++ * SERDES tuning based on the following hardware -
++ * - SolidRun COM express type 7 revision 1.7 and newer
++ * - SolidRun ClearFog CX revision 1.3 with TI retimers and EPT COM express headers
++ */
++
++.pbi
++/* Lane E (SD1 TX/RX 3) */
++write 0x01EA0C28,0x00000000
++write 0x01EA0C30,0x20818120
++write 0x01EA0C34,0x23000000
++write 0x01EA0C68,0x80000000
++write 0x01EA0C74,0x00002020
++write 0x01EA0C80,0x00008000
++
++/* Lane F (SD1 TX/RX 2)*/
++write 0x01EA0D28,0x00000000
++write 0x01EA0D30,0x20818120
++write 0x01EA0D34,0x23000000
++write 0x01EA0D68,0x80000000
++write 0x01EA0D74,0x00002020
++write 0x01EA0D80,0x00008000
++
++/* Lane G (SD1 TX/RX 1)*/
++write 0x01EA0E28,0x00000000
++write 0x01EA0E30,0x20818120
++write 0x01EA0E34,0x23000000
++write 0x01EA0E68,0x80000000
++write 0x01EA0E74,0x00002020
++write 0x01EA0E80,0x00008000
++
++/* Lane H (SD1 TX/RX 0)*/
++write 0x01EA0F28,0x00000000
++write 0x01EA0F30,0x20818120
++write 0x01EA0F34,0x23000000
++write 0x01EA0F68,0x80000000
++write 0x01EA0F74,0x00002020
++write 0x01EA0F80,0x00008000
++.end
+diff --git a/lx2160acex7/include/SD1_8.rcwi b/lx2160acex7/include/SD1_8.rcwi
+new file mode 100644
+index 0000000..87ce260
+--- /dev/null
++++ b/lx2160acex7/include/SD1_8.rcwi
+@@ -0,0 +1,24 @@
++/*
++ * Serdes 1 Reference Clocks:
++ * - PLLF = 100MHz
++ * - PLLS = 161.1328125MHz
++ */
++
++/* Serdes 1 Protocol 8: 8x10Gbps */
++SRDS_PRTCL_S1=8
++
++/* Disable PLLF */
++SRDS_PLL_PD_PLL1=1
++
++/* Use PLLF for PLLS */
++SRDS_INTRA_REF_CLK_S1=1
++
++/* Enable PLLS */
++SRDS_PLL_PD_PLL2=0
++
++/*
++ * Select PLLF frequency 100MHz (don't care): Bit 0 = 0
++ * Select PLLS frequency 161.1328125MHz: Bit 1 = 1
++ * (See QorIQ LX2160A Reference Manual, Rev. 0, 07/2020, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 932-933)
++ */
++SRDS_PLL_REF_CLK_SEL_S1=2
+diff --git a/lx2160acex7/include/SD2_5.rcwi b/lx2160acex7/include/SD2_5.rcwi
+new file mode 100644
+index 0000000..8fed5bd
+--- /dev/null
++++ b/lx2160acex7/include/SD2_5.rcwi
+@@ -0,0 +1,27 @@
++/*
++ * Serdes 2 Reference Clocks:
++ * - PLLF = 100MHz
++ * - PLLS = 100MHz
++ */
++
++/* Serdes 2 Protocol 5: 1x PCI-e x4 Gen 3 + 4x SATA */
++SRDS_PRTCL_S2=5
++
++/* Enable PLLF */
++SRDS_PLL_PD_PLL3=0
++
++/* Don't use PLLF for PLLS */
++SRDS_INTRA_REF_CLK_S2=0
++
++/* Enable PLLS */
++SRDS_PLL_PD_PLL4=0
++
++/*
++ * Select PLLF frequency 100MHz: Bit 0 = 0
++ * Select PLLS frequency 100MHz: Bit 1 = 0
++ * (See QorIQ LX2160A Reference Manual, Rev. 0, 07/2020, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 934-935)
++ */
++SRDS_PLL_REF_CLK_SEL_S2=0
++
++/* Support up to PCI-e Gen 3 */
++SRDS_DIV_PEX_S2=1
+diff --git a/lx2160acex7/include/SD3_2.rcwi b/lx2160acex7/include/SD3_2.rcwi
+new file mode 100644
+index 0000000..b0be701
+--- /dev/null
++++ b/lx2160acex7/include/SD3_2.rcwi
+@@ -0,0 +1,27 @@
++/*
++ * Serdes 3 Reference Clocks:
++ * - PLLF = 100MHz
++ * - PLLS = 100MHz
++ */
++
++/* Serdes 3 Protocol 2: 1x PCI-e x8 Gen 3 */
++SRDS_PRTCL_S3=2
++
++/* Disable PLLF */
++SRDS_PLL_PD_PLL5=1
++
++/* Don't use Serdes 3 PLLF for PLLS */
++SRDS_INTRA_REF_CLK_S3=0
++
++/* Enable PLLS */
++SRDS_PLL_PD_PLL6=0
++
++/*
++ * Select PLLF frequency 100MHz: Bit 0 = 0
++ * Select PLLS frequency 100MHz: Bit 1 = 0
++ * (See QorIQ LX2160A Reference Manual, Rev. 0, 07/2020, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 936-937)
++ */
++SRDS_PLL_REF_CLK_SEL_S3=0
++
++/* Support up to PCI-e Gen 3 */
++SRDS_DIV_PEX_S3=1
+diff --git a/lx2160acex7/include/common.rcwi b/lx2160acex7/include/common.rcwi
+new file mode 100644
+index 0000000..e8a5660
+--- /dev/null
++++ b/lx2160acex7/include/common.rcwi
+@@ -0,0 +1,90 @@
++/*
++ * LX2160A COM-Express Type 7 Common Configuration
++ */
++
++/* DDR CGU PLL clk out div 4 */
++MEM_PLL_CFG=3
++MEM2_PLL_CFG=3
++/* C[5:8]_PLL are CG[5:8] div 1 */
++C5_PLL_SEL=0
++C6_PLL_SEL=0
++C7_PLL_SEL=0
++C8_PLL_SEL=0
++/* Cluster group A clock is PLL1 div 1 (unused on LX2160A) */
++HWA_CGA_M1_CLK_SEL=1
++/* Cluster group B clock is PLL2 div 2 (for DCE) */
++HWA_CGB_M1_CLK_SEL=6
++/* fall-back boot-mode is ocram, when DCFG bit location pointer registers are null */
++BOOT_LOC=21 // TODO: test if SPI boot still functional
++/* SYSCLK is 100MHz */
++SYSCLK_FREQ=600
++/* USB-3.0 clock is 100MHz */
++USB3_CLK_FSEL=39
++
++/* IIC1 is I2C */
++IIC1_PMUX=0
++/* IIC2 is SD Card-Detect */
++IIC2_PMUX=6
++/* IIC3 is I2C */
++IIC3_PMUX=0
++/* IIC4 is I2C (unused) */
++IIC4_PMUX=0
++/* IIC5 is I2C */
++IIC5_PMUX=0
++/* IIC6 is I2C (unused) */
++IIC6_PMUX=0
++/*
++ * SDHC1 CMD/CLK/VBUS/DAT[0:3] are SDHC
++ * SPI3_PCS0 is VSEL
++ */
++SDHC1_BASE_PMUX=0
++/* SDHC1_DS is GPIO (unused) */
++SDHC1_DS_PMUX=1
++/* SDHC1_CMD/DAT0/DAT1_DIR (SPI3_PCS[1:3]) are GPIO1[14:12] */
++SDHC1_DIR_PMUX=1
++/* USB[1:2]_DRVVBUS/PWRFAULT are GPIO4[28:25] (unused) */
++USB_EXT_PMUX=1
++/* XSPI1_A_DQS/SCK/CS0_B/CS1_B are SPI */
++XSPI1_A_BASE_PMUX=0
++/* XSPI1_A_DATA[3:0] are SPI */
++XSPI1_A_DATA30_PMUX=0
++/* XSPI1_A_DATA[7:4] are SPI */
++XSPI1_A_DATA74_PMUX=0
++/* ASLEEP is ASLEEP (unused) */
++ASLEEP_PMUX=0
++/* EVT[2:0] are GPIO3[14:12] */
++EVT20_PMUX=1
++/* EVT[4:3] are GPIO3[16:15] */
++EVT43_PMUX=1
++/* CLK_OUT is GPIO (unused) */
++CLK_OUT_PMUX=1
++/* IRQ[3:0] are GPIO3[3:0] */
++IRQ03_00_PMUX=1
++/* IRQ[7:4] are GPIO3[7:4] */
++IRQ07_04_PMUX=1
++/* IRQ[11:8] are GPIO3[11:8] */
++IRQ11_08_PMUX=1
++/* EC1_* are RGMII */
++EC1_PMUX=0
++/* EC2_* are PTP */
++EC2_PMUX=2
++/* EC_GTX_CLK125 is PTP */
++GTX_CLK_PMUX=0
++/* UART1_SOUT/SIN are UART1 */
++UART1_SOUTSIN_PMUX=0
++/* UART1_RTS/CTS_B are GPIO (unused) */
++UART1_RTSCTS_PMUX=1
++/* UART2_SOUT/SIN are UART2 */
++UART2_SOUTSIN_PMUX=0
++/* UART2_RTS/CTS_B are GPIO (unused) */
++UART2_RTSCTS_PMUX=1
++/* SDHC2_CMD/DAT[3:0]/DS/CLK are SDHC */
++SDHC2_BASE_PMUX=0
++/* SDHC2_DAT[7:4] are SDHC */
++SDHC2_DAT74_PMUX=0
++
++/*
++ * Original SolidRun Settings in LSDK-21.08
++ *
++ * HWA_CGB_M1_CLK_SEL=7 // Cluster Group B PLL 2 / 3 is clock
++ */
+diff --git a/lx2160acex7/include/common_pbi.rcwi b/lx2160acex7/include/common_pbi.rcwi
+new file mode 100644
+index 0000000..0c28f92
+--- /dev/null
++++ b/lx2160acex7/include/common_pbi.rcwi
+@@ -0,0 +1,55 @@
++/*
++ * LX2160A COM-Express Type 7 Common Configuration
++ */
++
++/* Drive the fan full speed pin */
++.pbi
++write 0x2320000,0x20000000
++.end
++
++/* Errata to write on scratch reg for validation */
++#include <../lx2160asi/scratchrw1.rcw>
++
++/* Boot Location Pointer */
++#include <../lx2160asi/bootlocptr_sd.rcw>
++
++/* Errata for SATA controller */
++#include <../lx2160asi/a010554.rcw>
++
++#if LX_SR == 1
++/* Errata for PCIe controller */
++#include <../lx2160asi/a011270.rcw>
++#include <../lx2160asi/a050234.rcw>
++#endif
++
++/* common PBI commands */
++#include <../lx2160asi/common.rcw>
++
++#if LX_SR == 2
++/*PCIe Errata A-009531*/
++#include <../lx2160asi/a009531_PEX3.rcw>
++#include <../lx2160asi/a009531_PEX5.rcw>
++
++/*PCIe Errata A-008851*/
++#include <../lx2160asi/a008851_PEX3.rcw>
++#include <../lx2160asi/a008851_PEX5.rcw>
++
++/*SerDes Errata A-050479*/
++#include <../lx2160asi/a050479.rcw>
++
++/* Errata A-050426 */
++#include <../lx2160asi/a050426.rcw>
++#endif
++
++/*
++ * FlexSPI controller supports modifcation of the FlexSPI Clock
++ * divisor value, default value of this is 80.
++ * For 700 MHz, FlexSPI clock runs with default value is
++ *    (Platform Clock * 2) / (Divisor value)
++ *      => 700 * 2 / 80 ==> 17MHz
++ * On Clearfog-CX bus speed is limited to 20MHz by a mux on carrier board.
++ * Explicitly set the default value again, in case it was modified elsewhere.
++ */
++.pbi
++write 0x1e00900,0x00000014
++.end
+diff --git a/lx2160acex7/include/pll_2000_700_xxxx.rcwi b/lx2160acex7/include/pll_2000_700_xxxx.rcwi
+new file mode 100644
+index 0000000..2a3725f
+--- /dev/null
++++ b/lx2160acex7/include/pll_2000_700_xxxx.rcwi
+@@ -0,0 +1,14 @@
++/*
++ * Core and Platform Clocks:
++ * - Platform: 700MHz
++ * - Core: 2000MHz
++ */
++
++/* platform clock is system clock mul 14 div 2 = 700 */
++SYS_PLL_RAT=14
++
++/* core clocks are 2000 */
++CGA_PLL1_RAT=20
++CGA_PLL2_RAT=20
++CGB_PLL1_RAT=20
++CGB_PLL2_RAT=7
+diff --git a/lx2160acex7/include/pll_2200_700_xxxx.rcwi b/lx2160acex7/include/pll_2200_700_xxxx.rcwi
+new file mode 100644
+index 0000000..91d1a9b
+--- /dev/null
++++ b/lx2160acex7/include/pll_2200_700_xxxx.rcwi
+@@ -0,0 +1,14 @@
++/*
++ * Core and Platform Clocks:
++ * - Platform: 700MHz
++ * - Core: 2200MHz
++ */
++
++/* platform clock is system clock mul 14 div 2 = 700 */
++SYS_PLL_RAT=14
++
++/* core clocks are 2200 */
++CGA_PLL1_RAT=22
++CGA_PLL2_RAT=22
++CGB_PLL1_RAT=22
++CGB_PLL2_RAT=7
+diff --git a/lx2160acex7/include/pll_xxxx_xxx_2400.rcwi b/lx2160acex7/include/pll_xxxx_xxx_2400.rcwi
+new file mode 100644
+index 0000000..9c79664
+--- /dev/null
++++ b/lx2160acex7/include/pll_xxxx_xxx_2400.rcwi
+@@ -0,0 +1,7 @@
++/*
++ * DDR Rate: 2400MHz
++ */
++
++/* data rate is reference clock mul 24 = 2400 */
++MEM_PLL_RAT=24
++MEM2_PLL_RAT=24
+diff --git a/lx2160acex7/include/pll_xxxx_xxx_2600.rcwi b/lx2160acex7/include/pll_xxxx_xxx_2600.rcwi
+new file mode 100644
+index 0000000..404d52a
+--- /dev/null
++++ b/lx2160acex7/include/pll_xxxx_xxx_2600.rcwi
+@@ -0,0 +1,7 @@
++/*
++ * DDR Rate: 2600MHz
++ */
++
++/* data rate is reference clock mul 26 = 2600 */
++MEM_PLL_RAT=26
++MEM2_PLL_RAT=26
+diff --git a/lx2160acex7/include/pll_xxxx_xxx_2900.rcwi b/lx2160acex7/include/pll_xxxx_xxx_2900.rcwi
+new file mode 100644
+index 0000000..2ba2426
+--- /dev/null
++++ b/lx2160acex7/include/pll_xxxx_xxx_2900.rcwi
+@@ -0,0 +1,7 @@
++/*
++ * DDR Rate: 2900MHz
++ */
++
++/* data rate is reference clock mul 29 = 2900 */
++MEM_PLL_RAT=29
++MEM2_PLL_RAT=29
+diff --git a/lx2160acex7/include/pll_xxxx_xxx_3200.rcwi b/lx2160acex7/include/pll_xxxx_xxx_3200.rcwi
+new file mode 100644
+index 0000000..cbc2cf4
+--- /dev/null
++++ b/lx2160acex7/include/pll_xxxx_xxx_3200.rcwi
+@@ -0,0 +1,7 @@
++/*
++ * DDR Rate: 3200MHz
++ */
++
++/* data rate is reference clock mul 32 = 3200 */
++MEM_PLL_RAT=32
++MEM2_PLL_RAT=32
+diff --git a/lx2160acex7_rev2/Makefile b/lx2160acex7_rev2/Makefile
+new file mode 100644
+index 0000000..f77e46b
+--- /dev/null
++++ b/lx2160acex7_rev2/Makefile
+@@ -0,0 +1 @@
++include ../Makefile.inc
+diff --git a/lx2160acex7_rev2/README b/lx2160acex7_rev2/README
+new file mode 100644
+index 0000000..e69de29
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_8_5_2.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_8_5_2.rcw
+new file mode 100644
+index 0000000..1c23c5c
+--- /dev/null
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2400 MT/s
++ *
++ * Silicon 2.0
++ */
++
++#define LX_SR 2
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2400.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_8_5_2.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_8_5_2.rcw
+new file mode 100644
+index 0000000..87391ab
+--- /dev/null
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2600 MT/s
++ *
++ * Silicon 2.0
++ */
++
++#define LX_SR 2
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2600.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_8_5_2.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_8_5_2.rcw
+new file mode 100644
+index 0000000..9114f36
+--- /dev/null
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2900 MT/s
++ *
++ * Silicon 2.0
++ */
++
++#define LX_SR 2
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_8_5_2.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_8_5_2.rcw
+new file mode 100644
+index 0000000..7e97984
+--- /dev/null
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 3200 MT/s
++ *
++ * Silicon 2.0
++ */
++
++#define LX_SR 2
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_3200.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_700_2400_8_5_2.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_700_2400_8_5_2.rcw
+new file mode 100644
+index 0000000..d59ceed
+--- /dev/null
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_700_2400_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2200 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2400 MT/s
++ *
++ * Silicon 2.0
++ */
++
++#define LX_SR 2
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2200_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2400.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_700_2600_8_5_2.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_700_2600_8_5_2.rcw
+new file mode 100644
+index 0000000..1bf815b
+--- /dev/null
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_700_2600_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2200 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2600 MT/s
++ *
++ * Silicon 2.0
++ */
++
++#define LX_SR 2
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2200_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2600.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_700_2900_8_5_2.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_700_2900_8_5_2.rcw
+new file mode 100644
+index 0000000..01138dc
+--- /dev/null
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_700_2900_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2200 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2900 MT/s
++ *
++ * Silicon 2.0
++ */
++
++#define LX_SR 2
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2200_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_700_3200_8_5_2.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_700_3200_8_5_2.rcw
+new file mode 100644
+index 0000000..e99a12b
+--- /dev/null
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_700_3200_8_5_2.rcw
+@@ -0,0 +1,23 @@
++/*
++ * SerDes Protocol 1 -  8
++ * SerDes Protocol 2 -  5
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2200 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 3200 MT/s
++ *
++ * Silicon 2.0
++ */
++
++#define LX_SR 2
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2200_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_3200.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8.rcwi>
++#include <../lx2160acex7/include/SD2_5.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
+-- 
+2.35.3
+

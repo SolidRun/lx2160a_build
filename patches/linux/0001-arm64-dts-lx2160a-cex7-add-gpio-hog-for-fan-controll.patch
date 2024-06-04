@@ -1,0 +1,49 @@
+From a12abaab41ec9ffe381a655c4763d0b44988ec3a Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 28 Jun 2024 16:19:32 +0200
+Subject: [PATCH] arm64: dts: lx2160a-cex7: add gpio hog for fan-controller
+ therm signal
+
+AMC6821 fan-controller has an open-drain inpu/output signal "THERM"
+which is driven low in case of thermal warning, but can also be driven
+low externally to force fan at full-speed.
+
+Add gpio hog setting the cpu-side as input to release the full-speed
+request set by firmware during reset.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../boot/dts/freescale/fsl-lx2160a-cex7.dtsi    | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+index afb455210bd0..feb6d02494df 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+@@ -51,6 +51,23 @@ &esdhc1 {
+ 	status = "okay";
+ };
+ 
++&gpio2 {
++	/*
++	 * AMC6821 THERM signal uses open-drain logic and can be driven
++	 * by either the host (force full-speed) or the chip
++	 * (thermal warning). Firmware drives it low during reset.
++	 *
++	 * Release the signal here for autonomous operation.
++	 * TODO: Add support to fan-controller driver.
++	 */
++	fan-full-speed-hog {
++		gpio-hog;
++		gpios = <2 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
++		input;
++		line-name = "fan-full-speed";
++	};
++};
++
+ &i2c0 {
+ 	status = "okay";
+ 
+-- 
+2.35.3
+

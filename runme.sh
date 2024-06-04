@@ -12,10 +12,14 @@ set -e
 ###############################################################################
 # Misc
 ###############################################################################
-: ${RELEASE:=LSDK-21.08}
-: ${MC_RELEASE:=mc_release_10.37.0}
+: ${RELEASE:=ls-5.15.71-2.2.0}
+: ${CPU_SPEED:=2000}
 : ${DDR_SPEED:=3200}
 : ${SERDES:=8_5_2}
+# SoC Boot Source
+# - sd
+# - nor
+: ${BOOTSOURCE:=sd}
 : ${SHALLOW:=false}
 : ${SECURE:=false}
 : ${ATF_DEBUG:=false}
@@ -26,25 +30,17 @@ set -e
 # Ubuntu Version
 # - focal (20.04)
 # - jammy (22.04)
-: ${UBUNTU_VERSION:=focal}
+: ${UBUNTU_VERSION:=jammy}
 : ${UBUNTU_ROOTFS_SIZE:=350M}
-: ${DEBIAN_VERSION:=bullseye}
 # Debian Version
 # - bullseye (11)
 # - bookworm (12)
+: ${DEBIAN_VERSION:=bullseye}
 : ${DEBIAN_ROOTFS_SIZE:=350M}
 : ${APTPROXY:=}
 
 if [ "x$SHALLOW" == "xtrue" ]; then
 	SHALLOW_FLAG="--depth 1000"
-fi
-
-if [ "x$ATF_DEBUG" == "xtrue" ]; then
-	ATF_DEBUG="DEBUG=1 LOG_LEVEL=40"
-	ATF_BUILD="debug"
-else
-	ATF_DEBUG=""
-	ATF_BUILD="release"
 fi
 
 # we don't have status code checks for each step - use "-e" with a trap instead
@@ -59,11 +55,8 @@ set -e
 mkdir -p build images
 ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
-SPEED=2000_700_${DDR_SPEED}
-TOOLS="tar git make 7z dd mkfs.ext4 parted mkdosfs mcopy dtc iasl mkimage e2cp truncate qemu-system-aarch64 cpio rsync bc bison flex python2 unzip pandoc meson ninja depmod"
-BL2=bl2_auto
+SPEED=${CPU_SPEED}_700_${DDR_SPEED}
 
-export PATH=$ROOTDIR/build/toolchain/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu/bin:$PATH
 export CROSS_COMPILE=aarch64-linux-gnu-
 export ARCH=arm64
 
@@ -71,96 +64,16 @@ REPO_PREFIX=`git log -1 --pretty=format:%h || echo unknown`
 echo "Repository prefix for images is $REPO_PREFIX"
 
 case "${SERDES}" in
-	0_*)
-		DPC=dpc-8_x_usxgmii.dtb
-		DPL=dpl-eth.8x10g.19.dtb
+	0_0_*)
+		# no networking, can be used as base for new configurations
+		DPC=LX2160A-CEX7/null-s1_0-s2_0-dpc.dtb
+		DPL=LX2160A-CEX7/null-s1_0-s2_0-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
 	;;
-	8_9_*|8S_9_*)
-		DPC=dpc-8_x_usxgmii_8_x_sgmii.dtb
-		DPL=dpl-eth.8x10g.8x1g.dtb
-		DEFAULT_FDT_FILE="fsl-lx2160a-half-twins.dtb"
-	;;
-	2_*)
-		DPC=dpc-8_x_usxgmii.dtb
-		DPL=dpl-eth.8x10g.19.dtb
-	;;
-	4_5_2)
-		DPC=dpc-8_x_usxgmii.dtb
-		DPL=dpl-eth.8x10g.19.dtb
-	;;
-	4_*)
-		DPC=dpc-backplane.dtb
-		DPL=dpl-eth.8x10g.19.dtb
-	;;
-	8_*|8S_*)
-		DPC=dpc-8_x_usxgmii.dtb
-		DPL=dpl-eth.8x10g.19.dtb
-	;;
-	10S_*)
-		DPC=dpc-S1_10-S2_0-6x_usxgmii.dtb
-		DPL=dpl-S1_10-S2_0-6x_eth.dtb
-	;;
-	13_*)
-		DPC=dpc-dual-100g.dtb
-		DPL=dpl-eth.dual-100g.19.dtb
-	;;
-	14_*)
-		DPC=dpc-single-100g.dtb
-		DPL=dpl-eth.single-100g.19.dtb
-	;;
-	17_*)
-		DPC=dpc-quad-25g.dtb
-		DPL=dpl-eth.quad-25g.19.dtb
-	;;
-	18_*)
-		DPC=dpc-sd1-18.dtb
-		DPL=dpl-sd1-18.dtb
-	;;
-	19_*)
-		DPC=dpc-quad-25g.dtb
-		DPL=dpl-eth.quad-25g.19.dtb
-	;;
-	20_*)
-		DPC=dpc-dual-40g.dtb
-		DPL=dpl-eth.dual-40g.19.dtb
-	;;
-	21_13_*)
-		DPC=dpc-S1_21-S2_13-6x_25gbe-2x_sgmii.dtb
-		DPL=dpl-S1_21-S2_13-6x_25gbe-2x_sgmii.dtb
-	;;
-	21_*)
-		DPC=dpc-6x25g.dtb
-		DPL=dpl-eth.6x25g.21.dtb
-	;;
-	LX2160ACEX6_EVB_3_3_2)
-		DPC=LX2160-CEX6/evb-s1_3-s2-3-dpc.dtb
-		DPL=LX2160-CEX6/evb-s1_3-s2-3-dpl.dtb
-		DEFAULT_FDT_FILE="fsl-lx2160a-cex6.dtb"
-	;;
-	LX2162A_CLEARFOG_0_0_*)
-		DPC=LX2162-USOM/clearfog-s1_0-s2_0-dpc.dtb
-		DPL=LX2162-USOM/clearfog-s1_0-s2_0-dpl.dtb
-		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
-	;;
-	LX2162A_CLEARFOG_3_7_*)
-		DPC=LX2162-USOM/clearfog-s1_3-s2_7-dpc.dtb
-		DPL=LX2162-USOM/clearfog-s1_3-s2_7-dpl.dtb
-		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
-	;;
-	LX2162A_CLEARFOG_3_9_*)
-		DPC=LX2162-USOM/clearfog-s1_3-s2_9-dpc.dtb
-		DPL=LX2162-USOM/clearfog-s1_3-s2_9-dpl.dtb
-		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
-	;;
-	LX2162A_CLEARFOG_3_11_*)
-		DPC=LX2162-USOM/clearfog-s1_3-s2_7-dpc.dtb
-		DPL=LX2162-USOM/clearfog-s1_3-s2_7-dpl.dtb
-		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
-	;;
-	LX2162A_CLEARFOG_18_9_*)
-		DPC=LX2162-USOM/clearfog-s1_3-s2_9-dpc.dtb
-		DPL=LX2162-USOM/clearfog-s1_3-s2_9-dpl.dtb
-		DEFAULT_FDT_FILE="fsl-lx2162a-clearfog.dtb"
+	8_5_*)
+		DPC=LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpc.dtb
+		DPL=LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
 	;;
 	*)
 		echo "Please define SERDES configuration"
@@ -169,7 +82,16 @@ case "${SERDES}" in
 esac
 
 # unless set above, fall back to default reference platform
-: ${DEFAULT_FDT_FILE:=fsl-lx2160a-clearfog-cx.dtb}
+: ${DEFAULT_FDT_FILE:=freescale/fsl-lx2160a-clearfog-cx.dtb}
+
+case "${CPU_SPEED}" in
+	2000|2200)
+	;;
+	*)
+		echo "Please use one of allowed CPU speeds: 2000, 2200"
+		exit -1
+	;;
+esac
 
 case "${DDR_SPEED}" in
 	2400|2600|2900|3200)
@@ -192,18 +114,6 @@ esac
 
 echo "Checking all required tools are installed"
 
-set +e
-for i in $TOOLS; do
-	TOOL_PATH=`which $i`
-	if [ "x$TOOL_PATH" == "x" ]; then
-		echo "Tool $i is not installed"
-		echo "If running under apt based package management you can run -"
-		echo "sudo apt install build-essential git dosfstools e2fsprogs parted sudo mtools p7zip p7zip-full device-tree-compiler acpica-tools u-boot-tools e2tools qemu-system-arm libssl-dev cpio rsync bc bison flex python unzip pandoc meson ninja-build kmod"
-		exit -1
-	fi
-done
-set -e
-
 # Check if git is configured
 GIT_CONF=`git config user.name || true`
 if [ "x$GIT_CONF" == "x" ]; then
@@ -214,64 +124,58 @@ if [ "x$GIT_CONF" == "x" ]; then
 	export GIT_COMMITTER_EMAIL="${GIT_AUTHOR_EMAIL}"
 fi
 
-if [[ ! -d $ROOTDIR/build/toolchain ]]; then
-	mkdir -p $ROOTDIR/build/toolchain
-	cd $ROOTDIR/build/toolchain
-	wget https://releases.linaro.org/components/toolchain/binaries/7.4-2019.02/aarch64-linux-gnu/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu.tar.xz
-	tar -xvf gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu.tar.xz
-fi
-
 echo "Building boot loader"
 cd $ROOTDIR
 
 ###############################################################################
 # source code cloning
 ###############################################################################
-QORIQ_COMPONENTS="u-boot atf ddr-phy-binary rcw restool mc-utils linux dpdk cst mdio-proxy-module"
+QORIQ_COMPONENTS="u-boot atf ddr-phy-binary rcw restool mc-utils linux dpdk cst mdio-proxy-module optee_os qoriq-mc-binary"
 for i in $QORIQ_COMPONENTS; do
 	if [[ ! -d $ROOTDIR/build/$i ]]; then
 		echo "Cloning https://github.com/nxp-qoriq/$i release $RELEASE"
 		cd $ROOTDIR/build
 		CHECKOUT=$RELEASE
-		# Release LSDK-20.12
-		if [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-20.12" ]; then
-			CHECKOUT=LSDK-20.12-V5.4
+		COMMIT=
+
+		# Release ls-5.15.71-2.2.0
+		if [ "x$RELEASE" == "xls-5.15.71-2.2.0" ]; then
+			case "$i" in
+			u-boot|atf|linux|dpdk|optee_os)
+				CHECKOUT=lf-5.15.71-2.2.0
+			;;
+			ddr-phy-binary)
+				CHECKOUT=lf-5.15.5-1.0.0
+			;;
+			rcw|restool)
+				CHECKOUT=lf-5.15.52-2.1.0
+			;;
+			mc-utils|cst|mdio-proxy-module)
+				CHECKOUT=lf-5.15.32-2.0.0
+			;;
+			mc-utils)
+				CHECKOUT=mc_release_10.35.0
+			;;
+			qoriq-mc-binary)
+				COMMIT=73d323d2538d7fe7ae93d88c2c5c4489f5891fcb
+			;;
+			esac
 		fi
-		# Release LSDK-20.4
-		if [ "x$i" == "xu-boot" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
-			CHECKOUT=LSDK-20.04-update-290520
+
+		if [ -z "${COMMIT}" ]; then
+			git clone $SHALLOW_FLAG https://github.com/nxp-qoriq/$i -b $CHECKOUT
+			cd $i
+		else
+			git clone https://github.com/nxp-qoriq/$i
+			cd $i
+			git reset --hard $COMMIT
 		fi
-		if [ "x$i" == "xlinux" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
-			CHECKOUT=LSDK-20.04-V5.4-update-290520
-		fi
-		if [ "x$i" == "xatf" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
-			CHECKOUT=LSDK-20.04-update-290520
-		fi
-		if [ "x$i" == "xrcw" ] && [ "x$RELEASE" == "xLSDK-20.04" ]; then
-			CHECKOUT=LSDK-20.04-update-290520
-		fi
-		git clone $SHALLOW_FLAG https://github.com/nxp-qoriq/$i -b $CHECKOUT
-		cd $i
-		if [[ -d $ROOTDIR/patches/$i-$RELEASE/ ]]; then
-			git am $ROOTDIR/patches/$i-$RELEASE/*.patch
-		elif [[ -d $ROOTDIR/patches/$i/ ]]; then
+
+		if [[ -d $ROOTDIR/patches/$i/ ]]; then
 			git am $ROOTDIR/patches/$i/*.patch
-		fi
-		if [[ $RELEASE == *"-update"* ]]; then
-			# Check extract the LSDK name up to the '-update-...'
-			SUB_RELEASE=`echo $RELEASE | cut -f-2 -d'-'`
-			if [[ -d $ROOTDIR/patches/$i-$RELEASE/ ]]; then
-				git am $ROOTDIR/patches/$i-$RELEASE/*.patch
-			fi
 		fi
 	fi
 done
-
-
-if [[ ! -d $ROOTDIR/build/qoriq-mc-binary ]]; then
-	cd $ROOTDIR/build
-	git clone $SHALLOW_FLAG https://github.com/NXP/qoriq-mc-binary.git -b $MC_RELEASE
-fi
 
 ###############################################################################
 # building sources
@@ -280,103 +184,105 @@ echo "Building restool"
 cd $ROOTDIR/build/restool
 CC=${CROSS_COMPILE}gcc DESTDIR=./install prefix=/usr make install
 
+do_build_rcw() {
+	local BOARD_TARGETS="lx2160acex7 lx2160acex7_rev2"
+
+	cd $ROOTDIR/build/rcw
+	make BOARDS="${BOARD_TARGETS}"
+	make BOARDS="${BOARD_TARGETS}" DESTDIR=${ROOTDIR}/images/tmp install
+}
 echo "Building RCW"
-cd $ROOTDIR/build/rcw/lx2160acex7
-mkdir -p RCW
-OLDIFS=$IFS
-IFS="_" arr=($SERDES)
-if [ ${#arr[@]} -eq 3 ]; then
-	echo "#include <configs/lx2160a_defaults.rcwi>" > RCW/template.rcw
-	echo "#include <configs/lx2160a_${SPEED}.rcwi>" >> RCW/template.rcw
-	echo "#include <configs/lx2160a_SD1_${arr[0]}.rcwi>" >> RCW/template.rcw
-	echo "#include <configs/lx2160a_SD2_${arr[1]}.rcwi>" >> RCW/template.rcw
-	echo "#include <configs/lx2160a_SD3_${arr[2]}.rcwi>" >> RCW/template.rcw
-fi
-if [ ${#arr[@]} -eq 5 ]; then
-	# extended serdes variable with soc and carrier
-	echo "#include <configs/lx2160a_defaults.rcwi>" > RCW/template.rcw
-	echo "#include <configs/lx2160a_${SPEED}.rcwi>" >> RCW/template.rcw
-	echo "#include <configs/${arr[0],,}_${arr[1],,}.rcwi>" >> RCW/template.rcw
-	echo "#include <configs/${arr[0],,}_${arr[1],,}_SD1_${arr[2]}.rcwi>" >> RCW/template.rcw
-	echo "#include <configs/${arr[0],,}_${arr[1],,}_SD2_${arr[3]}.rcwi>" >> RCW/template.rcw
-	echo "#include <configs/${arr[0],,}_${arr[1],,}_SD3_${arr[4]}.rcwi>" >> RCW/template.rcw
-fi
-if [ "x$SECURE" == "xtrue" ]; then
-	echo "SB_EN=1" #>> RCW/template.rcw
-fi
-IFS=$OLDIFS
-make clean
-make -j${PARALLEL}
+do_build_rcw
 
-if [ "x$SECURE" == "xtrue" ]; then
-	echo "Building CST"
-	cd $ROOTDIR/build/cst
+do_build_uboot() {
+	cd $ROOTDIR/build/u-boot
+	./scripts/kconfig/merge_config.sh configs/lx2160acex7_tfa_defconfig $ROOTDIR/configs/u-boot/lx2k_additions.config
+	make olddefconfig
+	make -j${PARALLEL}
+	make savedefconfig
+}
+echo "Build u-boot"
+do_build_uboot
 
-	fusefilechanged=`git diff --numstat input_files/gen_fusescr/ls2088_1088/input_fuse_file`
-	if [[ -z  $fusefilechanged ]]; then
-	    echo "For Secure-Boot please modify \"build/cst/input_files/gen_fusescr/ls2088_1088/input_fuse_file\"!"
-	    exit 1
+do_build_opteeos() {
+	local PLATFORM=ls-lx2160ardb
+
+	rm -rf $ROOTDIR/images/tmp/optee
+	mkdir -p $ROOTDIR/images/tmp/optee
+
+	# build optee devkit
+	cd $ROOTDIR/build/optee_os/
+	rm -rf out
+	make -j${JOBS} \
+		ARCH=arm \
+		PLATFORM=${PLATFORM} \
+		CROSS_COMPILE64=${CROSS_COMPILE} \
+		CROSS_COMPILE32=${CROSS_COMPILE} \
+		CFG_ARM64_core=y \
+		ta_dev_kit
+
+	# TODO: build external TAs
+
+	# build optee os
+	cd $ROOTDIR/build/optee_os/
+	make -j${JOBS} \
+		ARCH=arm \
+		PLATFORM=$PLATFORM \
+		CROSS_COMPILE64=aarch64-linux-gnu- \
+		CROSS_COMPILE32=arm-linux-gnueabihf- \
+		CFG_ARM64_core=y
+
+	cp out/arm-plat-ls/core/tee-pager_v2.bin $ROOTDIR/images/tmp/optee
+}
+
+echo "Building optee-os"
+do_build_opteeos
+
+do_build_atf() {
+	local PLATFORM=lx2160ardb
+	local rcwimg=$ROOTDIR/images/tmp/lx2160acex7_rev2/clearfog-cx/rcw_${CPU_SPEED}_700_${DDR_SPEED}_8_5_2.bin
+	local UBOOT_BINARY=$ROOTDIR/build/u-boot/u-boot.bin
+	local DDR_PHY_BIN_PATH=$ROOTDIR/build/ddr-phy-binary/lx2160a
+	local BUILD=release
+	local DEBUG_FLAGS=
+	if $ATF_DEBUG; then
+		BUILD=debug
+		DEBUG_FLAGS="DEBUG=1 LOG_LEVEL=40"
 	fi
 
-	make
-	./gen_fusescr input_files/gen_fusescr/ls2088_1088/input_fuse_file
-fi
+	rm -rf $ROOTDIR/images/tmp/atf
+	mkdir -p $ROOTDIR/images/tmp/atf
+	cd $ROOTDIR/build/atf/
 
-echo "Build u-boot"
-cd $ROOTDIR/build/u-boot
-#make distclean
-if [ "x$SECURE" == "xtrue" ]; then
-	make lx2160acex7_tfa_SECURE_BOOT_defconfig
-else
-	make lx2160acex7_tfa_defconfig
-fi
-if [ -n "${DEFAULT_FDT_FILE}" ]; then
-	printf "CONFIG_DEFAULT_FDT_FILE=\"%s\"\n" "${DEFAULT_FDT_FILE}" >> .config
-fi
-make -j${PARALLEL}
-make savedefconfig
-export BL33=$ROOTDIR/build/u-boot/u-boot.bin
+	if [ "x$SECURE" == "xtrue" ]; then
+		echo "Secure Boot is not supported!"
+		return 1
+	fi
+
+	make realclean
+	make \
+		-j${PARALLEL} V=1 \
+		PLAT=${PLATFORM} \
+		BOOT_MODE=${BOOTSOURCE} \
+		RCW=${rcwimg} \
+		BL32=$ROOTDIR/images/tmp/optee/tee-pager_v2.bin SPD=opteed \
+		BL33=${UBOOT_BINARY} \
+		DDR_PHY_BIN_PATH=$DDR_PHY_BIN_PATH \
+		${DEBUG_FLAGS} \
+		all fip pbl fip_ddr
+
+	cp -v $ROOTDIR/build/atf/build/lx2160ardb/${BUILD}/bl2_${BOOTSOURCE}.pbl $ROOTDIR/images/tmp/atf/bl2.pbl
+	cp -v $ROOTDIR/build/atf/build/lx2160ardb/${BUILD}/fip.bin $ROOTDIR/images/tmp/atf/
+	if $SECURE; then
+		cp -v $ROOTDIR/build/atf/build/lx2160ardb/${BUILD}/ddr_fip_sec.bin $ROOTDIR/images/tmp/atf/
+		cp -v $ROOTDIR/build/atf/build/lx2160ardb/${BUILD}/fuse_fip.bin $ROOTDIR/images/tmp/atf/
+	else
+		cp -v $ROOTDIR/build/atf/build/lx2160ardb/${BUILD}/ddr_fip.bin $ROOTDIR/images/tmp/atf/ddr_fip.bin
+	fi
+}
 
 echo "Building atf"
-cd $ROOTDIR/build/atf/
-make PLAT=lx2160acex7 distclean
-if [ "x$SECURE" == "xtrue" ]; then
-	if [ ! -f "srk.pub" ] || [ ! -f "srk.pri" ]; then
-		echo "Create srk.pub and srk.pri pair via ./gen_keys 4096 under $ROOTDIR/build/cst and place them under $ROOTDIR/build/atf"
-		exit -1
-	fi
-	# Following is without COT
-	# With secure boot auto mode is not supported... yet.. only flexspi_nor or sd
-	# that are needed to be stated explicitly
-	BL2=bl2_flexspi_nor_sec; BOOT_MODE_VAR=flexspi_nor
-	make \
-		-j${PARALLEL} \
-		PLAT=lx2160acex7 \
-		DDR_PHY_BIN_PATH=$ROOTDIR/build/ddr-phy-binary/lx2160a \
-		RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin \
-		TRUSTED_BOARD_BOOT=1 \
-		CST_DIR=$ROOTDIR/build/cst/ \
-		SECURE_BOOT=yes \
-		FUSE_PROG=1 \
-		FUSE_PROV_FILE=$ROOTDIR/build/cst/fuse_scr.bin \
-		GENERATE_COT=0 \
-		BOOT_MODE=${BOOT_MODE_VAR} \
-		$ATF_DEBUG \
-		all fip fip_ddr fip_fuse pbl
-else
-	make \
-		-j${PARALLEL} \
-		PLAT=lx2160acex7 \
-		DDR_PHY_BIN_PATH=$ROOTDIR/build/ddr-phy-binary/lx2160a \
-		RCW=$ROOTDIR/build/rcw/lx2160acex7/RCW/template.bin \
-		TRUSTED_BOARD_BOOT=0 \
-		SECURE_BOOT=false \
-		GENERATE_COT=0 \
-		BOOT_MODE=auto \
-		$ATF_DEBUG \
-		all fip fip_ddr pbl
-       #	DDR_PHY_DEBUG=yes DDR_DEBUG=yes # DEBUG_PHY_IO=yes
-fi
+do_build_atf
 
 echo "Building mc-utils"
 cd $ROOTDIR/build/mc-utils
@@ -385,6 +291,7 @@ make -C config/
 echo "Building the kernel"
 cd $ROOTDIR/build/linux
 ./scripts/kconfig/merge_config.sh arch/arm64/configs/defconfig arch/arm64/configs/lsdk.config $ROOTDIR/configs/linux/lx2k_additions.config
+make olddefconfig
 make -j${PARALLEL} all #Image dtbs
 KRELEASE=`make kernelrelease`
 
@@ -445,13 +352,13 @@ cat > kernel2160cex7.its << EOF
 EOF
 
 mkimage -f kernel2160cex7.its kernel-lx2160acex7.itb
-\rm -rf $ROOTDIR/images/tmp
-mkdir -p $ROOTDIR/images/tmp/
-mkdir -p $ROOTDIR/images/tmp/boot
-make INSTALL_MOD_PATH=$ROOTDIR/images/tmp/ INSTALL_MOD_STRIP=1 modules_install
-cp $ROOTDIR/build/linux/arch/arm64/boot/Image $ROOTDIR/images/tmp/boot
-cp $ROOTDIR/build/linux/arch/arm64/boot/Image.gz $ROOTDIR/images/tmp/boot
-cp $ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx216*.dtb $ROOTDIR/images/tmp/boot
+\rm -rf $ROOTDIR/images/tmp/linux
+mkdir -p $ROOTDIR/images/tmp/linux
+mkdir -p $ROOTDIR/images/tmp/linux/boot/freescale
+make INSTALL_MOD_PATH=$ROOTDIR/images/tmp/linux/ INSTALL_MOD_STRIP=1 modules_install
+cp $ROOTDIR/build/linux/arch/arm64/boot/Image $ROOTDIR/images/tmp/linux/boot
+cp $ROOTDIR/build/linux/arch/arm64/boot/Image.gz $ROOTDIR/images/tmp/linux/boot
+cp $ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx216*.dtb $ROOTDIR/images/tmp/linux/boot/freescale/
 
 
 # Build mdio-proxy kernel module
@@ -459,16 +366,16 @@ if [[ -d ${ROOTDIR}/build/mdio-proxy-module ]]; then
 	cd "${ROOTDIR}/build/mdio-proxy-module"
 
 	make -C "${ROOTDIR}/build/linux" CROSS_COMPILE="$CROSS_COMPILE" ARCH=arm64 M="$PWD" modules
-	install -v -m644 -D mdio-proxy.ko "${ROOTDIR}/images/tmp/lib/modules/${KRELEASE}/kernel/extra/mdio-proxy.ko"
+	install -v -m644 -D mdio-proxy.ko "${ROOTDIR}/images/tmp/linux/lib/modules/${KRELEASE}/kernel/extra/mdio-proxy.ko"
 fi
 
 # regenerate modules dependencies
-depmod -b "${ROOTDIR}/images/tmp" -F "${ROOTDIR}/build/linux/System.map" ${KRELEASE}
+depmod -b "${ROOTDIR}/images/tmp/linux" -F "${ROOTDIR}/build/linux/System.map" ${KRELEASE}
 
 function pkg_kernel() {
 # package kernel individually
 	rm -f "${ROOTDIR}/images/linux/linux.tar*"
-	cd "${ROOTDIR}/images/tmp"; tar -c --owner=root:0 -f "${ROOTDIR}/images/linux-${REPO_PREFIX}.tar" boot/* lib/modules/*; cd "${ROOTDIR}"
+	cd "${ROOTDIR}/images/tmp/linux"; tar -c --owner=root:0 -f "${ROOTDIR}/images/linux-${REPO_PREFIX}.tar" boot/* lib/modules/*; cd "${ROOTDIR}"
 }
 pkg_kernel
 
@@ -500,7 +407,10 @@ if [[ $DISTRO == ubuntu ]]; then
 			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.5-base-arm64.tar.gz
 		;;
 		jammy)
-			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/ubuntu-base-22.04.2-base-arm64.tar.gz
+			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/ubuntu-base-22.04.4-base-arm64.tar.gz
+		;;
+		noble)
+			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04-base-arm64.tar.gz
 		;;
 		*)
 			echo "Error: Unsupported Ubuntu Version \"\${UBUNTU_VERSION}\"! To proceed please add support to runme.sh."
@@ -508,7 +418,8 @@ if [[ $DISTRO == ubuntu ]]; then
 		;;
 	esac
 
-	if [ ! -f "$ROOTDIR/build/ubuntu/$UBUNTU_VERSION.ext4" ]; then
+	# (re-)generate only if rootfs doesn't exist or runme script has changed
+	if [ ! -f $UBUNTU_VERSION.ext4 ] || [[ ${ROOTDIR}/${BASH_SOURCE[0]} -nt $UBUNTU_VERSION.ext4 ]]; then
 		echo Building Ubuntu rootfs
 
 		rm -f ubuntu-base.dl
@@ -572,22 +483,24 @@ EOF
 
 		rm -f rootfs.ext4
 		truncate -s $UBUNTU_ROOTFS_SIZE rootfs.ext4
+
+		# create filesystem from first stage
 		fakeroot mkfs.ext4 -L rootfs -d rootfs rootfs.ext4
 
 		qemu-system-aarch64 \
 			-m 1G \
 			-M virt \
-			-cpu cortex-a53 \
-			-smp 1 \
+			-cpu max,pauth-impdef=on,sve=on \
+			-smp 4 \
+			-device virtio-rng-device \
 			-netdev user,id=eth0 \
 			-device virtio-net-device,netdev=eth0 \
-			-drive file=rootfs.ext4,if=none,format=raw,cache=unsafe,id=hd0 \
+			-drive file=rootfs.ext4,if=none,format=raw,id=hd0,discard=unmap \
 			-device virtio-blk-device,drive=hd0 \
-			-device virtio-rng-device \
 			-nographic \
 			-no-reboot \
-			-kernel "${ROOTDIR}/images/tmp/boot/Image" \
-			-append "console=ttyAMA0 root=/dev/vda rootfstype=ext4 ip=dhcp rw init=/stage2.sh"
+			-kernel "${ROOTDIR}/images/tmp/linux/boot/Image" \
+			-append "earlycon console=ttyAMA0 root=/dev/vda rootfstype=ext4 ip=dhcp rw init=/stage2.sh"
 		:
 
 		# fix errors
@@ -601,8 +514,9 @@ EOF
 		mv rootfs.ext4 $UBUNTU_VERSION.ext4
 	fi
 
+	# export final rootfs for next steps
 	ROOTFS=ubuntu-core
-	cp $ROOTDIR/build/ubuntu/$UBUNTU_VERSION.ext4 $ROOTDIR/images/tmp/$ROOTFS.ext4
+	cp --sparse=always $UBUNTU_VERSION.ext4 $ROOTDIR/images/tmp/$ROOTFS.ext4
 fi
 
 if [[ $DISTRO == debian ]]; then
@@ -622,7 +536,8 @@ if [[ $DISTRO == debian ]]; then
 		;;
 	esac
 
-	if [ ! -f "$ROOTDIR/build/debian/$DEBIAN_VERSION.ext4" ]; then
+	# (re-)generate only if rootfs doesn't exist or runme script has changed
+	if [ ! -f $DEBIAN_VERSION.ext4 ] || [[ ${ROOTDIR}/${BASH_SOURCE[0]} -nt $DEBIAN_VERSION.ext4 ]]; then
 		echo Building Debian rootfs
 
 		# use apt mirror, if available
@@ -709,23 +624,26 @@ EOF
 		rm -f rootfs.ext4
 		truncate -s $DEBIAN_ROOTFS_SIZE rootfs.ext4
 		truncate -s +${stagesize}M rootfs.ext4
+
+		# create filesystem from first stage
 		fakeroot mkfs.ext4 -L rootfs -d stage1 rootfs.ext4
 
 		qemu-system-aarch64 \
 			-m 1G \
 			-M virt \
-			-cpu cortex-a53 \
-			-smp 2 \
+			-cpu max,pauth-impdef=on,sve=on \
+			-smp 4 \
+			-device virtio-rng-device \
 			-netdev user,id=eth0 \
 			-device virtio-net-device,netdev=eth0 \
-			-drive file=rootfs.ext4,if=none,format=raw,cache=unsafe,id=hd0 \
+			-drive file=rootfs.ext4,if=none,format=raw,id=hd0,discard=unmap \
 			-device virtio-blk-device,drive=hd0 \
-			-device virtio-rng-device \
 			-nographic \
 			-no-reboot \
-			-kernel "${ROOTDIR}/images/tmp/boot/Image" \
-			-append "console=ttyAMA0 root=/dev/vda rootfstype=ext4 ip=dhcp rw init=/stage2.sh"
+			-kernel "${ROOTDIR}/images/tmp/linux/boot/Image" \
+			-append "earlycon console=ttyAMA0 root=/dev/vda rootfstype=ext4 ip=dhcp rw init=/stage2.sh"
 		:
+
 
 		# fix errors
 		s=0
@@ -742,8 +660,9 @@ EOF
 		mv rootfs.ext4 $DEBIAN_VERSION.ext4
 	fi
 
+	# export final rootfs for next steps
 	ROOTFS=debian
-	cp $ROOTDIR/build/debian/$DEBIAN_VERSION.ext4 $ROOTDIR/images/tmp/$ROOTFS.ext4
+	cp --sparse=always $DEBIAN_VERSION.ext4 $ROOTDIR/images/tmp/$ROOTFS.ext4
 fi
 
 if [ -z "$ROOTFS" ] || [ ! -f "$ROOTDIR/images/tmp/$ROOTFS.ext4" ]; then
@@ -783,19 +702,20 @@ EOF
 e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:extlinux
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/extlinux/extlinux.conf $ROOTDIR/images/tmp/$ROOTFS.ext4:extlinux/
 e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:boot
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/Image.gz $ROOTDIR/images/tmp/$ROOTFS.ext4:boot/
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/boot/fsl-lx216*.dtb $ROOTDIR/images/tmp/$ROOTFS.ext4:boot/
+e2cp -G 0 -O 0 $ROOTDIR/images/tmp/linux/boot/Image.gz $ROOTDIR/images/tmp/$ROOTFS.ext4:boot/
+e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:boot/freescale
+e2cp -G 0 -O 0 $ROOTDIR/images/tmp/linux/boot/freescale/fsl-lx216*.dtb $ROOTDIR/images/tmp/$ROOTFS.ext4:boot/freescale/
 
 # Copy over kernel image
 echo "Copying kernel modules"
-cd $ROOTDIR/images/tmp/
+cd $ROOTDIR/images/tmp/linux/
 for i in `find lib`; do
 	if [ -d $i ]; then
 		e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:usr/$i
 	fi
 	if [ -f $i ]; then
 		DIR=`dirname $i`
-		e2cp -G 0 -O 0 -p $ROOTDIR/images/tmp/$i $ROOTDIR/images/tmp/$ROOTFS.ext4:usr/$DIR
+		e2cp -G 0 -O 0 -p $ROOTDIR/images/tmp/linux/$i $ROOTDIR/images/tmp/$ROOTFS.ext4:usr/$DIR
 	fi
 done
 cd -
@@ -836,20 +756,16 @@ parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB $((64*
 
 \rm -rf $ROOTDIR/images/tmp/xspi_header.img
 truncate -s 128K $ROOTDIR/images/tmp/xspi_header.img
-dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/${BL2}.pbl of=$ROOTDIR/images/tmp/xspi_header.img bs=512 conv=notrunc
+dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=$ROOTDIR/images/tmp/xspi_header.img bs=512 conv=notrunc
 e2cp -G 0 -O 0 $ROOTDIR/images/tmp/xspi_header.img $ROOTDIR/images/tmp/boot.part:/
 
 # PFE firmware at 0x100
 
 # FIP (BL31+BL32+BL33) at 0x800
-dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/fip.bin of=images/${IMG} bs=512 seek=2048 conv=notrunc
+dd if=$ROOTDIR/images/tmp/atf/fip.bin of=images/${IMG} bs=512 seek=2048 conv=notrunc
 
 # DDR PHY FIP at 0x4000
-if [ "x$SECURE" == "xtrue" ]; then
-	dd if=$ROOTDIR/build/atf/build/lx2160acex7/$ATF_BUILD/ddr_fip_sec.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
-else
-	dd if=$ROOTDIR/build/atf/build/lx2160acex7/$ATF_BUILD/ddr_fip.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
-fi
+dd if=$ROOTDIR/images/tmp/atf/ddr_fip.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
 
 # Env variables at 0x2800
 
@@ -857,26 +773,15 @@ fi
 
 # Fuse header FIP at 0x4400
 if [ "x$SECURE" == "xtrue" ]; then
-	dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/fuse_fip.bin of=images/${IMG} bs=512 seek=17408 conv=notrunc
+	dd if=$ROOTDIR/images/tmp/atf/fuse_fip.bin of=images/${IMG} bs=512 seek=17408 conv=notrunc
 fi
 
 # DPAA1 FMAN ucode at 0x4800
 
 # DPAA2-MC at 0x5000
-if [ "x$RELEASE" == "xLSDK-20.04" ]; then
-	MC=mc_10.24.0_lx2160a.itb
-	dd if=$ROOTDIR/build/qoriq-mc-binary/lx2160a/${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
-else
-	if [ "x$MC_FORCE" == "x" ]; then
-		MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/ | grep -v sha256sum | cut -f1`
-		MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/${MC}`
-		dd if=${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
-	else
-		echo "Forcing MC firmware selection"
-		MC=$MC_FORCE
-		dd if=$ROOTDIR/$MC_FORCE of=images/${IMG} bs=512 seek=20480 conv=notrunc
-	fi
-fi
+MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/ | grep -v sha256sum | cut -f1`
+MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/${MC}`
+dd if=${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
 
 # DPAA2 DPL at 0x6800
 if [[ ! $DPL =~ / ]]; then
@@ -896,8 +801,8 @@ dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=3
 # Ramdisk at 0x10000
 # RCW+PBI+BL2 at block 8
 dd if=$ROOTDIR/images/${IMG} of=$ROOTDIR/images/lx2160acex7_xspi_${SPEED}_${SERDES}-${REPO_PREFIX}.img bs=1M count=64
-dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/${BL2}.pbl of=images/lx2160acex7_xspi_${SPEED}_${SERDES}-${REPO_PREFIX}.img bs=512 conv=notrunc
-dd if=$ROOTDIR/build/atf/build/lx2160acex7/${ATF_BUILD}/${BL2}.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
+dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=images/lx2160acex7_xspi_${SPEED}_${SERDES}-${REPO_PREFIX}.img bs=512 conv=notrunc
+dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
 
 # Copy first 64MByte from image excluding MBR to ubuntu-core.img for eMMC boot
 dd if=images/${IMG} of=$ROOTDIR/images/tmp/$ROOTFS.img bs=512 seek=1 skip=1 count=131071 conv=notrunc

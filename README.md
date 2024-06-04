@@ -113,17 +113,16 @@ generates *images/lx2160acex7_2000_700_3200_8_5_2.img* which is an image ready t
 #### Available Options:
 
 - `RELEASE`: select nxp bsp version
-  - `LSDK-21.08` (default)
-  - `LSDK-20.12`
-  - `LSDK-20.04`
-- `MC_RELEASE`: force specific version of Network Coprocessor Firmware
-  - `mc_release_10.37.0`: full release supporting serdes protocol change USXGMII/CAUI (default)
-  - `mc_lx2160a_10.36.100.itb`: prerelease supporting serdes protocol change USXGMII/CAUI
-  - `mc_lx2160a_10.36.0.itb`
-  - `mc_lx2160a_10.32.0.itb`: full release supporting serdes protocol change SGMII/USXGMII
-  - `mc_10.28.100_lx2160a.itb`: prerelease supporting serdes protocol change SGMII/USXGMII
+  - `ls-5.15.71-2.2.0` (default)
+- `BOOTSOURCE`: select soc boot source
+  - `sd`: eMMC / SD-Card (default)
+  - `nor`: SPI Flash
+  - `auto`
+- `CPU_SPEED`: DDR speed in MHz increments
+  - `2000` (default)
+  - `2200`
 - `DDR_SPEED`: DDR speed in MHz increments
-  - `3200`
+  - `3200` (default)
   - `2900`
   - `2600`
   - `2400`
@@ -169,13 +168,13 @@ The intended method is as follows:
 
 2. Create configuration files DPL & DPC for the network coprocessor:
 
-   - `build/mc-utils/config/lx2160a/CEX7/waffle-s1_1-s2_13-dpc.dts`
-   - `build/mc-utils/config/lx2160a/CEX7/waffle-s1_1-s2_13-dpl.dts`
+   - `build/mc-utils/config/lx2160a/LX2160A-CEX7/waffle-s1_1-s2_13-dpc.dts`
+   - `build/mc-utils/config/lx2160a/LX2160A-CEX7/waffle-s1_1-s2_13-dpl.dts`
 
    Safe starting points are configurations that disable all network interfaces:
 
-   - `build/mc-utils/config/lx2160a/LX2162-USOM/clearfog-s1_0-s2_0-dpc.dts`
-   - `build/mc-utils/config/lx2160a/LX2162-USOM/clearfog-s1_0-s2_0-dpl.dts`
+   - `build/mc-utils/config/lx2160a/LX2160A-CEX7/null-s1_0-s2_0-dpc.dts`
+   - `build/mc-utils/config/lx2160a/LX2160A-CEX7/null-s1_0-s2_0-dpl.dts`
 
    DPC must be edited by hand. DPL can be auto-generated with `restool` command after booting linux and manually instantiating dpmac and optionally dpni objects.
 
@@ -189,9 +188,9 @@ The intended method is as follows:
 
    ```
    	LX2160A_WAFFLE_1_13_3)
-   		DPC=CEX7/waffle-s1_1-s2_13-dpc.dtb
-   		DPL=CEX7/waffle-s1_1-s2_13-dpl.dtb
-   		DEFAULT_FDT_FILE="fsl-lx2160a-waffle.dtb"
+   		DPC=LX2160A-CEX7/waffle-s1_1-s2_13-dpc.dtb
+   		DPL=LX2160A-CEX7/waffle-s1_1-s2_13-dpl.dtb
+   		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-waffle.dtb"
    	;;
    ```
 
@@ -203,28 +202,19 @@ The intended method is as follows:
 
 6. Create RCW Configuration Files:
 
-   Based on the configuration name the build system generates reset configuration for the SoC from the following files (lower-case names):
+   Based on the configuration name the build system expects reset configuration file at `build/rcw/lx2160acex7_rev2/clearfog-cx/rcw_<CPU_SPEED>_700_<DDR_SPEED>_<SERDES>.rcw`.
+   For the Waffle example: `build/rcw/lx2160acex7_rev2/clearfog-cx/rcw_<CPU_SPEED>_700_<DDR_SPEED>_1_13_3.rcw`.
 
-   - `build/rcw/lx2160acex7/configs/lx2160a_defaults.rcwi`: SolidRun defaults for LX2160A CEX-7 / LX2162A SoM
-   - `build/rcw/lx2160acex7/configs/lx2160a_<SPEED>.rcwi`: DDR Frequency Selection
-   - `build/rcw/lx2160acex7/configs/<SOC>_<BOARD>.rcwi`: Board-specific configuration, e.g. pinmux
-   - `build/rcw/lx2160acex7/configs/<SOC>_<BOARD>_SD1_<Serdes-1 Protocol>.rcwi`: Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
-   - `build/rcw/lx2160acex7/configs/<SOC>_<BOARD>_SD2_<Serdes-2 Protocol>.rcwi`: Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
-   - `build/rcw/lx2160acex7/configs/<SOC>_<BOARD>_SD3_<Serdes-3 Protocol>.rcwi`: Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
+   It may reference using shared include files, e.g.:
 
-   For the Waffle example:
-
-   - `build/rcw/lx2160acex7/configs/lx2160a_defaults.rcwi`
-   - `build/rcw/lx2160acex7/configs/lx2160a_<SPEED>.rcwi`
-   - `build/rcw/lx2160acex7/configs/lx2160a_waffle.rcwi`
-   - `build/rcw/lx2160acex7/configs/lx2160a_waffle_SD1_1.rcwi`
-   - `build/rcw/lx2160acex7/configs/lx2160a_waffle_SD2_13.rcwi`
-   - `build/rcw/lx2160acex7/configs/lx2160a_waffle_SD3_3.rcwi`
-
-   For examples see `build/rcw/lx2160acex7/configs/lx2162a_clearfog*.rcwi` as these include comments with explanations.
+   - `build/rcw/lx2160acex7_rev2/include/common.rcwi`: SolidRun defaults for LX2160A CEX-7 / LX2162A SoM
+   - `build/rcw/lx2160acex7_rev2/include/pll_<CPU_SPEED>_700_xxxx.rcwi`: CPU Frequency Selection
+   - `build/rcw/lx2160acex7_rev2/include/pll_xxxx_700_<DDR_SPEED>.rcwi`: DDR Frequency Selection
+   - `build/rcw/lx2160acex7_rev2/include/SD1_<PROTOCOL>.rcwi`:  Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
+   - `build/rcw/lx2160acex7_rev2/include/SD2_<PROTOCOL>.rcwi`:  Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
+   - `build/rcw/lx2160acex7_rev2/include/SD3_<PROTOCOL>.rcwi`:  Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
 
    Safe reference points in case uart stays silent are protocols `0` (`SRDS_PRTCL_S1=0`, `SRDS_PRTCL_S2=0`, `SRDS_PRTCL_S3=0`).
-
 
 ## Deploying
 For SD card bootable images, plug in a micro SD into your machine and run the following, where sdX is the location of the SD card got probed into your machine -
