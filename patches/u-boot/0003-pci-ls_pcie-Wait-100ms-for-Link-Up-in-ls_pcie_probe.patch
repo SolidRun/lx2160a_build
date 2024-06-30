@@ -1,0 +1,64 @@
+From 1abb4b0ba3dd29f3b52c839cc3d2844e8bf78790 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 14 Apr 2024 16:45:42 +0200
+Subject: [PATCH 3/3] pci: ls_pcie: Wait 100ms for Link Up in ls_pcie_probe
+
+PCI Link-up can be delayed especially with pci bridges or fpga starting
+up slowly.
+
+Add a 100ms delay during probe polling for link-up.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/pci/pcie_layerscape_rc.c | 21 ++++++++++++++++++++-
+ 1 file changed, 20 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/pci/pcie_layerscape_rc.c b/drivers/pci/pcie_layerscape_rc.c
+index 17969e2f236..c78b8efd521 100644
+--- a/drivers/pci/pcie_layerscape_rc.c
++++ b/drivers/pci/pcie_layerscape_rc.c
+@@ -19,6 +19,9 @@
+ #endif
+ #include "pcie_layerscape.h"
+ 
++#define LINK_WAIT_RETRIES	100
++#define LINK_WAIT_TIMEOUT	1000
++
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+ struct ls_pcie_drvdata {
+@@ -27,6 +30,22 @@ struct ls_pcie_drvdata {
+ 	bool big_endian;
+ };
+ 
++static int ls_pcie_wait_for_link(struct ls_pcie *pcie)
++{
++	int retries;
++
++	/* check if the link is up or not */
++	for (retries = 0; retries < LINK_WAIT_RETRIES; retries++) {
++		if (ls_pcie_link_up(pcie)) {
++			return 1;
++		}
++
++		udelay(LINK_WAIT_TIMEOUT);
++	}
++
++	return 0;
++}
++
+ static void ls_pcie_cfg0_set_busdev(struct ls_pcie_rc *pcie_rc, u32 busdev)
+ {
+ 	struct ls_pcie *pcie = pcie_rc->pcie;
+@@ -375,7 +394,7 @@ static int ls_pcie_probe(struct udevice *dev)
+ 	       "Root Complex");
+ 	ls_pcie_setup_ctrl(pcie_rc);
+ 
+-	if (!ls_pcie_link_up(pcie)) {
++	if (!ls_pcie_wait_for_link(pcie)) {
+ 		/* Let the user know there's no PCIe link */
+ 		printf(": no link\n");
+ 		return 0;
+-- 
+2.35.3
+

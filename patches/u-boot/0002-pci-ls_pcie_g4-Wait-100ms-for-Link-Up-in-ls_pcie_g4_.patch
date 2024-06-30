@@ -1,0 +1,65 @@
+From 4c869a8ebbd4eff85f7fbd7d7102777dadcc0dd9 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 3 Apr 2024 17:58:37 +0200
+Subject: [PATCH 2/3] pci: ls_pcie_g4: Wait 100ms for Link Up in
+ ls_pcie_g4_probe
+
+PCI Link-up can be delayed especially with pci bridges or fpga starting
+up slowly.
+
+Add a 100ms delay during probe polling for link-up.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/pci/pcie_layerscape_gen4.c | 21 ++++++++++++++++++++-
+ 1 file changed, 20 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/pci/pcie_layerscape_gen4.c b/drivers/pci/pcie_layerscape_gen4.c
+index 6ecdd6af408..eeda47470c1 100644
+--- a/drivers/pci/pcie_layerscape_gen4.c
++++ b/drivers/pci/pcie_layerscape_gen4.c
+@@ -19,6 +19,9 @@
+ 
+ #include "pcie_layerscape_gen4.h"
+ 
++#define LINK_WAIT_RETRIES	100
++#define LINK_WAIT_TIMEOUT	1000
++
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+ LIST_HEAD(ls_pcie_g4_list);
+@@ -50,6 +53,22 @@ static int ls_pcie_g4_link_up(struct ls_pcie_g4 *pcie)
+ 	return 1;
+ }
+ 
++static int ls_pcie_g4_wait_for_link(struct ls_pcie_g4 *pcie)
++{
++	int retries;
++
++	/* check if the link is up or not */
++	for (retries = 0; retries < LINK_WAIT_RETRIES; retries++) {
++		if (ls_pcie_g4_link_up(pcie)) {
++			return 1;
++		}
++
++		udelay(LINK_WAIT_TIMEOUT);
++	}
++
++	return 0;
++}
++
+ static void ls_pcie_g4_ep_enable_cfg(struct ls_pcie_g4 *pcie)
+ {
+ 	ccsr_writel(pcie, GPEX_CFG_READY, PCIE_CONFIG_READY);
+@@ -548,7 +567,7 @@ static int ls_pcie_g4_probe(struct udevice *dev)
+ 	val |= PPIO_EN;
+ 	ccsr_writel(pcie, PAB_PEX_PIO_CTRL(0), val);
+ 
+-	if (!ls_pcie_g4_link_up(pcie)) {
++	if (!ls_pcie_g4_wait_for_link(pcie)) {
+ 		/* Let the user know there's no PCIe link */
+ 		printf(": no link\n");
+ 		return 0;
+-- 
+2.35.3
+
