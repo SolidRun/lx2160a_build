@@ -795,7 +795,8 @@ for i in `find lib`; do
 	fi
 	if [ -f $i ]; then
 		DIR=`dirname $i`
-		e2cp -G 0 -O 0 -p $ROOTDIR/images/tmp/$i $ROOTDIR/images/tmp/$ROOTFS.ext4:usr/$DIR
+  		e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:usr/$DIR || true
+		e2cp -G 0 -O 0 -p "$ROOTDIR/images/tmp/$i" "$ROOTDIR/images/tmp/$ROOTFS.ext4:usr/$DIR"
 	fi
 done
 cd -
