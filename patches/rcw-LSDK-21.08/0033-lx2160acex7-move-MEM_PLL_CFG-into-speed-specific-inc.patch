@@ -1,0 +1,158 @@
+From ddc5dc1add54db03f57f611af3e5f37cd4470adb Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 27 Sep 2024 16:20:00 +0200
+Subject: [PATCH] lx2160acex7: move MEM_PLL_CFG into speed-specific includes
+
+Both MEM_PLL_RAT and MEM_PLL_CFG together create the final ddr clock
+speed, move the latter from lx2160a_defaults.rcwi into each
+speed-specific include file.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2160acex7/configs/lx2160a_1900_600_2600.rcwi | 2 ++
+ lx2160acex7/configs/lx2160a_2000_700_2400.rcwi | 2 ++
+ lx2160acex7/configs/lx2160a_2000_700_2600.rcwi | 2 ++
+ lx2160acex7/configs/lx2160a_2000_700_2900.rcwi | 2 ++
+ lx2160acex7/configs/lx2160a_2000_700_3200.rcwi | 2 ++
+ lx2160acex7/configs/lx2160a_2000_750_3200.rcwi | 2 ++
+ lx2160acex7/configs/lx2160a_2000_800_3200.rcwi | 2 ++
+ lx2160acex7/configs/lx2160a_2400_700_3200.rcwi | 2 ++
+ lx2160acex7/configs/lx2160a_2500_700_3200.rcwi | 2 ++
+ lx2160acex7/configs/lx2160a_2600_700_3200.rcwi | 2 ++
+ lx2160acex7/configs/lx2160a_defaults.rcwi      | 2 --
+ lx2160acex7/configs/lx2162a_2000_650_2900.rcwi | 9 ++++++++-
+ 12 files changed, 28 insertions(+), 3 deletions(-)
+
+diff --git a/lx2160acex7/configs/lx2160a_1900_600_2600.rcwi b/lx2160acex7/configs/lx2160a_1900_600_2600.rcwi
+index a3b7b29..d001e9a 100644
+--- a/lx2160acex7/configs/lx2160a_1900_600_2600.rcwi
++++ b/lx2160acex7/configs/lx2160a_1900_600_2600.rcwi
+@@ -7,3 +7,5 @@ SYS_PLL_RAT=12
+ 
+ MEM_PLL_RAT=26
+ MEM2_PLL_RAT=26
++MEM_PLL_CFG=3
++MEM2_PLL_CFG=3
+diff --git a/lx2160acex7/configs/lx2160a_2000_700_2400.rcwi b/lx2160acex7/configs/lx2160a_2000_700_2400.rcwi
+index 4cb3abf..72c6bc1 100644
+--- a/lx2160acex7/configs/lx2160a_2000_700_2400.rcwi
++++ b/lx2160acex7/configs/lx2160a_2000_700_2400.rcwi
+@@ -7,3 +7,5 @@ SYS_PLL_RAT=14
+ 
+ MEM_PLL_RAT=24
+ MEM2_PLL_RAT=24
++MEM_PLL_CFG=3
++MEM2_PLL_CFG=3
+diff --git a/lx2160acex7/configs/lx2160a_2000_700_2600.rcwi b/lx2160acex7/configs/lx2160a_2000_700_2600.rcwi
+index a5c436c..9df0af7 100644
+--- a/lx2160acex7/configs/lx2160a_2000_700_2600.rcwi
++++ b/lx2160acex7/configs/lx2160a_2000_700_2600.rcwi
+@@ -7,3 +7,5 @@ SYS_PLL_RAT=14
+ 
+ MEM_PLL_RAT=26
+ MEM2_PLL_RAT=26
++MEM_PLL_CFG=3
++MEM2_PLL_CFG=3
+diff --git a/lx2160acex7/configs/lx2160a_2000_700_2900.rcwi b/lx2160acex7/configs/lx2160a_2000_700_2900.rcwi
+index d1db3fb..f75e462 100644
+--- a/lx2160acex7/configs/lx2160a_2000_700_2900.rcwi
++++ b/lx2160acex7/configs/lx2160a_2000_700_2900.rcwi
+@@ -7,3 +7,5 @@ SYS_PLL_RAT=14
+ 
+ MEM_PLL_RAT=29
+ MEM2_PLL_RAT=29
++MEM_PLL_CFG=3
++MEM2_PLL_CFG=3
+diff --git a/lx2160acex7/configs/lx2160a_2000_700_3200.rcwi b/lx2160acex7/configs/lx2160a_2000_700_3200.rcwi
+index 22fcadf..84bcecc 100644
+--- a/lx2160acex7/configs/lx2160a_2000_700_3200.rcwi
++++ b/lx2160acex7/configs/lx2160a_2000_700_3200.rcwi
+@@ -7,3 +7,5 @@ SYS_PLL_RAT=14
+ 
+ MEM_PLL_RAT=32
+ MEM2_PLL_RAT=32
++MEM_PLL_CFG=3
++MEM2_PLL_CFG=3
+diff --git a/lx2160acex7/configs/lx2160a_2000_750_3200.rcwi b/lx2160acex7/configs/lx2160a_2000_750_3200.rcwi
+index 84d544d..ccf9572 100644
+--- a/lx2160acex7/configs/lx2160a_2000_750_3200.rcwi
++++ b/lx2160acex7/configs/lx2160a_2000_750_3200.rcwi
+@@ -7,3 +7,5 @@ SYS_PLL_RAT=15
+ 
+ MEM_PLL_RAT=32
+ MEM2_PLL_RAT=32
++MEM_PLL_CFG=3
++MEM2_PLL_CFG=3
+diff --git a/lx2160acex7/configs/lx2160a_2000_800_3200.rcwi b/lx2160acex7/configs/lx2160a_2000_800_3200.rcwi
+index 31d7cfd..fa11a6a 100644
+--- a/lx2160acex7/configs/lx2160a_2000_800_3200.rcwi
++++ b/lx2160acex7/configs/lx2160a_2000_800_3200.rcwi
+@@ -7,3 +7,5 @@ SYS_PLL_RAT=16
+ 
+ MEM_PLL_RAT=32
+ MEM2_PLL_RAT=32
++MEM_PLL_CFG=3
++MEM2_PLL_CFG=3
+diff --git a/lx2160acex7/configs/lx2160a_2400_700_3200.rcwi b/lx2160acex7/configs/lx2160a_2400_700_3200.rcwi
+index 8f74ff0..3c4f1ee 100644
+--- a/lx2160acex7/configs/lx2160a_2400_700_3200.rcwi
++++ b/lx2160acex7/configs/lx2160a_2400_700_3200.rcwi
+@@ -7,3 +7,5 @@ SYS_PLL_RAT=14
+ 
+ MEM_PLL_RAT=32
+ MEM2_PLL_RAT=32
++MEM_PLL_CFG=3
++MEM2_PLL_CFG=3
+diff --git a/lx2160acex7/configs/lx2160a_2500_700_3200.rcwi b/lx2160acex7/configs/lx2160a_2500_700_3200.rcwi
+index 2dc1460..1253f39 100644
+--- a/lx2160acex7/configs/lx2160a_2500_700_3200.rcwi
++++ b/lx2160acex7/configs/lx2160a_2500_700_3200.rcwi
+@@ -7,3 +7,5 @@ SYS_PLL_RAT=14
+ 
+ MEM_PLL_RAT=32
+ MEM2_PLL_RAT=32
++MEM_PLL_CFG=3
++MEM2_PLL_CFG=3
+diff --git a/lx2160acex7/configs/lx2160a_2600_700_3200.rcwi b/lx2160acex7/configs/lx2160a_2600_700_3200.rcwi
+index d9fd795..c32f516 100644
+--- a/lx2160acex7/configs/lx2160a_2600_700_3200.rcwi
++++ b/lx2160acex7/configs/lx2160a_2600_700_3200.rcwi
+@@ -7,3 +7,5 @@ SYS_PLL_RAT=14
+ 
+ MEM_PLL_RAT=32
+ MEM2_PLL_RAT=32
++MEM_PLL_CFG=3
++MEM2_PLL_CFG=3
+diff --git a/lx2160acex7/configs/lx2160a_defaults.rcwi b/lx2160acex7/configs/lx2160a_defaults.rcwi
+index e048d8b..70e20e4 100644
+--- a/lx2160acex7/configs/lx2160a_defaults.rcwi
++++ b/lx2160acex7/configs/lx2160a_defaults.rcwi
+@@ -1,6 +1,4 @@
+ #include <../lx2160asi/lx2160a.rcwi>
+-MEM_PLL_CFG=3
+-MEM2_PLL_CFG=3
+ HWA_CGA_M1_CLK_SEL=1
+ HWA_CGB_M1_CLK_SEL=7
+ BOOT_LOC=26
+diff --git a/lx2160acex7/configs/lx2162a_2000_650_2900.rcwi b/lx2160acex7/configs/lx2162a_2000_650_2900.rcwi
+index 484b102..7f6086b 100644
+--- a/lx2160acex7/configs/lx2162a_2000_650_2900.rcwi
++++ b/lx2160acex7/configs/lx2162a_2000_650_2900.rcwi
+@@ -10,6 +10,13 @@ CGB_PLL2_RAT=8
+  */
+ SYS_PLL_RAT=13
+ 
+-// memory clock = 29 x 100MHz
++/*
++ * Memory Clock (half ddr clock, quarter mts rate)
++ * multiplier = 29 (29)
++ * divider = 4 (3)
++ * 100MHz x 29 / 4 = 725MHz (MTS = 4 x 725 = 2900MHz)
++ */
+ MEM_PLL_RAT=29
+ MEM2_PLL_RAT=29
++MEM_PLL_CFG=3
++MEM2_PLL_CFG=3
+-- 
+2.43.0
+
