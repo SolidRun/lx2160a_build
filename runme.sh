@@ -14,7 +14,8 @@ set -e
 ###############################################################################
 : ${RELEASE:=ls-5.15.71-2.2.0}
 : ${CPU_SPEED:=2000}
-: ${DDR_SPEED:=3200}
+: ${DDR_SPEED:=2900}
+: ${BUS_SPEED:=700}
 : ${SERDES:=8_5_2}
 # SoC Boot Source
 # - sd
@@ -55,7 +56,7 @@ set -e
 mkdir -p build images
 ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
-SPEED=${CPU_SPEED}_700_${DDR_SPEED}
+SPEED=${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}
 
 export CROSS_COMPILE=aarch64-linux-gnu-
 export ARCH=arm64
@@ -452,7 +453,7 @@ test -n "$APTPROXY" && printf 'Acquire::http { Proxy "%s"; }\n' $APTPROXY | tee 
 
 apt-get update
 env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C \
-	apt-get install --no-install-recommends -y apt apt-utils ethtool htop i2c-tools ifupdown iproute2 iptables iputils-ping isc-dhcp-client kmod less lm-sensors locales net-tools network-manager ntpdate openssh-server pciutils procps psmisc rng-tools sudo systemd-sysv wget
+	apt-get install --no-install-recommends -y apt apt-utils ethtool fdisk htop i2c-tools ifupdown iproute2 iptables iputils-ping isc-dhcp-client kmod less lm-sensors locales net-tools network-manager ntpdate openssh-server pciutils procps psmisc rng-tools sudo systemd-sysv wget
 apt-get clean
 
 # set root password

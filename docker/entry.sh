@@ -35,6 +35,6 @@ sudo -u $user git config --global user.email "support@solid-run.com"
 cd /work
 # now run the build script as the build user, preserving config variables
 sudo \
-	--preserve-env=APTPROXY,ATF_DEBUG,BOOTSOURCE,CPU_SPEED,DDR_SPEED,DEBIAN_ROOTFS_SIZE,DEBIAN_VERSION,DISTRO,RELEASE,SECURE,SERDES,SHALLOW,UBUNTU_ROOTFS_SIZE,UBUNTU_VERSION \
+	--preserve-env=APTPROXY,ATF_DEBUG,BUS_SPEED,BOOTSOURCE,CPU_SPEED,DDR_SPEED,DEBIAN_ROOTFS_SIZE,DEBIAN_VERSION,DISTRO,RELEASE,SECURE,SERDES,SHALLOW,UBUNTU_ROOTFS_SIZE,UBUNTU_VERSION \
 	-u $user \
 	./runme.sh
