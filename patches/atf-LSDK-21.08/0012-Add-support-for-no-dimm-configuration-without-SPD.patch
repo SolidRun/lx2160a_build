@@ -1,0 +1,306 @@
+From 682280348c1bb5c003df62ddc4cc5f2c253da36b Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 10 Sep 2024 14:17:31 +0200
+Subject: [PATCH 12/12] Add support for no-dimm configuration without SPD
+
+For units wiith empty SPD, and development a mock spd can be provided in
+source-code in place of actual spd eeprom data.
+
+Support all known sdram of LX2162 SoM:
+- 1 x 9 x K4A8G085WC-BCWE (single channel)
+- 2 x 9 x K4A8G085WC-BCWE (dual-channel)
+- 1 x 9 x K4AAG085WA-BCWE (single channel)
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/common/plat_common_def.mk           |   4 +-
+ plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c  | 213 +++++++++++++++++--
+ plat/nxp/soc-lx2160a/lx2160acex7/platform.mk |  12 ++
+ 3 files changed, 213 insertions(+), 16 deletions(-)
+
+diff --git a/plat/nxp/common/plat_common_def.mk b/plat/nxp/common/plat_common_def.mk
+index aa5851254..3b588f7f2 100644
+--- a/plat/nxp/common/plat_common_def.mk
++++ b/plat/nxp/common/plat_common_def.mk
+@@ -36,8 +36,8 @@ ifneq (${NUM_OF_DDRC},)
+ $(eval $(call add_define_val,NUM_OF_DDRC,${NUM_OF_DDRC}))
+ endif
+ 
+-ifeq (${CONFIG_DDR_NODIMM},1)
+-$(eval $(call add_define,CONFIG_DDR_NODIMM))
++ifneq (${CONFIG_DDR_NODIMM},0)
++$(eval $(call add_define,CONFIG_DDR_NODIMM,${CONFIG_DDR_NODIMM}))
+ DDRC_NUM_DIMM := 1
+ endif
+ 
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c b/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
+index eb28216e7..8dc5dbfba 100644
+--- a/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
++++ b/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
+@@ -25,9 +25,19 @@
+ int ddr_board_options(struct ddr_info *priv)
+ {
+ 	struct memctl_opt *popts = &priv->opt;
+-	uint32_t svr;
+ 
++	popts->caslat_override = 0;
++	popts->caslat_override_value = 0;
++	popts->auto_self_refresh_en = 1;
++	popts->output_driver_impedance = 0; // 34 Ohm
++	popts->twot_en = 0;
++	popts->threet_en = 0;
++	popts->addt_lat_override = 0;
++	popts->addt_lat_override_value = 0;
++	popts->phy_atx_impedance = 30;
++	popts->skip2d = 0;
+ 	popts->vref_dimm = 0x24;		/* range 1, 83.4% */
++
+ 	popts->rtt_override = 0;
+ 	popts->rtt_park = 240;
+ 	popts->otf_burst_chop_en = 0;
+@@ -43,20 +53,7 @@ int ddr_board_options(struct ddr_info *priv)
+ 	popts->odt = 48;
+ 	popts->phy_tx_impedance = 48;
+ 
+-	svr = mmio_read_32(NXP_DCFG_ADDR + DCFG_SVR_OFFSET);
+-	/* LX2162-SOM */
+-	if (svr & 0x800) {
+-		popts->vref_dimm = 0x19;
+-		popts->rtt_override = 1;
+-		popts->rtt_override_value = 0x5;
+-		popts->output_driver_impedance = 1;
+-		popts->rtt_park = 120;
+-		popts->phy_atx_impedance = 20;
+-		popts->vref_phy = 0x4D;
+-		popts->odt = 60;
+-	}
+ 	return 0;
+-
+ }
+ 
+ long long init_ddr(void)
+@@ -113,3 +110,191 @@ long long init_ddr(void)
+ 
+ 	return dram_size;
+ }
++
++#if defined(CONFIG_DDR_NODIMM)
++#if CONFIG_DDR_NODIMM == 1
++/*
++ * Mock DIMM (without SPD) - 9 x K4A8G085WC-BCWE
++ *
++ * Use in production for units with empty SPD,
++ * and development.
++ */
++static const struct dimm_params static_dimm = {
++	.mpart = "Fixed DDR Config 1",
++	.n_ranks = 1,
++	.die_density = 0x5, // encoded per spd byte 4, 0b101 = 8Gbit
++	.rank_density = 0x200000000, // 8GB
++	.capacity = 0x200000000, // 8GB
++	.primary_sdram_width = 64,
++	.ec_sdram_width = 8, // 8 bit ecc extension
++	.rdimm = 0,
++	.package_3ds = 0,
++	.device_width = 8, // 8 bit per sdram
++	.rc = 0,
++
++	.n_row_addr = 16,
++	.n_col_addr = 10,
++	.edc_config = 2, // enable ecc
++	.bank_addr_bits = 0, // 4 banks
++	.bank_group_bits = 2, // 4 bank groups
++	.burst_lengths_bitmask = 0xc, // enable 4 & 8-bit burst (DDR4 spec)
++
++	.mirrored_dimm = 0,
++
++	// timings based on K4A8G085WC-BCTD (DDR4-2666), missing values for 3200
++	.mtb_ps = 125, // MTB per SPD spec
++	.ftb_10th_ps = 10, // default value, unused by nxp ddr driver
++	.taa_ps = 13750, // min. 13.75ns
++	.tfaw_ps = 21000, // min: max(21ns or 20CK) (this 8Gbit sdram has 1KB pages)
++
++	.tckmin_x_ps = 625, // 3200 (CK=1600)
++	.tckmax_ps = 1250, // 1600 (CK=800)
++
++	.caslat_x = 0b00000001011111111111110000000000, // CL = [10-22,24] (1 << CL)
++
++	.trcd_ps = 13750, // 13.75ns - CL22-22-22
++	.trp_ps = 13750, // 13.75ns - CL22-22-22
++	.tras_ps = 32000, // 32ns
++
++	.trfc1_ps = 350000, // 350ns
++	.trfc2_ps = 260000, // 260ns
++	.trfc4_ps = 160000, // 160ns
++	.trrds_ps = 3300, // min: max(4CK or 3.3ns)
++	.trrdl_ps = 4900, // min: max(4CK or 6.4ns)
++	.tccdl_ps = 5000, // min: max(5CK or 5ns)
++	.trfc_slr_ps = 0,
++
++	.trc_ps = 45750, // tras + trp 45.75ns
++	.twr_ps = 15000, // 15ns
++
++	.refresh_rate_ps = 7800000, // 1x mode 7.8us for standard temperature range (TODO: pick correct range based on temperature?!)
++	// .extended_op_srt = 0,
++
++	// .rcw = {}, // only for registered dimm
++	.dq_mapping = {
++		0x16, // DQ[0:3]:   lower nibble, bit order 3120
++		0x22, // DQ[4:7]:   upper nibble, bit order 4576
++		0x0e, // DQ[8:11]:  lower nibble, bit order 2031
++		0x30, // DQ[12:15]: upper nibble, bit order 6574
++		0x14, // DQ[16:19]: lower nibble, bit order 3021
++		0x36, // DQ[20:23]: upper nibble, bit order 7564
++		0x11, // DQ[24:27]: lower nibble, bit order 2301
++		0x2f, // DQ[28:31]: upper nibble, bit order 6547
++		0x03, // ECC[0:3]:  lower nibble, bit order 0213
++		0x22, // ECC[4:7]:  upper nibble, bit order 4576
++		0x10, // DQ[32:35]: lower nibble, bit order 2130
++		0x30, // DQ[36:39]: upper nibble, bit order 6574
++		0x0e, // DQ[40:43]: lower nibble, bit order 2031
++		0x34, // DQ[44:47]: upper nibble, bit order 7465
++		0x14, // DQ[48:51]: lower nibble, bit order 3021
++		0x36, // DQ[52:55]: upper nibble, bit order 7564
++		0x10, // DQ[56:59]: lower nibble, bit order 2130
++		0x2b, // DQ[60:63]: upper nibble, bit order 5746
++	},
++	.dq_mapping_ors = 1,
++};
++#endif /* CONFIG_DDR_NODIMM == 1 */
++
++#if CONFIG_DDR_NODIMM == 2
++/*
++ * Mock DIMM (without SPD) - 9 x K4AAG085WA-BCWE (DDP)
++ *
++ * Use in production for units with empty SPD,
++ * and development.
++ */
++static const struct dimm_params static_dimm = {
++	.mpart = "Fixed DDR Config 2",
++	.n_ranks = 1,
++	.die_density = 0x6, // encoded per spd byte 4, 0b110 = 16Gbit
++	// TODO: for DDP memory should have 2 ranks per DIMM + correct density per die?
++	.rank_density = 0x400000000, // 16GB
++	.capacity = 0x400000000, // 16GB
++	.primary_sdram_width = 64,
++	.ec_sdram_width = 8, // 8 bit ecc extension
++	.rdimm = 0,
++	.package_3ds = 0,
++	.device_width = 8, // 8 bit per sdram
++	.rc = 0,
++
++	.n_row_addr = 17,
++	.n_col_addr = 10,
++	.edc_config = 2, // enable ecc
++	.bank_addr_bits = 0, // 4 banks
++	.bank_group_bits = 2, // 4 bank groups
++	.burst_lengths_bitmask = 0xc, // enable 4 & 8-bit burst (DDR4 spec)
++
++	.mirrored_dimm = 0,
++
++	.mtb_ps = 125, // MTB per SPD spec
++	.ftb_10th_ps = 10, // default value, unused by nxp ddr driver
++	.taa_ps = 13750, // min. 13.75ns
++	.tfaw_ps = 30000, // min: max(30ns or 28CK) (this 16Gbit sdram has 2KB pages)
++
++	.tckmin_x_ps = 625, // 3200 (CK=1600)
++	.tckmax_ps = 1250, // 1600 (CK=800)
++
++	.caslat_x = 0b00000001011111111111110000000000, // CL = [10-22,24] (1 << CL)
++
++	.trcd_ps = 13750, // 13.75ns
++	.trp_ps = 13750, // 13.75ns
++	.tras_ps = 32000, // 32ns
++
++	.trfc1_ps = 350000, // 350ns, assumed same as 8Gbit SDP module
++	.trfc2_ps = 260000, // 260ns, assumed same as 8Gbit SDP module
++	.trfc4_ps = 160000, // 160ns, assumed same as 8Gbit SDP module
++	.trrds_ps = 5300, // min: max(4CK or 5.3ns)
++	.trrdl_ps = 6400, // min: max(4CK or 6.4ns)
++	.tccdl_ps = 5000, // min: max(5CK or 5ns)
++	.trfc_slr_ps = 0,
++
++	.trc_ps = 45750, // tras + trp 45.75ns
++	.twr_ps = 15000, // 15ns
++
++	.refresh_rate_ps = 7800000, // 1x mode 7.8us for standard temperature range (TODO: pick correct range based on temperature?!)
++	// .extended_op_srt = 0,
++
++	// .rcw = {}, // only for registered dimm
++	.dq_mapping = {
++		0x16, // DQ[0:3]:   lower nibble, bit order 3120
++		0x22, // DQ[4:7]:   upper nibble, bit order 4576
++		0x0e, // DQ[8:11]:  lower nibble, bit order 2031
++		0x30, // DQ[12:15]: upper nibble, bit order 6574
++		0x14, // DQ[16:19]: lower nibble, bit order 3021
++		0x36, // DQ[20:23]: upper nibble, bit order 7564
++		0x11, // DQ[24:27]: lower nibble, bit order 2301
++		0x2f, // DQ[28:31]: upper nibble, bit order 6547
++		0x03, // ECC[0:3]:  lower nibble, bit order 0213
++		0x22, // ECC[4:7]:  upper nibble, bit order 4576
++		0x10, // DQ[32:35]: lower nibble, bit order 2130
++		0x30, // DQ[36:39]: upper nibble, bit order 6574
++		0x0e, // DQ[40:43]: lower nibble, bit order 2031
++		0x34, // DQ[44:47]: upper nibble, bit order 7465
++		0x14, // DQ[48:51]: lower nibble, bit order 3021
++		0x36, // DQ[52:55]: upper nibble, bit order 7564
++		0x10, // DQ[56:59]: lower nibble, bit order 2130
++		0x2b, // DQ[60:63]: upper nibble, bit order 5746
++	},
++	.dq_mapping_ors = 1,
++};
++#endif /* CONFIG_DDR_NODIMM == 2 */
++
++int ddr_get_ddr_params(struct dimm_params *pdimm,
++			    struct ddr_conf *conf)
++{
++	// channel 1
++	conf->dimm_in_use[0] = 1;
++	memcpy(&pdimm[0], &static_dimm, sizeof(struct dimm_params));
++
++#if defined(CONFIG_DDR_NODIMM_CH2)
++	// channel 2
++	conf->dimm_in_use[1] = 1; // enable (module on) channel 2
++	memcpy(&pdimm[1], &static_dimm, sizeof(struct dimm_params));
++
++	/* 2 modules */
++	return 0x3;
++#else
++	/* 1 module */
++	return 0x1;
++#endif /* defined(CONFIG_DDR_NODIMM_CH2) */
++}
++#endif /* defined(CONFIG_DDR_NODIMM) */
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk b/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
+index 98cbc22e7..f5a46ee2d 100644
+--- a/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
++++ b/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
+@@ -21,6 +21,14 @@ DDR_ECC_EN	:=	yes
+ DDR_ADDR_DEC	:=	yes
+ APPLY_MAX_CDD	:=	yes
+ 
++# Mock SPD:
++# - 0: disable mock spd
++# - 1: 9 x K4A8G085WC-BCWE
++# - 2: 9 x K4AAG085WA-BCWE
++CONFIG_DDR_NODIMM	:=	0
++# enable second channel for mock spd
++CONFIG_DDR_NODIMM_CH2	:=	0
++
+  # On-Board Flash Details
+ FLASH_TYPE	:=	MT35XU512A
+ XSPI_FLASH_SZ	:=	0x10000000
+@@ -42,6 +50,10 @@ SUPPORTED_BOOT_MODE	:=	flexspi_nor	\
+ 				emmc		\
+ 				auto
+ 
++ifeq (${CONFIG_DDR_NODIMM_CH2},1)
++$(eval $(call add_define,CONFIG_DDR_NODIMM_CH2))
++endif
++
+ # Adding platform board build info
+ include plat/nxp/common/plat_common_def.mk
+ 
+-- 
+2.43.0
+
