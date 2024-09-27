@@ -1,0 +1,112 @@
+From 9d49cf46a3fde08abd3ba48169c7688dfeed74bb Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 27 Sep 2024 17:58:11 +0200
+Subject: [PATCH] lx2160acex7: move MEM_PLL_CFG into ddr-speed-specific
+ includes
+
+Both MEM_PLL_RAT and MEM_PLL_CFG together create the final ddr clock
+speed, move the latter from common.rcwi into each speed-specific
+include.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2160acex7/include/common.rcwi            | 3 ---
+ lx2160acex7/include/pll_xxxx_xxx_2400.rcwi | 9 +++++++--
+ lx2160acex7/include/pll_xxxx_xxx_2600.rcwi | 9 +++++++--
+ lx2160acex7/include/pll_xxxx_xxx_2900.rcwi | 9 +++++++--
+ lx2160acex7/include/pll_xxxx_xxx_3200.rcwi | 9 +++++++--
+ 5 files changed, 28 insertions(+), 11 deletions(-)
+
+diff --git a/lx2160acex7/include/common.rcwi b/lx2160acex7/include/common.rcwi
+index e8a5660..5523318 100644
+--- a/lx2160acex7/include/common.rcwi
++++ b/lx2160acex7/include/common.rcwi
+@@ -2,9 +2,6 @@
+  * LX2160A COM-Express Type 7 Common Configuration
+  */
+ 
+-/* DDR CGU PLL clk out div 4 */
+-MEM_PLL_CFG=3
+-MEM2_PLL_CFG=3
+ /* C[5:8]_PLL are CG[5:8] div 1 */
+ C5_PLL_SEL=0
+ C6_PLL_SEL=0
+diff --git a/lx2160acex7/include/pll_xxxx_xxx_2400.rcwi b/lx2160acex7/include/pll_xxxx_xxx_2400.rcwi
+index 9c79664..6356b36 100644
+--- a/lx2160acex7/include/pll_xxxx_xxx_2400.rcwi
++++ b/lx2160acex7/include/pll_xxxx_xxx_2400.rcwi
+@@ -1,7 +1,12 @@
+ /*
+  * DDR Rate: 2400MHz
++ *
++ * DDR PHY Clock (half ddr clock, quarter mts rate)
++ * multiplier = 24 (24)
++ * divider = 4 (3)
++ * 100MHz x 24 / 4 = 600MHz (MTS = 4 x 600 = 2400MHz)
+  */
+-
+-/* data rate is reference clock mul 24 = 2400 */
+ MEM_PLL_RAT=24
++MEM_PLL_CFG=3
+ MEM2_PLL_RAT=24
++MEM2_PLL_CFG=3
+diff --git a/lx2160acex7/include/pll_xxxx_xxx_2600.rcwi b/lx2160acex7/include/pll_xxxx_xxx_2600.rcwi
+index 404d52a..d72047d 100644
+--- a/lx2160acex7/include/pll_xxxx_xxx_2600.rcwi
++++ b/lx2160acex7/include/pll_xxxx_xxx_2600.rcwi
+@@ -1,7 +1,12 @@
+ /*
+  * DDR Rate: 2600MHz
++ *
++ * DDR PHY Clock (half ddr clock, quarter mts rate)
++ * multiplier = 26 (26)
++ * divider = 4 (3)
++ * 100MHz x 26 / 4 = 650MHz (MTS = 4 x 650 = 2600MHz)
+  */
+-
+-/* data rate is reference clock mul 26 = 2600 */
+ MEM_PLL_RAT=26
++MEM_PLL_CFG=3
+ MEM2_PLL_RAT=26
++MEM2_PLL_CFG=3
+diff --git a/lx2160acex7/include/pll_xxxx_xxx_2900.rcwi b/lx2160acex7/include/pll_xxxx_xxx_2900.rcwi
+index 2ba2426..9ad274f 100644
+--- a/lx2160acex7/include/pll_xxxx_xxx_2900.rcwi
++++ b/lx2160acex7/include/pll_xxxx_xxx_2900.rcwi
+@@ -1,7 +1,12 @@
+ /*
+  * DDR Rate: 2900MHz
++ *
++ * DDR PHY Clock (half ddr clock, quarter mts rate)
++ * multiplier = 29 (29)
++ * divider = 4 (3)
++ * 100MHz x 29 / 4 = 725MHz (MTS = 4 x 725 = 2900MHz)
+  */
+-
+-/* data rate is reference clock mul 29 = 2900 */
+ MEM_PLL_RAT=29
++MEM_PLL_CFG=3
+ MEM2_PLL_RAT=29
++MEM2_PLL_CFG=3
+diff --git a/lx2160acex7/include/pll_xxxx_xxx_3200.rcwi b/lx2160acex7/include/pll_xxxx_xxx_3200.rcwi
+index cbc2cf4..abf7e9d 100644
+--- a/lx2160acex7/include/pll_xxxx_xxx_3200.rcwi
++++ b/lx2160acex7/include/pll_xxxx_xxx_3200.rcwi
+@@ -1,7 +1,12 @@
+ /*
+  * DDR Rate: 3200MHz
++ *
++ * DDR PHY Clock (half ddr clock, quarter mts rate)
++ * multiplier = 32 (32)
++ * divider = 4 (3)
++ * 100MHz x 32 / 4 = 800MHz (MTS = 4 x 800 = 3200MHz)
+  */
+-
+-/* data rate is reference clock mul 32 = 3200 */
+ MEM_PLL_RAT=32
++MEM_PLL_CFG=3
+ MEM2_PLL_RAT=32
++MEM2_PLL_CFG=3
+-- 
+2.43.0
+
