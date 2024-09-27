@@ -1,0 +1,58 @@
+From 6d5d7b5019c260ff4b8ed6b78f97dd25384ac01f Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 27 Sep 2024 15:01:52 +0200
+Subject: [PATCH] add lx2162 som default clocks 2000_650_2900
+
+LX2162 SoC has maximum clock rates different from LX2160:
+- core = 2GHz
+- platform = 650MHz
+- ddr = 2900MHz
+
+Add rcw include file for this particular configuration.
+
+Further all lx2162 exampels of NXP have lower data-compression-engine
+clock rate of 600MHz where lx2160_defaults.rcwi had 700MHz.
+Override this to 600MHz for lx2162 som.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2160acex7/configs/lx2162a_2000_650_2900.rcwi | 15 +++++++++++++++
+ lx2160acex7/configs/lx2162a_defaults.rcwi      |  4 ++++
+ 2 files changed, 19 insertions(+)
+ create mode 100644 lx2160acex7/configs/lx2162a_2000_650_2900.rcwi
+ create mode 100644 lx2160acex7/configs/lx2162a_defaults.rcwi
+
+diff --git a/lx2160acex7/configs/lx2162a_2000_650_2900.rcwi b/lx2160acex7/configs/lx2162a_2000_650_2900.rcwi
+new file mode 100644
+index 0000000..484b102
+--- /dev/null
++++ b/lx2160acex7/configs/lx2162a_2000_650_2900.rcwi
+@@ -0,0 +1,15 @@
++CGA_PLL1_RAT=20
++CGA_PLL2_RAT=20
++CGB_PLL1_RAT=20
++// same as all nxp 2000_650_*
++CGB_PLL2_RAT=8
++
++/*
++ * coherency domain clock = 13 x 100MHz
++ * platform clock is half coherency domain
++ */
++SYS_PLL_RAT=13
++
++// memory clock = 29 x 100MHz
++MEM_PLL_RAT=29
++MEM2_PLL_RAT=29
+diff --git a/lx2160acex7/configs/lx2162a_defaults.rcwi b/lx2160acex7/configs/lx2162a_defaults.rcwi
+new file mode 100644
+index 0000000..12c4e5f
+--- /dev/null
++++ b/lx2160acex7/configs/lx2162a_defaults.rcwi
+@@ -0,0 +1,4 @@
++#include <configs/lx2160a_defaults.rcwi>
++
++// same as all nxp lx2162*, override for lx2160a_defaults.rcwi
++HWA_CGB_M1_CLK_SEL=6
+-- 
+2.43.0
+

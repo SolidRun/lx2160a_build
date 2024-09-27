@@ -14,7 +14,8 @@ set -e
 ###############################################################################
 : ${RELEASE:=LSDK-21.08}
 : ${MC_RELEASE:=mc_release_10.37.0}
-: ${DDR_SPEED:=3200}
+: ${DDR_SPEED:=2900}
+: ${BUS_SPEED:=700}
 : ${SERDES:=8_5_2}
 : ${SHALLOW:=false}
 : ${SECURE:=false}
@@ -59,7 +60,7 @@ set -e
 mkdir -p build images
 ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
-SPEED=2000_700_${DDR_SPEED}
+SPEED=2000_${BUS_SPEED}_${DDR_SPEED}
 TOOLS="tar git make 7z dd mkfs.ext4 parted mkdosfs mcopy dtc iasl mkimage e2cp truncate qemu-system-aarch64 cpio rsync bc bison flex python2 unzip pandoc meson ninja depmod"
 BL2=bl2_auto
 
@@ -294,8 +295,8 @@ if [ ${#arr[@]} -eq 3 ]; then
 fi
 if [ ${#arr[@]} -eq 5 ]; then
 	# extended serdes variable with soc and carrier
-	echo "#include <configs/lx2160a_defaults.rcwi>" > RCW/template.rcw
-	echo "#include <configs/lx2160a_${SPEED}.rcwi>" >> RCW/template.rcw
+	echo "#include <configs/${arr[0],,}_defaults.rcwi>" > RCW/template.rcw
+	echo "#include <configs/${arr[0],,}_${SPEED}.rcwi>" >> RCW/template.rcw
 	echo "#include <configs/${arr[0],,}_${arr[1],,}.rcwi>" >> RCW/template.rcw
 	echo "#include <configs/${arr[0],,}_${arr[1],,}_SD1_${arr[2]}.rcwi>" >> RCW/template.rcw
 	echo "#include <configs/${arr[0],,}_${arr[1],,}_SD2_${arr[3]}.rcwi>" >> RCW/template.rcw
