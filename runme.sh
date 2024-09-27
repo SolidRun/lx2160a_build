@@ -40,7 +40,7 @@ if [ "x$SHALLOW" == "xtrue" ]; then
 fi
 
 if [ "x$ATF_DEBUG" == "xtrue" ]; then
-	ATF_DEBUG="DEBUG=1 LOG_LEVEL=40"
+	ATF_DEBUG="DEBUG=1 LOG_LEVEL=50 DDR_DEBUG=1"
 	ATF_BUILD="debug"
 else
 	ATF_DEBUG=""
