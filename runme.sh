@@ -19,6 +19,7 @@ set -e
 : ${SERDES:=8_5_2}
 # SoC Boot Source
 # - sdhc1 (microSD)
+# - sdhc2 (eMMC)
 # - xspi (SPI NOR Flash)
 : ${BOOTSOURCE:=sdhc1}
 : ${SHALLOW:=false}
@@ -241,7 +242,6 @@ do_build_opteeos
 
 do_build_atf() {
 	local PLATFORM=lx2160ardb
-	local rcwimg=$ROOTDIR/images/tmp/lx2160acex7_rev2/clearfog-cx/rcw_${CPU_SPEED}_700_${DDR_SPEED}_8_5_2_${BOOTSOURCE}.bin
 	local UBOOT_BINARY=$ROOTDIR/build/u-boot/u-boot.bin
 	local DDR_PHY_BIN_PATH=$ROOTDIR/build/ddr-phy-binary/lx2160a
 	local BUILD=release
@@ -254,14 +254,21 @@ do_build_atf() {
 	case ${BOOTSOURCE} in
 	sdhc1)
 		BOOT_MODE=sd
+		RCW_BOOTSOURCE=sdhc
+		;;
+	sdhc2)
+		BOOT_MODE=emmc
+		RCW_BOOTSOURCE=sdhc
 		;;
 	xspi)
 		BOOT_MODE=flexspi_nor
+		RCW_BOOTSOURCE=xspi
 		;;
 	*)
 		echo "\"${BOOTSOURCE}\" is not a supported boot source!"
 		exit 1
 	esac
+	local rcwimg=$ROOTDIR/images/tmp/lx2160acex7_rev2/clearfog-cx/rcw_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_8_5_2_${RCW_BOOTSOURCE}.bin
 
 	rm -rf $ROOTDIR/images/tmp/atf
 	mkdir -p $ROOTDIR/images/tmp/atf
@@ -745,81 +752,123 @@ e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-addsw
 e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-listmac
 e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-listni
 
+# collect generated images
+declare -a IMAGES
 
+echo "Assembling rootfs Image"
+cd $ROOTDIR/
 truncate -s 64M $ROOTDIR/images/tmp/$ROOTFS.img
 truncate -s +$ROOTFS_SIZE $ROOTDIR/images/tmp/$ROOTFS.img
 parted --script $ROOTDIR/images/tmp/$ROOTFS.img mklabel msdos mkpart primary 64MiB $((64*1024*1024+ROOTFS_SIZE-1))B
 # Generate the above partuuid 3030303030 which is the 4 characters of '0' in ascii
 echo "0000" | dd of=$ROOTDIR/images/tmp/$ROOTFS.img bs=1 seek=440 conv=notrunc
 dd if=$ROOTDIR/images/tmp/$ROOTFS.ext4 of=$ROOTDIR/images/tmp/$ROOTFS.img bs=1M seek=64 conv=notrunc
+IMAGES+=("images/tmp/$ROOTFS.img")
 
-echo "Assembling Boot Image"
-cd $ROOTDIR/
-truncate -s 49M $ROOTDIR/images/tmp/boot.part
-truncate -s +64M $ROOTDIR/images/tmp/boot.part
-truncate -s +$ROOTFS_SIZE $ROOTDIR/images/tmp/boot.part
-mkfs.ext4 -b 4096 -F $ROOTDIR/images/tmp/boot.part
-BOOTPART_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/boot.part)
-
-IMG=lx2160acex7_${SPEED}_${SERDES}-${REPO_PREFIX}.img
-rm -rf $ROOTDIR/images/${IMG}
-truncate -s 64M $ROOTDIR/images/${IMG}
-truncate -s +$BOOTPART_SIZE $ROOTDIR/images/${IMG}
-parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB $((64*1024*1024+BOOTPART_SIZE-1))B
-
-\rm -rf $ROOTDIR/images/tmp/xspi_header.img
-truncate -s 128K $ROOTDIR/images/tmp/xspi_header.img
-dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=$ROOTDIR/images/tmp/xspi_header.img bs=512 conv=notrunc
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/xspi_header.img $ROOTDIR/images/tmp/boot.part:/
-
-# PFE firmware at 0x100
-
-# FIP (BL31+BL32+BL33) at 0x800
-dd if=$ROOTDIR/images/tmp/atf/fip.bin of=images/${IMG} bs=512 seek=2048 conv=notrunc
-
-# DDR PHY FIP at 0x4000
-dd if=$ROOTDIR/images/tmp/atf/ddr_fip.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
-
-# Env variables at 0x2800
-
-# Secureboot headers at 0x3000
-
-# Fuse header FIP at 0x4400
-if [ "x$SECURE" == "xtrue" ]; then
-	dd if=$ROOTDIR/images/tmp/atf/fuse_fip.bin of=images/${IMG} bs=512 seek=17408 conv=notrunc
-fi
-
-# DPAA1 FMAN ucode at 0x4800
-
-# DPAA2-MC at 0x5000
-MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/ | grep -v sha256sum | cut -f1`
-MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/${MC}`
-dd if=${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
-
-# DPAA2 DPL at 0x6800
+# add default prefix for short DPL/DPC variables
 if [[ ! $DPL =~ / ]]; then
 	DPL="CEX7/$DPL"
 fi
-dd if=$ROOTDIR/build/mc-utils/config/lx2160a/${DPL} of=images/${IMG} bs=512 seek=26624 conv=notrunc
-
-# DPAA2 DPC at 0x7000
 if [[ ! $DPC =~ / ]]; then
 	DPC="CEX7/$DPC"
 fi
-dd if=$ROOTDIR/build/mc-utils/config/lx2160a/${DPC} of=images/${IMG} bs=512 seek=28672 conv=notrunc
 
-# Kernel at 0x8000
-dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=32768 conv=notrunc
+# select MC firmware file
+MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/ | grep -v sha256sum | cut -f1`
+MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/${MC}`
 
-# Ramdisk at 0x10000
-# RCW+PBI+BL2 at block 8
-dd if=$ROOTDIR/images/${IMG} of=$ROOTDIR/images/lx2160acex7_xspi_${SPEED}_${SERDES}-${REPO_PREFIX}.img bs=1M count=64
-dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=images/lx2160acex7_xspi_${SPEED}_${SERDES}-${REPO_PREFIX}.img bs=512 conv=notrunc
-dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
+# shared function for placing artifacts in boot image
+do_populate_bootimg() {
+	local IMG="$1"
+	local BOOTSOURCE="$2"
 
-# Copy first 64MByte from image excluding MBR to ubuntu-core.img for eMMC boot
-dd if=images/${IMG} of=$ROOTDIR/images/tmp/$ROOTFS.img bs=512 seek=1 skip=1 count=131071 conv=notrunc
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.img $ROOTDIR/images/tmp/boot.part:/
-dd if=$ROOTDIR/images/tmp/boot.part of=$ROOTDIR/images/${IMG} bs=1M seek=64
+	if [[ ${BOOTSOURCE} == sdhc* ]]; then
+		# RCW+PBI+BL2 at 0x1000 (block 0x8)
+		dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
+	elif [ "${BOOTSOURCE}" = "xspi" ]; then
+		# RCW+PBI+BL2 at 0x0000000 (block 0x0000)
+		dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=images/${IMG} bs=512 seek=0 conv=notrunc
+	fi
 
-echo "Generated images/${IMG}"
+	# FIP (BL31+BL32+BL33) at 0x0100000 (block 0x800)
+	dd if=$ROOTDIR/images/tmp/atf/fip.bin of=images/${IMG} bs=512 seek=2048 conv=notrunc
+
+	# DDR PHY FIP at 0x0800000 (block 0x4000)
+	dd if=$ROOTDIR/images/tmp/atf/ddr_fip.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
+
+	# Fuse header FIP at 0x0880000 (block 0x4400)
+	if [ "x$SECURE" == "xtrue" ]; then
+		dd if=$ROOTDIR/images/tmp/atf/fuse_fip.bin of=images/${IMG} bs=512 seek=17408 conv=notrunc
+	fi
+
+	# DPAA2-MC at 0x0a00000 (block 0x5000)
+	dd if=${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
+
+	# DPAA2 DPL at 0x0d00000 (block 0x6800)
+	dd if=$ROOTDIR/build/mc-utils/config/lx2160a/${DPL} of=images/${IMG} bs=512 seek=26624 conv=notrunc
+
+	# DPAA2 DPC at 0x0e00000 (block 0x7000)
+	dd if=$ROOTDIR/build/mc-utils/config/lx2160a/${DPC} of=images/${IMG} bs=512 seek=28672 conv=notrunc
+
+	# DTB at 0x0f00000 (block 0x7800)
+
+	# Kernel at 0x1000000 (block 0x8000)
+	dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=32768 conv=notrunc
+}
+
+# generate SPI boot image
+if ([ "${BOOTSOURCE}" = "auto" ] || [ "${BOOTSOURCE}" = "xspi" ]); then
+	echo "Assembling XSPI Boot Image"
+	cd $ROOTDIR/
+
+	\rm -rf $ROOTDIR/images/tmp/xspi_header.img
+	truncate -s 128K $ROOTDIR/images/tmp/xspi_header.img
+	dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=$ROOTDIR/images/tmp/xspi_header.img bs=512 conv=notrunc
+
+	IMG=lx2160acex7_xspi_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
+	rm -rf $ROOTDIR/images/${IMG}
+	truncate -s 64M $ROOTDIR/images/${IMG}
+
+	do_populate_bootimg "${IMG}" xspi
+
+	IMAGES+=("images/${IMG}")
+fi
+
+# generate SD boot image
+if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc* ]]); then
+	echo "Assembling SDHC Boot Image"
+	cd $ROOTDIR/
+
+	# generate partition 1 for boot image
+	truncate -s 49M $ROOTDIR/images/tmp/boot.part
+	truncate -s +64M $ROOTDIR/images/tmp/boot.part
+	truncate -s +$ROOTFS_SIZE $ROOTDIR/images/tmp/boot.part
+	mkfs.ext4 -b 4096 -F $ROOTDIR/images/tmp/boot.part
+	BOOTPART_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/boot.part)
+
+	# generate boot image
+	IMG=lx2160acex7_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
+	rm -rf $ROOTDIR/images/${IMG}
+	truncate -s 64M $ROOTDIR/images/${IMG}
+	truncate -s +$BOOTPART_SIZE $ROOTDIR/images/${IMG}
+	parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB $((64*1024*1024+BOOTPART_SIZE-1))B
+
+	if [ "${BOOTSOURCE}" = "auto" ]; then
+		e2cp -G 0 -O 0 $ROOTDIR/images/tmp/xspi_header.img $ROOTDIR/images/tmp/boot.part:/
+	fi
+
+	do_populate_bootimg "${IMG}" sdhc
+
+	# Copy first 64MByte from image excluding MBR to rootfs image, making it bootable
+	dd if=images/${IMG} of=$ROOTDIR/images/tmp/$ROOTFS.img bs=512 seek=1 skip=1 count=131071 conv=notrunc
+
+	# Copy rootfs image as a file into boot image for eMMC installation
+	e2cp -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.img $ROOTDIR/images/tmp/boot.part:/
+	dd if=$ROOTDIR/images/tmp/boot.part of=$ROOTDIR/images/${IMG} bs=1M seek=64
+
+	IMAGES+=("images/${IMG}")
+fi
+
+for IMG in ${IMAGES[@]}; do
+	echo "Generated ${IMG}"
+done
