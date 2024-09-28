@@ -18,9 +18,9 @@ set -e
 : ${BUS_SPEED:=700}
 : ${SERDES:=8_5_2}
 # SoC Boot Source
-# - sd
-# - nor
-: ${BOOTSOURCE:=sd}
+# - sdhc1 (microSD)
+# - xspi (SPI NOR Flash)
+: ${BOOTSOURCE:=sdhc1}
 : ${SHALLOW:=false}
 : ${SECURE:=false}
 : ${ATF_DEBUG:=false}
@@ -241,7 +241,7 @@ do_build_opteeos
 
 do_build_atf() {
 	local PLATFORM=lx2160ardb
-	local rcwimg=$ROOTDIR/images/tmp/lx2160acex7_rev2/clearfog-cx/rcw_${CPU_SPEED}_700_${DDR_SPEED}_8_5_2.bin
+	local rcwimg=$ROOTDIR/images/tmp/lx2160acex7_rev2/clearfog-cx/rcw_${CPU_SPEED}_700_${DDR_SPEED}_8_5_2_${BOOTSOURCE}.bin
 	local UBOOT_BINARY=$ROOTDIR/build/u-boot/u-boot.bin
 	local DDR_PHY_BIN_PATH=$ROOTDIR/build/ddr-phy-binary/lx2160a
 	local BUILD=release
@@ -250,6 +250,18 @@ do_build_atf() {
 		BUILD=debug
 		DEBUG_FLAGS="DEBUG=1 LOG_LEVEL=40"
 	fi
+	local BOOT_MODE=
+	case ${BOOTSOURCE} in
+	sdhc1)
+		BOOT_MODE=sd
+		;;
+	xspi)
+		BOOT_MODE=flexspi_nor
+		;;
+	*)
+		echo "\"${BOOTSOURCE}\" is not a supported boot source!"
+		exit 1
+	esac
 
 	rm -rf $ROOTDIR/images/tmp/atf
 	mkdir -p $ROOTDIR/images/tmp/atf
@@ -264,7 +276,7 @@ do_build_atf() {
 	make \
 		-j${PARALLEL} V=1 \
 		PLAT=${PLATFORM} \
-		BOOT_MODE=${BOOTSOURCE} \
+		BOOT_MODE=${BOOT_MODE} \
 		RCW=${rcwimg} \
 		BL32=$ROOTDIR/images/tmp/optee/tee-pager_v2.bin SPD=opteed \
 		BL33=${UBOOT_BINARY} \
@@ -272,7 +284,7 @@ do_build_atf() {
 		${DEBUG_FLAGS} \
 		all fip pbl fip_ddr
 
-	cp -v $ROOTDIR/build/atf/build/lx2160ardb/${BUILD}/bl2_${BOOTSOURCE}.pbl $ROOTDIR/images/tmp/atf/bl2.pbl
+	cp -v $ROOTDIR/build/atf/build/lx2160ardb/${BUILD}/bl2_${BOOT_MODE}.pbl $ROOTDIR/images/tmp/atf/bl2.pbl
 	cp -v $ROOTDIR/build/atf/build/lx2160ardb/${BUILD}/fip.bin $ROOTDIR/images/tmp/atf/
 	if $SECURE; then
 		cp -v $ROOTDIR/build/atf/build/lx2160ardb/${BUILD}/ddr_fip_sec.bin $ROOTDIR/images/tmp/atf/

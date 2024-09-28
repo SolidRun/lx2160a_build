@@ -115,9 +115,8 @@ generates *images/lx2160acex7_2000_700_3200_8_5_2.img* which is an image ready t
 - `RELEASE`: select nxp bsp version
   - `ls-5.15.71-2.2.0` (default)
 - `BOOTSOURCE`: select soc boot source
-  - `sd`: eMMC / SD-Card (default)
-  - `nor`: SPI Flash
-  - `auto`
+  - `sdhc1` micro-SD (default)
+  - `xspi` SPI NOR Flash
 - `CPU_SPEED`: DDR speed in MHz increments
   - `2000` (default)
   - `2200`
@@ -219,9 +218,16 @@ The intended method is as follows:
    Safe reference points in case uart stays silent are protocols `0` (`SRDS_PRTCL_S1=0`, `SRDS_PRTCL_S2=0`, `SRDS_PRTCL_S3=0`).
 
 ## Deploying
+
+### SD Boot
+
 For SD card bootable images, plug in a micro SD into your machine and run the following, where sdX is the location of the SD card got probed into your machine -
 
 `sudo dd if=images/lx2160acex7_2000_700_3200_8_5_2_sd.img of=/dev/sdX`
+
+And then set boot DIP switch on COM to off/on/on/on from numbers 1 to 4 (dip number 5 is not used, notice the marking 'ON' on the DIP switch)
+
+### SPI Boot
 
 For SPI boot, boot thru SD card and then load the _xspi_ images to system memory and flash it using the `sf probe` and `sf update` commands. An example below loads the image through TFTP prototocl, flashes and then verifies the image -
 
@@ -229,13 +235,25 @@ For SPI boot, boot thru SD card and then load the _xspi_ images to system memory
 
 And then set boot DIP switch on COM to off/off/off/off from numbers 1 to 4 (dip number 5 is not used. Notice the marking 'ON' on the DIP switch)
 
+### eMMC Boot
+
 For eMMC boot (supported only thru LX2160A silicon rev 2 which is LX2160A COM Express type 7 rev 1.5 and newer) -
 
-`load mmc 0:1 0xa4000000 ubuntu-core.img`
+Either full image including MBR and rootfs:
 
-`mmc dev 1`
+```
+load mmc 0:1 0xa4000000 ubuntu-core.img
+mmc dev 1
+mmc write 0xa4000000 0 0xd2000
+```
 
-`mmc write 0xa4000000 0 0xd2000`
+OR bootcode only (first 64MB excluding MBR):
+
+```
+load mmc 0:1 0xa4000000 ubuntu-core.img
+mmc dev 1
+mmc write 0xa4000200 1 0x1FFFF
+```
 
 And then set boot DIP switch on COM to off/on/on/off from numbers 1 to 4 (dip number 5 is not used, notice the marking 'ON' on the DIP switch)
 
