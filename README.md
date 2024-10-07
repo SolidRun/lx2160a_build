@@ -230,16 +230,12 @@ And then set boot DIP switch on COM to off/on/on/on from numbers 1 to 4 (dip num
 
 ### SPI Boot
 
-For SPI boot, boot thru SD card and then load the _xspi_ images to system memory and flash it using the `sf probe` and `sf update` commands. An example below loads the image through TFTP prototocl, flashes and then verifies the image -
+For SPI boot, boot thru SD card and then load the `xspi.img` to system memory and flash it using the `sf probe` and `sf update` commands.
 
 ```
+load mmc 0:1 $kernel_addr_r xspi.img
 sf probe
-setenv ipaddr 192.168.15.223
-setenv serverip 192.168.15.3
-tftp 0xa0000000 lx2160acex7_xspi_2000_700_2600_8_5_2_xspi.img
-sf update 0xa0000000 0 0x4000000
-sf read 0xa4000000 0 0x4000000
-cmp.b 0xa0000000 0xa4000000 0x4000000
+sf update $kernel_addr_r 0 0x4000000
 ```
 
 And then set boot DIP switch on COM to off/off/off/off from numbers 1 to 4 (dip number 5 is not used. Notice the marking 'ON' on the DIP switch)
@@ -251,17 +247,18 @@ For eMMC boot (supported only thru LX2160A silicon rev 2 which is LX2160A COM Ex
 Either full image including MBR and rootfs:
 
 ```
-load mmc 0:1 0xa4000000 ubuntu-core.img
+load mmc 0:1 $kernel_addr_r ubuntu-core.img
 mmc dev 1
-mmc write 0xa4000000 0 0xd2000
+mmc write $kernel_addr_r 0 0xd2000
 ```
 
 OR bootcode only (first 64MB excluding MBR):
 
 ```
-load mmc 0:1 0xa4000000 ubuntu-core.img
+load mmc 0:1 $kernel_addr_r ubuntu-core.img
+setexpr mbroffset ${kernel_addr_r} + 0x200
 mmc dev 1
-mmc write 0xa4000200 1 0x1FFFF
+mmc write 0x${mbroffset} 1 0x1FFFF
 ```
 
 And then set boot DIP switch on COM to off/on/on/off from numbers 1 to 4 (dip number 5 is not used, notice the marking 'ON' on the DIP switch)

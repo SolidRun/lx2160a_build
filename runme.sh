@@ -445,7 +445,8 @@ if [[ $DISTRO == ubuntu ]]; then
 	esac
 
 	# (re-)generate only if rootfs doesn't exist or runme script has changed
-	if [ ! -f $UBUNTU_VERSION.ext4 ] || [[ ${ROOTDIR}/${BASH_SOURCE[0]} -nt $UBUNTU_VERSION.ext4 ]]; then
+	if [ 0 -eq 1 ]; then
+	#if [ ! -f $UBUNTU_VERSION.ext4 ] || [[ ${ROOTDIR}/${BASH_SOURCE[0]} -nt $UBUNTU_VERSION.ext4 ]]; then
 		echo Building Ubuntu rootfs
 
 		rm -f ubuntu-base.dl
@@ -765,6 +766,7 @@ echo "Assembling rootfs Image"
 cd $ROOTDIR/
 truncate -s 64M $ROOTDIR/images/tmp/$ROOTFS.img
 truncate -s +$ROOTFS_SIZE $ROOTDIR/images/tmp/$ROOTFS.img
+ROOTFS_IMG_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/$ROOTFS.img)
 parted --script $ROOTDIR/images/tmp/$ROOTFS.img mklabel msdos mkpart primary 64MiB $((64*1024*1024+ROOTFS_SIZE-1))B
 # Generate the above partuuid 3030303030 which is the 4 characters of '0' in ascii
 echo "0000" | dd of=$ROOTDIR/images/tmp/$ROOTFS.img bs=1 seek=440 conv=notrunc
@@ -827,17 +829,13 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [ "${BOOTSOURCE}" = "xspi" ]); then
 	echo "Assembling XSPI Boot Image"
 	cd $ROOTDIR/
 
-	\rm -rf $ROOTDIR/images/tmp/xspi_header.img
-	truncate -s 128K $ROOTDIR/images/tmp/xspi_header.img
-	dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=$ROOTDIR/images/tmp/xspi_header.img bs=512 conv=notrunc
+	XSPI_IMG=lx2160acex7_xspi_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
+	rm -rf $ROOTDIR/images/${XSPI_IMG}
+	truncate -s 64M $ROOTDIR/images/${XSPI_IMG}
 
-	IMG=lx2160acex7_xspi_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
-	rm -rf $ROOTDIR/images/${IMG}
-	truncate -s 64M $ROOTDIR/images/${IMG}
+	do_populate_bootimg "${XSPI_IMG}" xspi
 
-	do_populate_bootimg "${IMG}" xspi
-
-	IMAGES+=("images/${IMG}")
+	IMAGES+=("images/${XSPI_IMG}")
 fi
 
 # generate SD boot image
@@ -847,8 +845,8 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc* ]]); then
 
 	# generate partition 1 for boot image
 	truncate -s 49M $ROOTDIR/images/tmp/boot.part
+	truncate -s +$ROOTFS_IMG_SIZE $ROOTDIR/images/tmp/boot.part
 	truncate -s +64M $ROOTDIR/images/tmp/boot.part
-	truncate -s +$ROOTFS_SIZE $ROOTDIR/images/tmp/boot.part
 	mkfs.ext4 -b 4096 -F $ROOTDIR/images/tmp/boot.part
 	BOOTPART_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/boot.part)
 
@@ -860,7 +858,7 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc* ]]); then
 	parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB $((64*1024*1024+BOOTPART_SIZE-1))B
 
 	if [ "${BOOTSOURCE}" = "auto" ]; then
-		e2cp -G 0 -O 0 $ROOTDIR/images/tmp/xspi_header.img $ROOTDIR/images/tmp/boot.part:/
+		e2cp -G 0 -O 0 $ROOTDIR/images/${XSPI_IMG} $ROOTDIR/images/tmp/boot.part:/xspi.img
 	fi
 
 	do_populate_bootimg "${IMG}" sdhc
