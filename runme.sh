@@ -22,7 +22,7 @@ set -e
 # - sdhc1 (microSD)
 # - sdhc2 (eMMC)
 # - xspi (SPI NOR Flash)
-: ${BOOTSOURCE:=sdhc1}
+: ${BOOTSOURCE:=auto}
 : ${SHALLOW:=false}
 : ${SECURE:=false}
 : ${ATF_DEBUG:=false}

@@ -115,8 +115,8 @@ generates *images/lx2160acex7_2000_700_3200_8_5_2.img* which is an image ready t
 - `RELEASE`: select nxp bsp version
   - `ls-5.15.71-2.2.0` (default)
 - `BOOTSOURCE`: select soc boot source
-  - `auto`
-  - `sdhc1` micro-SD (default)
+  - `auto` (default)
+  - `sdhc1` micro-SD
   - `xspi` SPI NOR Flash
 - `CPU_SPEED`: DDR speed in MHz increments
   - `2000` (default)
