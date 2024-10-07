@@ -1,0 +1,55 @@
+From 22e16d5c3969a2fdfdb23423a8d28d5e80eea987 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Mon, 23 Mar 2020 12:16:13 +0200
+Subject: [PATCH 5/6] add loadc, jumpc and jump to pbi instructions
+
+Add 'load conditional', 'jump condidional' and 'jump' to PBI
+instructions.
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ rcw.py | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
+
+diff --git a/rcw.py b/rcw.py
+index e7d3795..bcd088d 100755
+--- a/rcw.py
++++ b/rcw.py
+@@ -330,6 +330,34 @@ def build_pbi(lines):
+             v2 = struct.pack(endianess + 'L', p2)
+             subsection += v1
+             subsection += v2
++        elif op == 'loadc':
++            if p1 == None or p2 == None:
++                print('Error: "loadc" instruction requires two parameters')
++                return ''
++            v1 = struct.pack(endianess + 'L', 0x80140000)
++            v2 = struct.pack(endianess + 'L', p1)
++            v3 = struct.pack(endianess + 'L', p2)
++            subsection += v1
++            subsection += v2
++            subsection += v3
++        elif op == 'jumpc':
++            if p1 == None or p2 == None:
++                print('Error: "jumpc" instruction requires two parameters')
++                return ''
++            v1 = struct.pack(endianess + 'L', 0x80850000)
++            v2 = struct.pack(endianess + 'L', p1)
++            v3 = struct.pack(endianess + 'L', p2)
++            subsection += v1
++            subsection += v2
++            subsection += v3
++        elif op == 'jump':
++            if p1 == None:
++                print('Error: "jump" instruction requires a parameter')
++                return ''
++            v1 = struct.pack(endianess + 'L', 0x80840000)
++            v2 = struct.pack(endianess + 'L', p1)
++            subsection += v1
++            subsection += v2
+         elif op == 'awrite':
+             if opsize == '.b5':
+                 # altconfig write with B=5 (16 bytes)
+-- 
+2.43.0
+

@@ -18,6 +18,7 @@ set -e
 : ${BUS_SPEED:=700}
 : ${SERDES:=8_5_2}
 # SoC Boot Source
+# - auto
 # - sdhc1 (microSD)
 # - sdhc2 (eMMC)
 # - xspi (SPI NOR Flash)
@@ -190,6 +191,7 @@ do_build_rcw() {
 	local BOARD_TARGETS="lx2160acex7 lx2160acex7_rev2"
 
 	cd $ROOTDIR/build/rcw
+	make BOARDS="${BOARD_TARGETS}" clean
 	make BOARDS="${BOARD_TARGETS}"
 	make BOARDS="${BOARD_TARGETS}" DESTDIR=${ROOTDIR}/images/tmp install
 }
@@ -252,6 +254,10 @@ do_build_atf() {
 	fi
 	local BOOT_MODE=
 	case ${BOOTSOURCE} in
+	auto)
+		BOOT_MODE=auto
+		RCW_BOOTSOURCE=auto
+		;;
 	sdhc1)
 		BOOT_MODE=sd
 		RCW_BOOTSOURCE=sdhc
