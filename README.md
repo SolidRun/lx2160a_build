@@ -124,6 +124,7 @@ generates *images/lx2160acex7_2000_700_3200_8_5_2.img* which is an image ready t
 - `DDR_SPEED`: DDR speed in MHz increments
   - `3200` only for LX2160A binned 2.2GHz
   - `2900` only for LX2162A, and LX2160A binned 2GHz and higher (default)
+  - `2666`
   - `2600`
   - `2400`
 - `BUS_SPEED`: Platform clock in MHz

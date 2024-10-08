@@ -1,0 +1,63 @@
+From 7320dd540f97a56f7f7cfcbd0dc2e9fae393a8a1 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 8 Oct 2024 13:29:36 +0200
+Subject: [PATCH] fsl-lsch3: update calculation of ddr clock rate to include
+ divider
+
+DDR clock is passes through a divider and a multiplier - and is then
+again doubled once by the phy and once by the controller.
+The doubling was previously hidden by divider default value of 4.
+
+Take into account the divider value per MEM_PLL_CFG when calculating ddr
+bus frequency, and multiply the result by 4.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm/cpu/armv8/fsl-layerscape/fsl_lsch3_speed.c    | 8 ++++++++
+ arch/arm/include/asm/arch-fsl-layerscape/immap_lsch3.h | 4 ++++
+ 2 files changed, 12 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/fsl-layerscape/fsl_lsch3_speed.c b/arch/arm/cpu/armv8/fsl-layerscape/fsl_lsch3_speed.c
+index 1c04a5b5b7e..29a786bf26c 100644
+--- a/arch/arm/cpu/armv8/fsl-layerscape/fsl_lsch3_speed.c
++++ b/arch/arm/cpu/armv8/fsl-layerscape/fsl_lsch3_speed.c
+@@ -97,11 +97,19 @@ void get_sys_info(struct sys_info *sys_info)
+ 	sys_info->freq_ddrbus *= (gur_in32(&gur->rcwsr[0]) >>
+ 			FSL_CHASSIS3_RCWSR0_MEM_PLL_RAT_SHIFT) &
+ 			FSL_CHASSIS3_RCWSR0_MEM_PLL_RAT_MASK;
++	sys_info->freq_ddrbus /= ((gur_in32(&gur->rcwsr[0]) >>
++			FSL_CHASSIS3_RCWSR0_MEM_PLL_CFG_SHIFT) &
++			FSL_CHASSIS3_RCWSR0_MEM_PLL_CFG_MASK) + 1;
++	/* ddr clock is doubled at phy, then doubled again controller */
++	sys_info->freq_ddrbus *= 4;
+ #ifdef CONFIG_SYS_FSL_HAS_DP_DDR
+ 	if (soc_has_dp_ddr()) {
+ 		sys_info->freq_ddrbus2 *= (gur_in32(&gur->rcwsr[0]) >>
+ 			FSL_CHASSIS3_RCWSR0_MEM2_PLL_RAT_SHIFT) &
+ 			FSL_CHASSIS3_RCWSR0_MEM2_PLL_RAT_MASK;
++		sys_info->freq_ddrbus2 /= ((gur_in32(&gur->rcwsr[0]) >>
++			FSL_CHASSIS3_RCWSR0_MEM2_PLL_CFG_SHIFT) &
++			FSL_CHASSIS3_RCWSR0_MEM2_PLL_CFG_MASK) + 1;
+ 	} else {
+ 		sys_info->freq_ddrbus2 = 0;
+ 	}
+diff --git a/arch/arm/include/asm/arch-fsl-layerscape/immap_lsch3.h b/arch/arm/include/asm/arch-fsl-layerscape/immap_lsch3.h
+index 863618a5f3d..ec9505fb6f1 100644
+--- a/arch/arm/include/asm/arch-fsl-layerscape/immap_lsch3.h
++++ b/arch/arm/include/asm/arch-fsl-layerscape/immap_lsch3.h
+@@ -374,8 +374,12 @@ struct ccsr_gur {
+ 
+ #define FSL_CHASSIS3_RCWSR0_SYS_PLL_RAT_SHIFT	2
+ #define FSL_CHASSIS3_RCWSR0_SYS_PLL_RAT_MASK	0x1f
++#define FSL_CHASSIS3_RCWSR0_MEM_PLL_CFG_SHIFT	8
++#define FSL_CHASSIS3_RCWSR0_MEM_PLL_CFG_MASK	0x3
+ #define FSL_CHASSIS3_RCWSR0_MEM_PLL_RAT_SHIFT	10
+ #define FSL_CHASSIS3_RCWSR0_MEM_PLL_RAT_MASK	0x3f
++#define FSL_CHASSIS3_RCWSR0_MEM2_PLL_CFG_SHIFT	16
++#define FSL_CHASSIS3_RCWSR0_MEM2_PLL_CFG_MASK	0x3
+ #define FSL_CHASSIS3_RCWSR0_MEM2_PLL_RAT_SHIFT	18
+ #define FSL_CHASSIS3_RCWSR0_MEM2_PLL_RAT_MASK	0x3f
+ 
+-- 
+2.43.0
+

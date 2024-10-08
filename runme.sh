@@ -97,7 +97,7 @@ case "${CPU_SPEED}" in
 esac
 
 case "${DDR_SPEED}" in
-	2400|2600|2900|3200)
+	2400|2600|2666|2900|3200)
 	;;
 	*)
 		echo "Please use one of allowed DDR speeds: 2400, 2600, 2900, 3200"
