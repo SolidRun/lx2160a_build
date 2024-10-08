@@ -128,6 +128,7 @@ generates *images/lx2160acex7_2000_700_3200_8_5_2.img* which is an image ready t
   - `2400`
 - `BUS_SPEED`: Platform clock in MHz
   - `700`: only for LX2160A binned 2GHz and higher (default)
+  - `750`: only for LX2160A binned 2.2GHz
 - `SERDES`: Select Board and Serdes Protocols (for list of valid choices see `runme.sh`)
 - `SHALLOW`: enable shallow git clone to save space and bandwidth
   - `false` (default)
