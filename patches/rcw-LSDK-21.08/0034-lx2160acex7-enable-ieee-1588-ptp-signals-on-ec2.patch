@@ -1,0 +1,29 @@
+From 91afdc10a359719956e67f00b2b4bf00d9eca961 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 9 Oct 2024 12:00:57 +0200
+Subject: [PATCH] lx2160acex7: enable ieee 1588 ptp signals on ec2
+
+LX2160A CEX-7 (since revision 1.6) describe EC2 signals on B2B Connector
+for PTP. Set the default pinmux accordingly.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2160acex7/configs/lx2160a_defaults.rcwi | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/lx2160acex7/configs/lx2160a_defaults.rcwi b/lx2160acex7/configs/lx2160a_defaults.rcwi
+index 70e20e4..5f298aa 100644
+--- a/lx2160acex7/configs/lx2160a_defaults.rcwi
++++ b/lx2160acex7/configs/lx2160a_defaults.rcwi
+@@ -16,6 +16,8 @@ IRQ07_04_PMUX=1
+ IRQ11_08_PMUX=1
+ EVT20_PMUX=1
+ EVT43_PMUX=1
++/* Configure Ethernet Controller 2 Pins for IEE1588 PTP */
++EC2_PMUX=2
+ 
+ /* Drive the fan full speed pin */
+ .pbi
+-- 
+2.43.0
+
