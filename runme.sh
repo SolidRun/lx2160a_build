@@ -78,6 +78,11 @@ case "${SERDES}" in
 		DPL=LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpl.dtb
 		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
 	;;
+	LX2160ACEX6_EVB_3_3_2)
+		DPC=LX2160A-CEX6/evb-s1_3-s2_0-dpc.dtb
+		DPL=LX2160A-CEX6/evb-s1_3-s2_0-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-cex6-evb.dtb"
+	;;
 	*)
 		echo "Please define SERDES configuration"
 		exit -1
@@ -200,7 +205,7 @@ cd $ROOTDIR/build/restool
 CC=${CROSS_COMPILE}gcc DESTDIR=./install prefix=/usr make install
 
 do_build_rcw() {
-	local BOARD_TARGETS="lx2160acex7 lx2160acex7_rev2"
+	local BOARD_TARGETS="lx2160acex6_rev2 lx2160acex7 lx2160acex7_rev2"
 
 	cd $ROOTDIR/build/rcw
 	make BOARDS="${BOARD_TARGETS}" clean
