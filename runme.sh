@@ -84,6 +84,18 @@ case "${SERDES}" in
 	;;
 esac
 
+# extract module and board from SERDES variable if length == 5
+OLDIFS=$IFS
+IFS="_" arr=($SERDES)
+MODULE=LX2160ACEX7
+BOARD=CLEARFOG-CX
+if [ ${#arr[@]} -eq 5 ]; then
+	MODULE=${arr[0]}
+	BOARD=${arr[1]}
+	SERDES=${arr[2]}_${arr[3]}_${arr[4]}
+fi
+IFS=$OLDIFS
+
 # unless set above, fall back to default reference platform
 : ${DEFAULT_FDT_FILE:=freescale/fsl-lx2160a-clearfog-cx.dtb}
 
@@ -201,6 +213,7 @@ do_build_rcw
 do_build_uboot() {
 	cd $ROOTDIR/build/u-boot
 	./scripts/kconfig/merge_config.sh configs/lx2160acex7_tfa_defconfig $ROOTDIR/configs/u-boot/lx2k_additions.config
+	test -n "${DEFAULT_FDT_FILE}" && printf "CONFIG_DEFAULT_FDT_FILE=\"%s\"\n" "${DEFAULT_FDT_FILE}" >> .config || true
 	make olddefconfig
 	make -j${PARALLEL}
 	make savedefconfig
@@ -274,7 +287,7 @@ do_build_atf() {
 		echo "\"${BOOTSOURCE}\" is not a supported boot source!"
 		exit 1
 	esac
-	local rcwimg=$ROOTDIR/images/tmp/lx2160acex7_rev2/clearfog-cx/rcw_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_8_5_2_${RCW_BOOTSOURCE}.bin
+	local rcwimg=$ROOTDIR/images/tmp/${MODULE,,}_rev2/${BOARD,,}/rcw_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}_${RCW_BOOTSOURCE}.bin
 
 	rm -rf $ROOTDIR/images/tmp/atf
 	mkdir -p $ROOTDIR/images/tmp/atf
@@ -829,7 +842,7 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [ "${BOOTSOURCE}" = "xspi" ]); then
 	echo "Assembling XSPI Boot Image"
 	cd $ROOTDIR/
 
-	XSPI_IMG=lx2160acex7_xspi_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
+	XSPI_IMG=${MODULE,,}_${BOARD,,}_xspi_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
 	rm -rf $ROOTDIR/images/${XSPI_IMG}
 	truncate -s 64M $ROOTDIR/images/${XSPI_IMG}
 
@@ -851,7 +864,7 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc* ]]); then
 	BOOTPART_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/boot.part)
 
 	# generate boot image
-	IMG=lx2160acex7_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
+	IMG=${MODULE,,}_${BOARD,,}_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
 	rm -rf $ROOTDIR/images/${IMG}
 	truncate -s 64M $ROOTDIR/images/${IMG}
 	truncate -s +$BOOTPART_SIZE $ROOTDIR/images/${IMG}
