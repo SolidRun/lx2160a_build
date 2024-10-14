@@ -1,0 +1,29 @@
+From 72557b712198e3292776fbe8697322c68583acf4 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Sun, 28 Nov 2021 13:33:10 +0200
+Subject: [PATCH] lx2160acex7: assert SUS_S5# GPIO to poweroff the COM
+
+Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
+---
+ plat/nxp/soc-lx2160a/aarch64/lx2160a.S | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/plat/nxp/soc-lx2160a/aarch64/lx2160a.S b/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
+index cc679f2ba..01b3c7ecd 100644
+--- a/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
++++ b/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
+@@ -563,6 +563,11 @@ endfunc _soc_sys_reset
+  */
+ func _soc_sys_off
+ 
++	/* assert GPIO3[7] (IRQ07 - CEX-7 SUS_S5) */
++	mov x3, #NXP_GPIO3_ADDR
++	mov w1, #0x01000000
++	str w1, [x3]
++
+ 	/* disable sec, QBman, spi and qspi */
+ 	ldr  x2, =NXP_DCFG_ADDR
+ 	ldr  x0, =DCFG_DEVDISR1_OFFSET
+-- 
+2.43.0
+
