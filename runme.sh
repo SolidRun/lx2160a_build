@@ -261,7 +261,7 @@ echo "Building optee-os"
 do_build_opteeos
 
 do_build_atf() {
-	local PLATFORM=lx2160ardb
+	local PLATFORM=${MODULE,,}
 	local UBOOT_BINARY=$ROOTDIR/build/u-boot/u-boot.bin
 	local DDR_PHY_BIN_PATH=$ROOTDIR/build/ddr-phy-binary/lx2160a
 	local BUILD=release
@@ -315,13 +315,13 @@ do_build_atf() {
 		${DEBUG_FLAGS} \
 		all fip pbl fip_ddr
 
-	cp -v $ROOTDIR/build/atf/build/lx2160ardb/${BUILD}/bl2_${BOOT_MODE}.pbl $ROOTDIR/images/tmp/atf/bl2.pbl
-	cp -v $ROOTDIR/build/atf/build/lx2160ardb/${BUILD}/fip.bin $ROOTDIR/images/tmp/atf/
+	cp -v $ROOTDIR/build/atf/build/${PLATFORM}/${BUILD}/bl2_${BOOT_MODE}.pbl $ROOTDIR/images/tmp/atf/bl2.pbl
+	cp -v $ROOTDIR/build/atf/build/${PLATFORM}/${BUILD}/fip.bin $ROOTDIR/images/tmp/atf/
 	if $SECURE; then
-		cp -v $ROOTDIR/build/atf/build/lx2160ardb/${BUILD}/ddr_fip_sec.bin $ROOTDIR/images/tmp/atf/
-		cp -v $ROOTDIR/build/atf/build/lx2160ardb/${BUILD}/fuse_fip.bin $ROOTDIR/images/tmp/atf/
+		cp -v $ROOTDIR/build/atf/build/${PLATFORM}/${BUILD}/ddr_fip_sec.bin $ROOTDIR/images/tmp/atf/
+		cp -v $ROOTDIR/build/atf/build/${PLATFORM}/${BUILD}/fuse_fip.bin $ROOTDIR/images/tmp/atf/
 	else
-		cp -v $ROOTDIR/build/atf/build/lx2160ardb/${BUILD}/ddr_fip.bin $ROOTDIR/images/tmp/atf/ddr_fip.bin
+		cp -v $ROOTDIR/build/atf/build/${PLATFORM}/${BUILD}/ddr_fip.bin $ROOTDIR/images/tmp/atf/ddr_fip.bin
 	fi
 }
 

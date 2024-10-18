@@ -1,0 +1,63 @@
+From 13496d248f11fe09d5a634fe15dd6b507a520a87 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 18 Oct 2024 21:09:04 +0200
+Subject: [PATCH 5/6] lx2160a: assert optional S5 gpio from Makefile constant
+
+GPIO address and number for S5 are specific per board and should not be
+set globally across lx2160.
+
+Add support for setting gpio address and number form platform.mk, into
+soc.mk:
+
+- LX2160A_S5_GPIO_ADDR: gpio value register address
+- LX2160A_S5_GPIO: gpio number
+
+This feature can be enabled for individual boards by setting a non-zero
+address in platform.mk file, before including soc.mk.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/soc-lx2160a/aarch64/lx2160a.S | 9 ++++++---
+ plat/nxp/soc-lx2160a/soc.mk            | 8 ++++++++
+ 2 files changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/plat/nxp/soc-lx2160a/aarch64/lx2160a.S b/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
+index 8035b145e..67ade7b66 100644
+--- a/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
++++ b/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
+@@ -563,10 +563,13 @@ endfunc _soc_sys_reset
+  */
+ func _soc_sys_off
+ 
+-	/* assert GPIO3[7] (IRQ07 - CEX-7 SUS_S5), GPIO3[0] (IRQ00 - CEX-6 EVB IRQ0) */
+-	mov x3, #NXP_GPIO3_ADDR
+-	mov w1, #0x81000000
++#if defined(CONFIG_LX2160A_S5_GPIO_ADDR) && defined(CONFIG_LX2160A_S5_GPIO)
++	/* assert s5 gpio */
++	mov x3, # CONFIG_LX2160A_S5_GPIO_ADDR
++	ldr w1, [x3]
++	orr w1, w1, # 1 << (31 - CONFIG_LX2160A_S5_GPIO)
+ 	str w1, [x3]
++#endif
+ 
+ 	/* disable sec, QBman, spi and qspi */
+ 	ldr  x2, =NXP_DCFG_ADDR
+diff --git a/plat/nxp/soc-lx2160a/soc.mk b/plat/nxp/soc-lx2160a/soc.mk
+index a72b4113d..20e64753c 100644
+--- a/plat/nxp/soc-lx2160a/soc.mk
++++ b/plat/nxp/soc-lx2160a/soc.mk
+@@ -177,3 +177,11 @@ include ${PLAT_PATH}/common/setup/common.mk
+ 
+  # Adding source files to generate separate DDR FIP image
+ include ${PLAT_SOC_PATH}/ddr_fip.mk
++
++# S5 GPIO (optional)
++LX2160A_S5_GPIO_ADDR ?= 0
++LX2160A_S5_GPIO ?= 0
++ifneq (${LX2160A_S5_GPIO_ADDR},0)
++$(eval $(call add_define_val,CONFIG_LX2160A_S5_GPIO_ADDR,$(LX2160A_S5_GPIO_ADDR)))
++$(eval $(call add_define_val,CONFIG_LX2160A_S5_GPIO,$(LX2160A_S5_GPIO)))
++endif
+-- 
+2.43.0
+

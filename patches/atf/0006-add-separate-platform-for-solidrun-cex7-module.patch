@@ -1,0 +1,418 @@
+From 1fc354074e5fe98e185633b8d7f62836d5b2b710 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 18 Oct 2024 15:11:53 +0200
+Subject: [PATCH 6/6] add separate platform for solidrun cex7 module
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c   | 116 ++++++++++++++++++
+ plat/nxp/soc-lx2160a/lx2160acex7/plat_def.h   | 105 ++++++++++++++++
+ plat/nxp/soc-lx2160a/lx2160acex7/platform.c   |  29 +++++
+ plat/nxp/soc-lx2160a/lx2160acex7/platform.mk  |  56 +++++++++
+ .../soc-lx2160a/lx2160acex7/platform_def.h    |  14 +++
+ plat/nxp/soc-lx2160a/lx2160acex7/policy.h     |  38 ++++++
+ 6 files changed, 358 insertions(+)
+ create mode 100644 plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
+ create mode 100644 plat/nxp/soc-lx2160a/lx2160acex7/plat_def.h
+ create mode 100644 plat/nxp/soc-lx2160a/lx2160acex7/platform.c
+ create mode 100644 plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
+ create mode 100644 plat/nxp/soc-lx2160a/lx2160acex7/platform_def.h
+ create mode 100644 plat/nxp/soc-lx2160a/lx2160acex7/policy.h
+
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c b/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
+new file mode 100644
+index 000000000..2bd014a7e
+--- /dev/null
++++ b/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
+@@ -0,0 +1,116 @@
++/*
++ * Copyright 2021 NXP
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ *
++ */
++
++#include <assert.h>
++#include <errno.h>
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include <common/debug.h>
++#include <ddr.h>
++#include <lib/utils.h>
++#include <load_img.h>
++
++#include "plat_common.h"
++#include <platform_def.h>
++
++#if defined(CONFIG_STATIC_DDR) || defined(CONFIG_DDR_NODIMM)
++#error not implemented
++#endif /* defined(CONFIG_STATIC_DDR) || defined(CONFIG_DDR_NODIMM) */
++
++int ddr_board_options(struct ddr_info *priv)
++{
++	struct memctl_opt *popts = &priv->opt;
++	const struct ddr_conf *conf = &priv->conf;
++
++	popts->vref_dimm = U(0x24);		/* range 1, 83.4% */
++	popts->rtt_override = 0;
++	popts->rtt_park = U(240);
++	popts->otf_burst_chop_en = 0;
++	popts->burst_length = U(DDR_BL8);
++	popts->trwt_override = U(1);
++	popts->bstopre = U(0);			/* auto precharge */
++	popts->addr_hash = 1;
++
++	/* Set ODT impedance on PHY side */
++	switch (conf->cs_on_dimm[1]) {
++	case 0xc:	/* Two slots dual rank */
++	case 0x4:	/* Two slots single rank, not valid for interleaving */
++		popts->trwt = U(0xf);
++		popts->twrt = U(0x7);
++		popts->trrt = U(0x7);
++		popts->twwt = U(0x7);
++		popts->vref_phy = U(0x6B);	/* 83.6% */
++		popts->odt = U(60);
++		popts->phy_tx_impedance = U(28);
++		break;
++	case 0:		/* One slot used */
++	default:
++		popts->trwt = U(0x3);
++		popts->twrt = U(0x3);
++		popts->trrt = U(0x3);
++		popts->twwt = U(0x3);
++		popts->vref_phy = U(0x60);	/* 75% */
++		popts->odt = U(48);
++		popts->phy_tx_impedance = U(28);
++		break;
++	}
++
++	return 0;
++}
++
++long long init_ddr(void)
++{
++	int spd_addr[] = { 0x51, 0x52, 0x53, 0x54 };
++	struct ddr_info info;
++	struct sysinfo sys;
++	long long dram_size;
++
++	zeromem(&sys, sizeof(sys));
++	if (get_clocks(&sys) != 0) {
++		ERROR("System clocks are not set\n");
++		panic();
++	}
++	debug("platform clock %lu\n", sys.freq_platform);
++	debug("DDR PLL1 %lu\n", sys.freq_ddr_pll0);
++	debug("DDR PLL2 %lu\n", sys.freq_ddr_pll1);
++
++	zeromem(&info, sizeof(info));
++
++	/* Set two DDRC. Unused DDRC will be removed automatically. */
++	info.num_ctlrs = NUM_OF_DDRC;
++	info.spd_addr = spd_addr;
++	info.ddr[0] = (void *)NXP_DDR_ADDR;
++	info.ddr[1] = (void *)NXP_DDR2_ADDR;
++	info.phy[0] = (void *)NXP_DDR_PHY1_ADDR;
++	info.phy[1] = (void *)NXP_DDR_PHY2_ADDR;
++	info.clk = get_ddr_freq(&sys, 0);
++	info.img_loadr = load_img;
++	info.phy_gen2_fw_img_buf = PHY_GEN2_FW_IMAGE_BUFFER;
++	if (info.clk == 0) {
++		info.clk = get_ddr_freq(&sys, 1);
++	}
++	info.dimm_on_ctlr = DDRC_NUM_DIMM;
++
++	info.warm_boot_flag = DDR_WRM_BOOT_NT_SUPPORTED;
++
++	dram_size = dram_init(&info
++#if defined(NXP_HAS_CCN504) || defined(NXP_HAS_CCN508)
++		    , NXP_CCN_HN_F_0_ADDR
++#endif
++		    );
++
++
++	if (dram_size < 0) {
++		ERROR("DDR init failed.\n");
++	}
++
++	return dram_size;
++}
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/plat_def.h b/plat/nxp/soc-lx2160a/lx2160acex7/plat_def.h
+new file mode 100644
+index 000000000..02f51e74d
+--- /dev/null
++++ b/plat/nxp/soc-lx2160a/lx2160acex7/plat_def.h
+@@ -0,0 +1,105 @@
++/*
++ * Copyright 2021 NXP
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ *
++ */
++
++#ifndef PLAT_DEF_H
++#define PLAT_DEF_H
++
++#include <arch.h>
++#include <cortex_a72.h>
++/* Required without TBBR.
++ * To include the defines for DDR PHY
++ * Images.
++ */
++#include <tbbr_img_def.h>
++
++#include <policy.h>
++#include <soc.h>
++
++#if defined(IMAGE_BL31)
++#define LS_SYS_TIMCTL_BASE		0x2890000
++#define PLAT_LS_NSTIMER_FRAME_ID	0
++#define LS_CONFIG_CNTACR		1
++#endif
++
++#define NXP_SYSCLK_FREQ		100000000
++#define NXP_DDRCLK_FREQ		100000000
++
++/* UART related definition */
++#define NXP_CONSOLE_ADDR	NXP_UART_ADDR
++#define NXP_CONSOLE_BAUDRATE	115200
++
++/* Size of cacheable stacks */
++#if defined(IMAGE_BL2)
++#if defined(TRUSTED_BOARD_BOOT)
++#define PLATFORM_STACK_SIZE	0x2000
++#else
++#define PLATFORM_STACK_SIZE	0x1000
++#endif
++#elif defined(IMAGE_BL31)
++#define PLATFORM_STACK_SIZE	0x1000
++#endif
++
++/* SD block buffer */
++#define NXP_SD_BLOCK_BUF_SIZE	(0x8000)
++#define NXP_SD_BLOCK_BUF_ADDR	(NXP_OCRAM_ADDR + NXP_OCRAM_SIZE \
++				- NXP_SD_BLOCK_BUF_SIZE)
++
++#ifdef SD_BOOT
++#define BL2_LIMIT		(NXP_OCRAM_ADDR + NXP_OCRAM_SIZE \
++				- NXP_SD_BLOCK_BUF_SIZE)
++#else
++#define BL2_LIMIT		(NXP_OCRAM_ADDR + NXP_OCRAM_SIZE)
++#endif
++
++/* IO defines as needed by IO driver framework */
++#define MAX_IO_DEVICES		4
++#define MAX_IO_BLOCK_DEVICES	1
++#define MAX_IO_HANDLES		4
++
++#define PHY_GEN2_FW_IMAGE_BUFFER	(NXP_OCRAM_ADDR + CSF_HDR_SZ)
++
++/*
++ * FIP image defines - Offset at which FIP Image would be present
++ * Image would include Bl31 , Bl33 and Bl32 (optional)
++ */
++#ifdef POLICY_FUSE_PROVISION
++#define MAX_FIP_DEVICES		3
++#endif
++
++#ifndef MAX_FIP_DEVICES
++#define MAX_FIP_DEVICES		2
++#endif
++
++/*
++ * ID of the secure physical generic timer interrupt used by the BL32.
++ */
++#define BL32_IRQ_SEC_PHY_TIMER	29
++
++#define BL31_WDOG_SEC		89
++
++#define BL31_NS_WDOG_WS1	108
++
++/*
++ * Define properties of Group 1 Secure and Group 0 interrupts as per GICv3
++ * terminology. On a GICv2 system or mode, the lists will be merged and treated
++ * as Group 0 interrupts.
++ */
++#define PLAT_LS_G1S_IRQ_PROPS(grp) \
++	INTR_PROP_DESC(BL32_IRQ_SEC_PHY_TIMER, GIC_HIGHEST_SEC_PRIORITY, grp, \
++			GIC_INTR_CFG_EDGE)
++
++/* SGI 15 and Secure watchdog interrupts assigned to Group 0 */
++#define NXP_IRQ_SEC_SGI_7		15
++
++#define PLAT_LS_G0_IRQ_PROPS(grp)	\
++	INTR_PROP_DESC(BL31_WDOG_SEC, GIC_HIGHEST_SEC_PRIORITY, grp, \
++			GIC_INTR_CFG_EDGE), \
++	INTR_PROP_DESC(BL31_NS_WDOG_WS1, GIC_HIGHEST_SEC_PRIORITY, grp, \
++			GIC_INTR_CFG_EDGE), \
++	INTR_PROP_DESC(NXP_IRQ_SEC_SGI_7, GIC_HIGHEST_SEC_PRIORITY, grp, \
++			GIC_INTR_CFG_LEVEL)
++#endif
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/platform.c b/plat/nxp/soc-lx2160a/lx2160acex7/platform.c
+new file mode 100644
+index 000000000..b00adb51d
+--- /dev/null
++++ b/plat/nxp/soc-lx2160a/lx2160acex7/platform.c
+@@ -0,0 +1,29 @@
++/*
++ * Copyright 2021 NXP
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ *
++ */
++
++#include <plat_common.h>
++
++#pragma weak board_enable_povdd
++#pragma weak board_disable_povdd
++
++bool board_enable_povdd(void)
++{
++#ifdef CONFIG_POVDD_ENABLE
++	return true;
++#else
++	return false;
++#endif
++}
++
++bool board_disable_povdd(void)
++{
++#ifdef CONFIG_POVDD_ENABLE
++	return true;
++#else
++	return false;
++#endif
++}
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk b/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
+new file mode 100644
+index 000000000..37598c2d7
+--- /dev/null
++++ b/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
+@@ -0,0 +1,56 @@
++#
++# Copyright 2021 NXP
++#
++# SPDX-License-Identifier: BSD-3-Clause
++#
++
++# board-specific build parameters
++
++BOOT_MODE	?= 	flexspi_nor
++BOARD		?=	lx2160acex7
++POVDD_ENABLE	:=	no
++NXP_COINED_BB	:=	no
++
++ # DDR Compilation Configs
++NUM_OF_DDRC	:=	2
++DDRC_NUM_DIMM	:=	2
++DDRC_NUM_CS	:=	4
++DDR_ECC_EN	:=	yes
++ #enable address decoding feature
++DDR_ADDR_DEC	:=	yes
++APPLY_MAX_CDD	:=	yes
++
++# S5 GPIO
++LX2160A_S5_GPIO_ADDR := NXP_GPIO3_ADDR
++LX2160A_S5_GPIO := 7
++
++# DDR Errata
++ERRATA_DDR_A011396	:= 1
++ERRATA_DDR_A050450	:= 1
++
++ # On-Board Flash Details
++FLASH_TYPE	:=	MT35XU512A
++XSPI_FLASH_SZ	:=	0x10000000
++NXP_XSPI_NOR_UNIT_SIZE		:=	0x20000
++BL2_BIN_XSPI_NOR_END_ADDRESS	:=	0x100000
++# CONFIG_FSPI_ERASE_4K is required to erase 4K sector sizes. This
++# config is enabled for future use cases.
++FSPI_ERASE_4K	:= 0
++
++ # Platform specific features.
++WARM_BOOT	:=	no
++
++ # Adding Platform files build files
++BL2_SOURCES	+=	${BOARD_PATH}/ddr_init.c\
++			${BOARD_PATH}/platform.c
++
++SUPPORTED_BOOT_MODE	:=	flexspi_nor	\
++				sd		\
++				emmc		\
++				auto
++
++# Adding platform board build info
++include plat/nxp/common/plat_make_helper/plat_common_def.mk
++
++ # Adding SoC build info
++include plat/nxp/soc-lx2160a/soc.mk
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/platform_def.h b/plat/nxp/soc-lx2160a/lx2160acex7/platform_def.h
+new file mode 100644
+index 000000000..666099800
+--- /dev/null
++++ b/plat/nxp/soc-lx2160a/lx2160acex7/platform_def.h
+@@ -0,0 +1,14 @@
++/*
++ * Copyright 2021 NXP
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ *
++ */
++
++#ifndef PLATFORM_DEF_H
++#define PLATFORM_DEF_H
++
++#include "plat_def.h"
++#include "plat_default_def.h"
++
++#endif
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/policy.h b/plat/nxp/soc-lx2160a/lx2160acex7/policy.h
+new file mode 100644
+index 000000000..19ad6dbec
+--- /dev/null
++++ b/plat/nxp/soc-lx2160a/lx2160acex7/policy.h
+@@ -0,0 +1,38 @@
++/*
++ * Copyright 2021 NXP
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ *
++ */
++
++#ifndef POLICY_H
++#define	POLICY_H
++
++/* Following defines affect the PLATFORM SECURITY POLICY */
++
++/* set this to 0x0 if the platform is not using/responding to ECC errors
++ * set this to 0x1 if ECC is being used (we have to do some init)
++ */
++#define  POLICY_USING_ECC 0x0
++
++/* Set this to 0x0 to leave the default SMMU page size in sACR
++ * Set this to 0x1 to change the SMMU page size to 64K
++ */
++#define POLICY_SMMU_PAGESZ_64K 0x1
++
++/*
++ * POLICY_PERF_WRIOP = 0 : No Performance enhancement for WRIOP RN-I
++ * POLICY_PERF_WRIOP = 1 : No Performance enhancement for WRIOP RN-I = 7
++ * POLICY_PERF_WRIOP = 2 : No Performance enhancement for WRIOP RN-I = 23
++ */
++#define POLICY_PERF_WRIOP 0
++
++/*
++ * set this to '1' if the debug clocks need to remain enabled during
++ * system entry to low-power (LPM20) - this should only be necessary
++ * for testing and NEVER set for normal production
++ */
++#define POLICY_DEBUG_ENABLE 0
++
++
++#endif /* POLICY_H */
+-- 
+2.43.0
+
