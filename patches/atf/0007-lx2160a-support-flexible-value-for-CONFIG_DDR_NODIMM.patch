@@ -1,0 +1,33 @@
+From 92d0a6fab056eb43fa5561fb1888c8c393ebee29 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 18 Oct 2024 21:17:12 +0200
+Subject: [PATCH 7/8] lx2160a: support flexible value for CONFIG_DDR_NODIMM
+
+Add support for values other than 0 and 1 for CONFIG_DDR_NODIMM.
+This macro can be used for both enabling, and selecting a specific
+memory configuration at compile-time.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/common/plat_make_helper/plat_common_def.mk | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/plat/nxp/common/plat_make_helper/plat_common_def.mk b/plat/nxp/common/plat_make_helper/plat_common_def.mk
+index a1038a073..ed6e0bdac 100644
+--- a/plat/nxp/common/plat_make_helper/plat_common_def.mk
++++ b/plat/nxp/common/plat_make_helper/plat_common_def.mk
+@@ -39,8 +39,9 @@ ifneq (${NUM_OF_DDRC},)
+ $(eval $(call add_define_val,NUM_OF_DDRC,${NUM_OF_DDRC}))
+ endif
+ 
+-ifeq (${CONFIG_DDR_NODIMM},1)
+-$(eval $(call add_define,CONFIG_DDR_NODIMM))
++CONFIG_DDR_NODIMM ?= 0
++ifneq (${CONFIG_DDR_NODIMM},0)
++$(eval $(call add_define_val,CONFIG_DDR_NODIMM,${CONFIG_DDR_NODIMM}))
+ DDRC_NUM_DIMM := 1
+ endif
+ 
+-- 
+2.43.0
+
