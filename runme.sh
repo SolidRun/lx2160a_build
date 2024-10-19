@@ -16,6 +16,10 @@ set -e
 : ${CPU_SPEED:=2000}
 : ${DDR_SPEED:=2900}
 : ${BUS_SPEED:=700}
+# SoC revision
+# - 1 lx2160a preview version
+# - 2 (default)
+: ${CPU_REVISION:=2}
 : ${SERDES:=8_5_2}
 # SoC Boot Source
 # - auto
@@ -266,6 +270,10 @@ do_build_atf() {
 	local DDR_PHY_BIN_PATH=$ROOTDIR/build/ddr-phy-binary/lx2160a
 	local BUILD=release
 	local DEBUG_FLAGS=
+	local REV=
+	if [ ${CPU_REVISION} -gt 1 ]; then
+		REV=_rev${CPU_REVISION}
+	fi
 	if $ATF_DEBUG; then
 		BUILD=debug
 		DEBUG_FLAGS="DEBUG=1 LOG_LEVEL=40"
@@ -292,7 +300,7 @@ do_build_atf() {
 		echo "\"${BOOTSOURCE}\" is not a supported boot source!"
 		exit 1
 	esac
-	local rcwimg=$ROOTDIR/images/tmp/${MODULE,,}_rev2/${BOARD,,}/rcw_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}_${RCW_BOOTSOURCE}.bin
+	local rcwimg=$ROOTDIR/images/tmp/${MODULE,,}${REV}/${BOARD,,}/rcw_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}_${RCW_BOOTSOURCE}.bin
 
 	rm -rf $ROOTDIR/images/tmp/atf
 	mkdir -p $ROOTDIR/images/tmp/atf
@@ -847,7 +855,7 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [ "${BOOTSOURCE}" = "xspi" ]); then
 	echo "Assembling XSPI Boot Image"
 	cd $ROOTDIR/
 
-	XSPI_IMG=${MODULE,,}_${BOARD,,}_xspi_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
+	XSPI_IMG=${MODULE,,}_rev${CPU_REVISION}_${BOARD,,}_xspi_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
 	rm -rf $ROOTDIR/images/${XSPI_IMG}
 	truncate -s 64M $ROOTDIR/images/${XSPI_IMG}
 
@@ -869,7 +877,7 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc* ]]); then
 	BOOTPART_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/boot.part)
 
 	# generate boot image
-	IMG=${MODULE,,}_${BOARD,,}_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
+	IMG=${MODULE,,}_rev${CPU_REVISION}_${BOARD,,}_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
 	rm -rf $ROOTDIR/images/${IMG}
 	truncate -s 64M $ROOTDIR/images/${IMG}
 	truncate -s +$BOOTPART_SIZE $ROOTDIR/images/${IMG}
