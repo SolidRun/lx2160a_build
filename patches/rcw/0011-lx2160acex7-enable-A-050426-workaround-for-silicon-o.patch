@@ -1,0 +1,35 @@
+From e42d8bf470388b16c4addb47b17669a6967bebe2 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 20 Oct 2024 15:39:21 +0200
+Subject: [PATCH] lx2160acex7: enable A-050426 workaround for silicon one
+
+A-050426 affects both Silicon revisions 1 and 2, enable for 1 as well.
+
+Note this significantly increases size of PBI and currently leads to
+issues with autoboot support. Plain sdhc or xspi builds continue to
+work.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2160acex7/include/common_pbi.rcwi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lx2160acex7/include/common_pbi.rcwi b/lx2160acex7/include/common_pbi.rcwi
+index 7dd4be7..bb0f8bc 100644
+--- a/lx2160acex7/include/common_pbi.rcwi
++++ b/lx2160acex7/include/common_pbi.rcwi
+@@ -33,10 +33,10 @@ write 0x2320000,0x20000000
+ 
+ /*SerDes Errata A-050479*/
+ #include <../lx2160asi/a050479.rcw>
++#endif
+ 
+ /* Errata A-050426 */
+ #include <../lx2160asi/a050426.rcw>
+-#endif
+ 
+ /*
+  * FlexSPI controller supports modifcation of the FlexSPI Clock
+-- 
+2.43.0
+
