@@ -1,0 +1,87 @@
+From 30773f1070b4a315bcaa041e85ee2bdf8e04bf5b Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 20 Oct 2024 15:45:00 +0200
+Subject: [PATCH 12/13] lx2160acex6: enable pci errata workarounds for all
+ active ports
+
+SolidRun internal cex6 evaluation baord uses PEX2, PEX3, PEX4 and PEX5.
+Include workarounds for A-008851 and A-009531 for all available ports.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../evb/rcw_2000_700_2900_3_3_2_auto.rcw      |  2 +-
+ lx2160acex6_rev2/include/common_pbi.rcwi      | 52 +++++++++++++++++++
+ 2 files changed, 53 insertions(+), 1 deletion(-)
+ create mode 100644 lx2160acex6_rev2/include/common_pbi.rcwi
+
+diff --git a/lx2160acex6_rev2/evb/rcw_2000_700_2900_3_3_2_auto.rcw b/lx2160acex6_rev2/evb/rcw_2000_700_2900_3_3_2_auto.rcw
+index 8d14387..6ae1090 100644
+--- a/lx2160acex6_rev2/evb/rcw_2000_700_2900_3_3_2_auto.rcw
++++ b/lx2160acex6_rev2/evb/rcw_2000_700_2900_3_3_2_auto.rcw
+@@ -19,4 +19,4 @@
+ #include <../lx2160acex7/include/SD1_3.rcwi>
+ #include <../lx2160acex7/include/SD2_3.rcwi>
+ #include <../lx2160acex7/include/SD3_2.rcwi>
+-#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex6_rev2/include/common_pbi.rcwi>
+diff --git a/lx2160acex6_rev2/include/common_pbi.rcwi b/lx2160acex6_rev2/include/common_pbi.rcwi
+new file mode 100644
+index 0000000..aaadeb2
+--- /dev/null
++++ b/lx2160acex6_rev2/include/common_pbi.rcwi
+@@ -0,0 +1,52 @@
++/*
++ * LX2160A COM-Express Type 6 Common Configuration
++ */
++
++/* Drive the fan full speed pin */
++.pbi
++write 0x2320000,0x20000000
++.end
++
++/* Errata to write on scratch reg for validation */
++#include <../lx2160asi/scratchrw1.rcw>
++
++/* Errata for SATA controller */
++#include <../lx2160asi/a010554.rcw>
++
++#if LX_SR == 1
++/* Errata for PCIe controller */
++#include <../lx2160asi/a011270.rcw>
++#include <../lx2160asi/a050234.rcw>
++#endif
++
++/* common PBI commands */
++#include <../lx2160asi/common.rcw>
++
++#if LX_SR == 2
++/*PCIe Errata A-009531*/
++#include <../lx2160asi/a009531_PEX2.rcw>
++#include <../lx2160asi/a009531_PEX3.rcw>
++#include <../lx2160asi/a009531_PEX4.rcw>
++#include <../lx2160asi/a009531_PEX5.rcw>
++
++/*PCIe Errata A-008851*/
++#include <../lx2160asi/a008851_PEX2.rcw>
++#include <../lx2160asi/a008851_PEX3.rcw>
++#include <../lx2160asi/a008851_PEX4.rcw>
++#include <../lx2160asi/a008851_PEX5.rcw>
++
++/*SerDes Errata A-050479*/
++#include <../lx2160asi/a050479.rcw>
++#endif
++
++/* Errata A-050426 */
++#include <../lx2160asi/a050426.rcw>
++
++/* Set Boot Location Pointer (Fall-back when unset is BOOT_LOC) */
++#if defined(LX_BOOTSOURCE_SDHC)
++#include <../lx2160asi/bootlocptr_sd.rcw>
++#elif defined(LX_BOOTSOURCE_XSPI)
++#include <../lx2160asi/bootlocptr_nor.rcw>
++#else
++#include <../lx2160asi/bootlocptr_auto.rcw>
++#endif
+-- 
+2.43.0
+
