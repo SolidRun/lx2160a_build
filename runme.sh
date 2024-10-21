@@ -459,8 +459,7 @@ if [[ $DISTRO == ubuntu ]]; then
 	esac
 
 	# (re-)generate only if rootfs doesn't exist or runme script has changed
-	if [ 0 -eq 1 ]; then
-	#if [ ! -f $UBUNTU_VERSION.ext4 ] || [[ ${ROOTDIR}/${BASH_SOURCE[0]} -nt $UBUNTU_VERSION.ext4 ]]; then
+	if [ ! -f $UBUNTU_VERSION.ext4 ] || [[ ${ROOTDIR}/${BASH_SOURCE[0]} -nt $UBUNTU_VERSION.ext4 ]]; then
 		echo Building Ubuntu rootfs
 
 		rm -f ubuntu-base.dl
