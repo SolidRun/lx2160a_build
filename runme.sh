@@ -20,7 +20,8 @@ set -e
 # - 1 lx2160a preview version
 # - 2 (default)
 : ${CPU_REVISION:=2}
-: ${SERDES:=8_5_2}
+# Target configuration (SoC, module, board, serdes)
+: ${TARGET:=LX2160A_CEX7_CLEARFOG-CX_8_5_2}
 # SoC Boot Source
 # - auto
 # - sdhc1 (microSD)
@@ -70,61 +71,46 @@ export ARCH=arm64
 REPO_PREFIX=`git log -1 --pretty=format:%h || echo unknown`
 echo "Repository prefix for images is $REPO_PREFIX"
 
-case "${SERDES}" in
-	0_0_*)
-		# no networking, can be used as base for new configurations
-		DPC=LX2160A-CEX7/null-s1_0-s2_0-dpc.dtb
-		DPL=LX2160A-CEX7/null-s1_0-s2_0-dpl.dtb
-		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
-	;;
-	8_5_*)
-		DPC=LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpc.dtb
-		DPL=LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpl.dtb
-		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
-	;;
-	LX2160ACEX6_EVB_3_3_2)
+case "${TARGET}" in
+	LX2160A_CEX6_EVB_3_3_*)
+		ATF_PLATFORM=lx2160acex6
 		DPC=LX2160A-CEX6/evb-s1_3-s2_0-dpc.dtb
 		DPL=LX2160A-CEX6/evb-s1_3-s2_0-dpl.dtb
 		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-cex6-evb.dtb"
+		OPTEE_PLATFORM=ls-lx2160ardb
+		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+	;;
+	LX2160A_CEX7_CLEARFOG-CX_0_0_*)
+		# no networking, can be used as base for new configurations
+		ATF_PLATFORM=lx2160acex7
+		DPC=LX2160A-CEX7/null-s1_0-s2_0-dpc.dtb
+		DPL=LX2160A-CEX7/null-s1_0-s2_0-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
+		OPTEE_PLATFORM=ls-lx2160ardb
+		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+	;;
+	LX2160A_CEX7_CLEARFOG-CX_8_5_*)
+		ATF_PLATFORM=lx2160acex7
+		DPC=LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpc.dtb
+		DPL=LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
+		OPTEE_PLATFORM=ls-lx2160ardb
+		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
 	;;
 	*)
-		echo "Please define SERDES configuration"
+		echo "Please specify a supported TARGET configuration"
 		exit -1
 	;;
 esac
 
-# extract module and board from SERDES variable if length == 5
+# extract components from TARGET variable if length == 6
 OLDIFS=$IFS
-IFS="_" arr=($SERDES)
-MODULE=LX2160ACEX7
-BOARD=CLEARFOG-CX
-if [ ${#arr[@]} -eq 5 ]; then
-	MODULE=${arr[0]}
-	BOARD=${arr[1]}
-	SERDES=${arr[2]}_${arr[3]}_${arr[4]}
-fi
+IFS="_" arr=($TARGET)
+SOC=${arr[0]}
+MODULE=${arr[1]}
+BOARD=${arr[2]}
+SERDES=${arr[3]}_${arr[4]}_${arr[5]}
 IFS=$OLDIFS
-
-# unless set above, fall back to default reference platform
-: ${DEFAULT_FDT_FILE:=freescale/fsl-lx2160a-clearfog-cx.dtb}
-
-case "${CPU_SPEED}" in
-	2000|2200)
-	;;
-	*)
-		echo "Please use one of allowed CPU speeds: 2000, 2200"
-		exit -1
-	;;
-esac
-
-case "${DDR_SPEED}" in
-	2400|2600|2666|2900|3200)
-	;;
-	*)
-		echo "Please use one of allowed DDR speeds: 2400, 2600, 2900, 3200"
-		exit -1
-	;;
-esac
 
 case "${DISTRO}" in
 	debian|ubuntu)
@@ -221,7 +207,7 @@ do_build_rcw
 
 do_build_uboot() {
 	cd $ROOTDIR/build/u-boot
-	./scripts/kconfig/merge_config.sh configs/lx2160acex7_tfa_defconfig $ROOTDIR/configs/u-boot/lx2k_additions.config
+	./scripts/kconfig/merge_config.sh configs/${UBOOT_DEFCONFIG} $ROOTDIR/configs/u-boot/lx2k_additions.config
 	test -n "${DEFAULT_FDT_FILE}" && printf "CONFIG_DEFAULT_FDT_FILE=\"%s\"\n" "${DEFAULT_FDT_FILE}" >> .config || true
 	make olddefconfig
 	make -j${PARALLEL}
@@ -231,8 +217,6 @@ echo "Build u-boot"
 do_build_uboot
 
 do_build_opteeos() {
-	local PLATFORM=ls-lx2160ardb
-
 	rm -rf $ROOTDIR/images/tmp/optee
 	mkdir -p $ROOTDIR/images/tmp/optee
 
@@ -241,7 +225,7 @@ do_build_opteeos() {
 	rm -rf out
 	make -j${JOBS} \
 		ARCH=arm \
-		PLATFORM=${PLATFORM} \
+		PLATFORM=${OPTEE_PLATFORM} \
 		CROSS_COMPILE64=${CROSS_COMPILE} \
 		CROSS_COMPILE32=${CROSS_COMPILE} \
 		CFG_ARM64_core=y \
@@ -253,7 +237,7 @@ do_build_opteeos() {
 	cd $ROOTDIR/build/optee_os/
 	make -j${JOBS} \
 		ARCH=arm \
-		PLATFORM=$PLATFORM \
+		PLATFORM=${OPTEE_PLATFORM} \
 		CROSS_COMPILE64=aarch64-linux-gnu- \
 		CROSS_COMPILE32=arm-linux-gnueabihf- \
 		CFG_ARM64_core=y
@@ -265,7 +249,6 @@ echo "Building optee-os"
 do_build_opteeos
 
 do_build_atf() {
-	local PLATFORM=${MODULE,,}
 	local UBOOT_BINARY=$ROOTDIR/build/u-boot/u-boot.bin
 	local DDR_PHY_BIN_PATH=$ROOTDIR/build/ddr-phy-binary/lx2160a
 	local BUILD=release
@@ -300,7 +283,12 @@ do_build_atf() {
 		echo "\"${BOOTSOURCE}\" is not a supported boot source!"
 		exit 1
 	esac
-	local rcwimg=$ROOTDIR/images/tmp/${MODULE,,}${REV}/${BOARD,,}/rcw_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}_${RCW_BOOTSOURCE}.bin
+	local rcwimg=$ROOTDIR/images/tmp/${SOC,,}${MODULE,,}${REV}/${BOARD,,}/rcw_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}_${RCW_BOOTSOURCE}.bin
+	if [ ! -e "${rcwimg}" ]; then
+		echo "cannot stat \"${rcwimg}\"!"
+		echo "Please specify a supported combination of BOOTSOURCE, CPU_REVISION, CPU_SPEED, BUS_SPEED, TARGET."
+		return 1
+	fi
 
 	rm -rf $ROOTDIR/images/tmp/atf
 	mkdir -p $ROOTDIR/images/tmp/atf
@@ -314,7 +302,7 @@ do_build_atf() {
 	make realclean
 	make \
 		-j${PARALLEL} V=1 \
-		PLAT=${PLATFORM} \
+		PLAT=${ATF_PLATFORM} \
 		BOOT_MODE=${BOOT_MODE} \
 		RCW=${rcwimg} \
 		BL32=$ROOTDIR/images/tmp/optee/tee-pager_v2.bin SPD=opteed \
@@ -323,13 +311,13 @@ do_build_atf() {
 		${DEBUG_FLAGS} \
 		all fip pbl fip_ddr
 
-	cp -v $ROOTDIR/build/atf/build/${PLATFORM}/${BUILD}/bl2_${BOOT_MODE}.pbl $ROOTDIR/images/tmp/atf/bl2.pbl
-	cp -v $ROOTDIR/build/atf/build/${PLATFORM}/${BUILD}/fip.bin $ROOTDIR/images/tmp/atf/
+	cp -v $ROOTDIR/build/atf/build/${ATF_PLATFORM}/${BUILD}/bl2_${BOOT_MODE}.pbl $ROOTDIR/images/tmp/atf/bl2.pbl
+	cp -v $ROOTDIR/build/atf/build/${ATF_PLATFORM}/${BUILD}/fip.bin $ROOTDIR/images/tmp/atf/
 	if $SECURE; then
-		cp -v $ROOTDIR/build/atf/build/${PLATFORM}/${BUILD}/ddr_fip_sec.bin $ROOTDIR/images/tmp/atf/
-		cp -v $ROOTDIR/build/atf/build/${PLATFORM}/${BUILD}/fuse_fip.bin $ROOTDIR/images/tmp/atf/
+		cp -v $ROOTDIR/build/atf/build/${ATF_PLATFORM}/${BUILD}/ddr_fip_sec.bin $ROOTDIR/images/tmp/atf/
+		cp -v $ROOTDIR/build/atf/build/${ATF_PLATFORM}/${BUILD}/fuse_fip.bin $ROOTDIR/images/tmp/atf/
 	else
-		cp -v $ROOTDIR/build/atf/build/${PLATFORM}/${BUILD}/ddr_fip.bin $ROOTDIR/images/tmp/atf/ddr_fip.bin
+		cp -v $ROOTDIR/build/atf/build/${ATF_PLATFORM}/${BUILD}/ddr_fip.bin $ROOTDIR/images/tmp/atf/ddr_fip.bin
 	fi
 }
 
@@ -855,7 +843,7 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [ "${BOOTSOURCE}" = "xspi" ]); then
 	echo "Assembling XSPI Boot Image"
 	cd $ROOTDIR/
 
-	XSPI_IMG=${MODULE,,}_rev${CPU_REVISION}_${BOARD,,}_xspi_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
+	XSPI_IMG=${SOC,,}_rev${CPU_REVISION}_${MODULE,,}_${BOARD,,}_xspi_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
 	rm -rf $ROOTDIR/images/${XSPI_IMG}
 	truncate -s 64M $ROOTDIR/images/${XSPI_IMG}
 
@@ -877,7 +865,7 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc* ]]); then
 	BOOTPART_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/boot.part)
 
 	# generate boot image
-	IMG=${MODULE,,}_rev${CPU_REVISION}_${BOARD,,}_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
+	IMG=${SOC,,}_rev${CPU_REVISION}_${MODULE,,}_${BOARD,,}_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
 	rm -rf $ROOTDIR/images/${IMG}
 	truncate -s 64M $ROOTDIR/images/${IMG}
 	truncate -s +$BOOTPART_SIZE $ROOTDIR/images/${IMG}
