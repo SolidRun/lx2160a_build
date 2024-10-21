@@ -1,15 +1,7 @@
-# SolidRun's LX2160A COM express type 7 build scripts
+# SolidRun's LX2160A build scripts
 
-## Introduction
-Main intention of this repository is to provide build scripts that are easy to handle than NXP's flexbuild build environment.
-
-They are used in SolidRun to quickly build images for development where those images can be SD or SPI booted or network TFTP (kernel) or used for root NFS
-
-The sources are pulled from NXP's GitHub repository and patched after being clone using the patches in the patches/ directory
-
-The build script builds the u-boot, atf, rcw and linux components, integrate it with Ubuntu rootfs bootstrapped with multistrap. Buildroot is also built aside for future use.
-
-Automatic binary releases are available on [our website](https://images.solid-run.com/LX2k/lx2160a_build) for download (latest versions are in subfolders named by build date).
+Main intention of this repository is to produce a reference system for LX2160A product evaluation.
+Automatic binary releases are available on [our website](https://images.solid-run.com/LX2k/lx2160a_build) for download.
 
 ## Get Started
 
@@ -69,7 +61,6 @@ ls *.ko
 In case the module requires access to kernel private headers not included in -headers package,
 it must be built as part of a full image. See [runme.sh](https://github.com/SolidRun/ti_am64x_build/blob/main/runme.sh) function `build_atemsys` for an example.
 
-
 ## Build Full Image from Source with Docker
 
 ### Build Full Image from Source with Docker
@@ -94,21 +85,21 @@ Therefore in order for the build directory to be owned by current user, `-u 0 -g
 
 ### Build Full Image from Source with host tools
 
-Simply running ./runme.sh will check for required tools, clone and build images and place results in images/ directory.
+Simply running ./runme.sh will check for required tools, clone and build images and place results in images/ directory:
 
-We enhanced the NXP PBI scripting tools to accomodate auto detection of boot device, due to that the boot images are now unified for SD, eMMC and SPI.
+- `images/tmp/ubuntu-core.img`: for SD-Card, Bootloader and OS on SD-Card
+- `images/lx2160a_rev2_cex7_clearfog-cx_xspi_2000_700_2900_8_5_2-<HASH>.img`: for SPI Flash, Bootloader only
+- `images/lx2160a_rev2_cex7_clearfog-cx_2000_700_2900_8_5_2-<HASH>.img`: for SD-Card, supports installation of Bootloader & OS to eMMC, supports installation of Bootloader to SPI Flash
 
 ### Configure Build Options
 
-By default the script will create an image bootable from SD (ready to use .img file) with DDR4 SO-DIMMs 3200Mtps, SERDES configuration `8_5_2` (SERDES1 = 8, SERDES2 = 5, SERDES = 2) suitable for Clearfog CX and Honeycomb.
+By default the script will create an image bootable from SD (ready to use .img file) with DDR4 SO-DIMMs 2900Mtps, SERDES configuration `8_5_2` (SERDES1 = 8, SERDES2 = 5, SERDES = 2) suitable for Clearfog CX and Honeycomb.
 
 Build options can be customised by passing environment variables to the runme script / docker/
 For example:
 
-- `./runme.sh SERDES=LX2162A_CLEARFOG_18_9_0` **or**
-- `docker run --rm -i -t -v "$PWD":/work -e SERDES=LX2162A_CLEARFOG_18_9_0 lx2160a_build -u $(id -u) -g $(id -g)`
-
-generates *images/lx2160acex7_2000_700_3200_8_5_2.img* which is an image ready to be deployed on micro SD card and *images/lx2160acex7_xspi_2000_700_3200_8_5_2.img* which is an image ready to be deployed on the COM SPI flash.
+- `./runme.sh TARGET=LX2162A_SOM_CLEARFOG_18_9_0 CPU_REVISION=1` **or**
+- `docker run --rm -i -t -v "$PWD":/work -e TARGET=LX2162A_SOM_CLEARFOG_18_9_0 -e CPU_REVISION=1 -e BUS_SPEED=650 lx2160a_build -u $(id -u) -g $(id -g)`
 
 #### Available Options:
 
@@ -133,7 +124,7 @@ generates *images/lx2160acex7_2000_700_3200_8_5_2.img* which is an image ready t
 - `CPU_REVISION`: select soc revision
   - `1`: LX2160A preview version
   - `2`: LX2160A production version (default)
-- `SERDES`: Select Board and Serdes Protocols (for list of valid choices see `runme.sh`)
+- `TARGET`: Select Board and Serdes Protocols (for list of valid choices see `runme.sh`)
 - `SHALLOW`: enable shallow git clone to save space and bandwidth
   - `false` (default)
   - `true`
@@ -164,14 +155,14 @@ generates *images/lx2160acex7_2000_700_3200_8_5_2.img* which is an image ready t
 
 ### Adding a new Configuration
 
-The easiest way to start development is reuse of an existing configuration `SERDES` setting and make changes where required.
+The easiest way to start development is reuse of an existing configuration `TARGET` setting and make changes where required.
 It comes however at the cost of merging future upstream changes not having customer boards in mind.
 
 The intended method is as follows:
 
-1. Define a specific configuration for the `SERDES` setting. The variable is a combination of multiple parameters: `<SOC>_<BOARD>_<SERDES-1>_<SERDES-2>_<SERDES-3>`
+1. Define a specific configuration for the `TARGET` setting. The variable is a combination of multiple parameters: `<SOC>_<MODULE>_<BOARD>_<SERDES-1>_<SERDES-2>_<SERDES-3>`
 
-   For example a ficticious board called "Waffle" using LX2160A CEX-7 with Serdes 1 Protocol 1, Serdes 2 Protocol 13 and Serdes 3 Protocol 3 should be named: `LX2160A_WAFFLE_1_13_3`
+   For example a ficticious board called "Waffle" using LX2160A CEX-7 with Serdes 1 Protocol 1, Serdes 2 Protocol 13 and Serdes 3 Protocol 3 should be named: `LX2160A_CEX7_WAFFLE_1_13_3`
 
 2. Create configuration files DPL & DPC for the network coprocessor:
 
@@ -191,13 +182,16 @@ The intended method is as follows:
 
 4. Add configuration to `runme.sh`:
 
-   Within the `case "${SERDES}" in` block, add a new entry:
+   Within the `case "${SOC^^}${MODULE^^}_${BOARD^^}_${SERDES}" in` block, add a new entry:
 
    ```
-   	LX2160A_WAFFLE_1_13_3)
+   	LX2160A_CEX7_WAFFLE_1_13_3)
+   		ATF_PLATFORM=lx2160acex7
    		DPC=LX2160A-CEX7/waffle-s1_1-s2_13-dpc.dtb
    		DPL=LX2160A-CEX7/waffle-s1_1-s2_13-dpl.dtb
    		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-waffle.dtb"
+   		OPTEE_PLATFORM=ls-lx2160ardb
+   		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
    	;;
    ```
 
@@ -209,17 +203,20 @@ The intended method is as follows:
 
 6. Create RCW Configuration Files:
 
-   Based on the configuration name the build system expects reset configuration file at `build/rcw/lx2160acex7_rev2/clearfog-cx/rcw_<CPU_SPEED>_700_<DDR_SPEED>_<SERDES>.rcw`.
-   For the Waffle example: `build/rcw/lx2160acex7_rev2/clearfog-cx/rcw_<CPU_SPEED>_700_<DDR_SPEED>_1_13_3.rcw`.
+   Based on the configuration name the build system expects reset configuration file at `build/rcw/<MODULE>_rev<CPU_REVISION>/<BOARD>/rcw_<CPU_SPEED>_<BUS_SPEED>_<DDR_SPEED>_<SERDES-1>_<SERDES-2>_<SERDES-3>_<BOOTSOURCE>.rcw`.
+   For the Waffle example: `build/rcw/lx2160acex7_rev2/clearfog-cx/rcw_<CPU_SPEED>_<BUS_SPEED>_<DDR_SPEED>_1_13_3_auto.rcw`.
 
-   It may reference using shared include files, e.g.:
+   It may reference shared include files, e.g.:
 
-   - `build/rcw/lx2160acex7_rev2/include/common.rcwi`: SolidRun defaults for LX2160A CEX-7 / LX2162A SoM
-   - `build/rcw/lx2160acex7_rev2/include/pll_<CPU_SPEED>_700_xxxx.rcwi`: CPU Frequency Selection
-   - `build/rcw/lx2160acex7_rev2/include/pll_xxxx_700_<DDR_SPEED>.rcwi`: DDR Frequency Selection
-   - `build/rcw/lx2160acex7_rev2/include/SD1_<PROTOCOL>.rcwi`:  Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
-   - `build/rcw/lx2160acex7_rev2/include/SD2_<PROTOCOL>.rcwi`:  Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
-   - `build/rcw/lx2160acex7_rev2/include/SD3_<PROTOCOL>.rcwi`:  Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
+   - `build/rcw/lx2160asi/lx2160a.rcwi`: LX2160A / LX2162A SoC Defaults
+   - `build/rcw/lx2160acex7/include/pll_<CPU_SPEED>_<BUS_SPEED>_xxxx.rcwi`: CPU & Bus Frequency Selection
+   - `build/rcw/lx2160acex7/include/pll_xxxx_xxx_<DDR_SPEED>.rcwi`: DDR Frequency Selection
+   - `build/rcw/lx2160acex7/include/SD1_<PROTOCOL>.rcwi`:  Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
+   - `build/rcw/lx2160acex7/include/SD2_<PROTOCOL>.rcwi`:  Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
+   - `build/rcw/lx2160acex7/include/SD3_<PROTOCOL>.rcwi`:  Serdes-Protocol-specific configuration, e.g. serdes clocks and pci-e speed
+   - `build/rcw/lx2160acex7/include/common.rcwi`: SolidRun defaults for LX2160A CEX-7
+   - `build/rcw/lx2160acex7/include/common_pbi.rcwi`: SolidRun defaults for LX2160A CEX-7
+   - `build/rcw/lx2160acex7/clearfog-cx/sd1_8_eq.rcwi`: SolidRun SerDes Equalization settings for Clearfog-CX
 
    Safe reference points in case uart stays silent are protocols `0` (`SRDS_PRTCL_S1=0`, `SRDS_PRTCL_S2=0`, `SRDS_PRTCL_S3=0`).
 
@@ -229,7 +226,7 @@ The intended method is as follows:
 
 For SD card bootable images, plug in a micro SD into your machine and run the following, where sdX is the location of the SD card got probed into your machine -
 
-`sudo dd if=images/lx2160acex7_2000_700_3200_8_5_2_sd.img of=/dev/sdX`
+`sudo dd if=images/lx2160acex7_rev2_clearfog-cx_2000_700_2900_8_5_2-<HASH>.img of=/dev/sdX`
 
 And then set boot DIP switch on COM to off/on/on/on from numbers 1 to 4 (dip number 5 is not used, notice the marking 'ON' on the DIP switch)
 
