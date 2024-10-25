@@ -1,0 +1,30 @@
+From 668924da1e8df2036dc05022616eb7d15a8c8727 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 25 Oct 2024 16:43:59 +0200
+Subject: [PATCH 10/11] lx2160acex6: flush i2c bus with spd eeprom before ddr
+ init
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/soc-lx2160a/lx2160acex6/platform.mk | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk b/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk
+index 1165cfa09..950207878 100644
+--- a/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk
++++ b/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk
+@@ -29,6 +29,11 @@ CONFIG_DDR_NODIMM	:=	0
+ LX2160A_S5_GPIO_ADDR := NXP_GPIO3_ADDR
+ LX2160A_S5_GPIO := 0
+ 
++# I2C Bus Flushing: IIC1
++LX2160_FLUSH_IIC := 1,
++# I2C Mux Flushing: IIC1: PCA9547@77: Channel 0 (SPD EEPROM)
++LX2160_FLUSH_IIC_MUX := { 1, 0x77, 0x01 },
++
+ # DDR Errata
+ ERRATA_DDR_A011396	:= 1
+ ERRATA_DDR_A050450	:= 1
+-- 
+2.43.0
+
