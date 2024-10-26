@@ -1,0 +1,102 @@
+From f107c333541cdb1dd35fdd056c4f72d1e23f610a Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 24 Oct 2024 16:17:49 +0200
+Subject: [PATCH] armv8: lx2160a: enable workaround for SPI erratum A-050752
+
+When RCW is loaded from SDHC1, chip-selects signals for SPI3 are always
+low and not usable.
+
+Implement workaround for erratum A-050752 by clearing rcw source values
+in dynamic configuration register and masking HRESET_B.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm/cpu/armv8/fsl-layerscape/Kconfig      |  4 ++++
+ arch/arm/cpu/armv8/fsl-layerscape/cpu.c        |  3 +++
+ arch/arm/cpu/armv8/fsl-layerscape/soc.c        | 18 ++++++++++++++++++
+ arch/arm/include/asm/arch-fsl-layerscape/soc.h |  4 ++++
+ 4 files changed, 29 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/fsl-layerscape/Kconfig b/arch/arm/cpu/armv8/fsl-layerscape/Kconfig
+index 9bb870dcd8c..ad7bea8e44e 100644
+--- a/arch/arm/cpu/armv8/fsl-layerscape/Kconfig
++++ b/arch/arm/cpu/armv8/fsl-layerscape/Kconfig
+@@ -296,6 +296,7 @@ config ARCH_LX2160A
+ 	select SYS_FSL_EC2
+ 	select SYS_FSL_ERRATUM_A050204
+ 	select SYS_FSL_ERRATUM_A011334
++	select SYS_FSL_ERRATUM_A050752
+ 	select SYS_FSL_ESDHC_UNRELIABLE_PULSE_DETECTION_WORKAROUND
+ 	select SYS_FSL_HAS_RGMII
+ 	select SYS_FSL_HAS_SEC
+@@ -671,6 +672,9 @@ config SYS_FSL_ERRATUM_A009660
+ config SYS_FSL_ERRATUM_A050382
+ 	bool
+ 
++config SYS_FSL_ERRATUM_A050752
++	bool
++
+ config SYS_FSL_HAS_RGMII
+ 	bool
+ 	depends on SYS_FSL_EC1 || SYS_FSL_EC2
+diff --git a/arch/arm/cpu/armv8/fsl-layerscape/cpu.c b/arch/arm/cpu/armv8/fsl-layerscape/cpu.c
+index 16650526e7d..eea3bd7c88f 100644
+--- a/arch/arm/cpu/armv8/fsl-layerscape/cpu.c
++++ b/arch/arm/cpu/armv8/fsl-layerscape/cpu.c
+@@ -1133,6 +1133,9 @@ int arch_early_init_r(void)
+ #endif
+ #if defined(CONFIG_SYS_FSL_ERRATUM_A009942) && defined(CONFIG_SYS_FSL_DDR)
+ 	erratum_a009942_check_cpo();
++#endif
++#ifdef CONFIG_SYS_FSL_ERRATUM_A050752
++	erratum_a050752();
+ #endif
+ 	if (check_psci()) {
+ 		debug("PSCI: PSCI does not exist.\n");
+diff --git a/arch/arm/cpu/armv8/fsl-layerscape/soc.c b/arch/arm/cpu/armv8/fsl-layerscape/soc.c
+index d3a5cfaac19..bfe7c7f5d9f 100644
+--- a/arch/arm/cpu/armv8/fsl-layerscape/soc.c
++++ b/arch/arm/cpu/armv8/fsl-layerscape/soc.c
+@@ -315,6 +315,24 @@ void erratum_a009635(void)
+ 	writel(val | 0x80000000, EPU_EPGCR);
+ }
+ #endif	/* CONFIG_SYS_FSL_ERRATUM_A009635 */
++#ifdef CONFIG_SYS_FSL_ERRATUM_A050752
++#define RESET_BASE 0x01e60000
++#define RESET_CCSR 0
++#define RESET_CCSR_HRESET_B_DIS BIT(25)
++
++void erratum_a050752(void)
++{
++	u32 __iomem *dcfg_ccsr = (u32 __iomem *)DCFG_BASE;
++	u32 __iomem *dcfg_dcsr = (u32 __iomem *)DCFG_DCSR_BASE;
++	u32 __iomem *reset_ccsr = (u32 __iomem *)RESET_BASE;
++	u32 val;
++
++	val = in_le32(dcfg_ccsr + DCFG_PORSR1 / 4);
++	val &= ~DCFG_PORSR1_RCW_SRC;
++	out_le32(dcfg_dcsr + DCFG_DCSR_PORCR1 / 4, val);
++	out_le32(reset_ccsr + RESET_CCSR / 4, RESET_CCSR_HRESET_B_DIS);
++}
++#endif	/* CONFIG_SYS_FSL_ERRATUM_A050752 */
+ 
+ static void erratum_rcw_src(void)
+ {
+diff --git a/arch/arm/include/asm/arch-fsl-layerscape/soc.h b/arch/arm/include/asm/arch-fsl-layerscape/soc.h
+index bd41df1be44..3e7c5b0e724 100644
+--- a/arch/arm/include/asm/arch-fsl-layerscape/soc.h
++++ b/arch/arm/include/asm/arch-fsl-layerscape/soc.h
+@@ -131,6 +131,10 @@ void erratum_a009635(void);
+ void erratum_a010315(void);
+ #endif
+ 
++#ifdef CONFIG_SYS_FSL_ERRATUM_A050752
++void erratum_a050752(void);
++#endif
++
+ bool soc_has_dp_ddr(void);
+ bool soc_has_aiop(void);
+ 
+-- 
+2.43.0
+
