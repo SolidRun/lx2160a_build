@@ -1,0 +1,33 @@
+From cbe4212aaa1b934135c8400f16265849d12689c0 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 30 Jul 2024 17:45:38 +0300
+Subject: [PATCH 13/13] plat: lx2160a: fix boot without spi flash / disable
+ non-volatile storage
+
+Watchdog restart function does not require book-keeping on non-volatile
+storage.
+Remove explicit enabling of NXP_NV_SW_MAINT_LAST_EXEC_DATA.
+
+This fixed hang during boot where atf gets stuck trying to erase a
+sector of spi flash.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/soc-lx2160a/soc.mk | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/plat/nxp/soc-lx2160a/soc.mk b/plat/nxp/soc-lx2160a/soc.mk
+index fa8c63251..4e864e164 100644
+--- a/plat/nxp/soc-lx2160a/soc.mk
++++ b/plat/nxp/soc-lx2160a/soc.mk
+@@ -28,7 +28,6 @@ NXP_WDOG_RESTART	:= yes
+ 
+  # for features enabled above.
+ ifeq (${NXP_WDOG_RESTART}, yes)
+-NXP_NV_SW_MAINT_LAST_EXEC_DATA := yes
+ LS_EL3_INTERRUPT_HANDLER := yes
+ $(eval $(call add_define, NXP_WDOG_RESTART))
+ endif
+-- 
+2.43.0
+
