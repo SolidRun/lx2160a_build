@@ -74,8 +74,8 @@ echo "Repository prefix for images is $REPO_PREFIX"
 case "${TARGET}" in
 	LX2160A_CEX6_EVB_3_3_*)
 		ATF_PLATFORM=lx2160acex6
-		DPC=LX2160A-CEX6/evb-s1_3-s2_0-dpc.dtb
-		DPL=LX2160A-CEX6/evb-s1_3-s2_0-dpl.dtb
+		DPC=evb-s1_3-s2_0-dpc.dtb
+		DPL=evb-s1_3-s2_0-dpl.dtb
 		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-cex6-evb.dtb"
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
@@ -83,17 +83,33 @@ case "${TARGET}" in
 	LX2160A_CEX7_CLEARFOG-CX_0_0_*)
 		# no networking, can be used as base for new configurations
 		ATF_PLATFORM=lx2160acex7
-		DPC=LX2160A-CEX7/null-s1_0-s2_0-dpc.dtb
-		DPL=LX2160A-CEX7/null-s1_0-s2_0-dpl.dtb
+		DPC=lx2160a/LX2160A-CEX7/null-s1_0-s2_0-dpc.dtb
+		DPL=lx2160a/LX2160A-CEX7/null-s1_0-s2_0-dpl.dtb
 		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
 	;;
 	LX2160A_CEX7_CLEARFOG-CX_8_5_*)
 		ATF_PLATFORM=lx2160acex7
-		DPC=LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpc.dtb
-		DPL=LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpl.dtb
+		DPC=clearfog-cx-s1_8-s2_0-dpc.dtb
+		DPL=clearfog-cx-s1_8-s2_0-dpl.dtb
 		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
+		OPTEE_PLATFORM=ls-lx2160ardb
+		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+	;;
+	LX2162A_SOM_CLEARFOG_18_9_0)
+		ATF_PLATFORM=lx2162asom
+		DPC=clearfog-s1_3-s2_9-dpc.dtb
+		DPL=clearfog-s1_3-s2_9-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2162a-clearfog.dtb"
+		OPTEE_PLATFORM=ls-lx2160ardb
+		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+	;;
+	LX2162A_SOM_CLEARFOG_18_7_0|LX2162A_SOM_CLEARFOG_18_11_0)
+		ATF_PLATFORM=lx2162asom
+		DPC=clearfog-s1_3-s2_7-dpc.dtb
+		DPL=clearfog-s1_3-s2_7-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2162a-clearfog.dtb"
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
 	;;
@@ -195,7 +211,7 @@ cd $ROOTDIR/build/restool
 CC=${CROSS_COMPILE}gcc DESTDIR=./install prefix=/usr make install
 
 do_build_rcw() {
-	local BOARD_TARGETS="lx2160acex6_rev2 lx2160acex7 lx2160acex7_rev2"
+	local BOARD_TARGETS="lx2160acex6_rev2 lx2160acex7 lx2160acex7_rev2 lx2162asom_rev2"
 
 	cd $ROOTDIR/build/rcw
 	make BOARDS="${BOARD_TARGETS}" clean
@@ -593,7 +609,7 @@ if [[ $DISTRO == debian ]]; then
 		fakeroot debootstrap --variant=minbase \
 			--arch=arm64 --components=main,contrib,non-free \
 			--foreign \
-			--include=apt-transport-https,busybox,ca-certificates,curl,e2fsprogs,ethtool,fdisk,haveged,i2c-tools,ifupdown,iputils-ping,isc-dhcp-client,iw,initramfs-tools,lm-sensors,localepurge,nano,net-tools,ntpdate,openssh-server,pciutils,psmisc,rfkill,sudo,systemd-sysv,tio,usbutils,wget,wpasupplicant,xz-utils \
+			--include=apt-transport-https,busybox,ca-certificates,curl,e2fsprogs,ethtool,fdisk,haveged,i2c-tools,ifupdown,iputils-ping,isc-dhcp-client,iw,initramfs-tools,lm-sensors,localepurge,nano,net-tools,ntpdate,openssh-server,pciutils,psmisc,rfkill,sudo,systemd-sysv,tee-supplicant,tio,usbutils,wget,wpasupplicant,xz-utils \
 			${EXCLUDE} \
 			$DEBIAN_VERSION \
 			stage1 \
@@ -788,10 +804,10 @@ IMAGES+=("images/tmp/$ROOTFS.img")
 
 # add default prefix for short DPL/DPC variables
 if [[ ! $DPL =~ / ]]; then
-	DPL="CEX7/$DPL"
+	DPL="${SOC,,}/${SOC^^}-${MODULE^^}/$DPL"
 fi
 if [[ ! $DPC =~ / ]]; then
-	DPC="CEX7/$DPC"
+	DPC="${SOC,,}/${SOC^^}-${MODULE^^}/$DPC"
 fi
 
 # select MC firmware file
@@ -826,10 +842,10 @@ do_populate_bootimg() {
 	dd if=${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
 
 	# DPAA2 DPL at 0x0d00000 (block 0x6800)
-	dd if=$ROOTDIR/build/mc-utils/config/lx2160a/${DPL} of=images/${IMG} bs=512 seek=26624 conv=notrunc
+	dd if=$ROOTDIR/build/mc-utils/config/${DPL} of=images/${IMG} bs=512 seek=26624 conv=notrunc
 
 	# DPAA2 DPC at 0x0e00000 (block 0x7000)
-	dd if=$ROOTDIR/build/mc-utils/config/lx2160a/${DPC} of=images/${IMG} bs=512 seek=28672 conv=notrunc
+	dd if=$ROOTDIR/build/mc-utils/config/${DPC} of=images/${IMG} bs=512 seek=28672 conv=notrunc
 
 	# DTB at 0x0f00000 (block 0x7800)
 

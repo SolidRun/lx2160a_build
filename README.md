@@ -119,6 +119,7 @@ For example:
   - `2600`
   - `2400`
 - `BUS_SPEED`: Platform clock in MHz
+  - `650`
   - `700`: only for LX2160A binned 2GHz and higher (default)
   - `750`: only for LX2160A binned 2.2GHz
 - `CPU_REVISION`: select soc revision

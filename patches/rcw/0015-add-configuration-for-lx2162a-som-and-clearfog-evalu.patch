@@ -1,0 +1,532 @@
+From 8aa66ef6694c03231f6432f0d62e40dffa88d3e4 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 27 Oct 2024 18:26:26 +0100
+Subject: [PATCH] add configuration for lx2162a som and clearfog evaluation
+ board
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2160acex7/include/SD1_0.rcwi                |  17 +++
+ lx2160acex7/include/SD2_0.rcwi                |  17 +++
+ lx2160acex7/include/SD3_0.rcwi                |  20 +++
+ lx2160acex7/include/pll_2000_650_xxxx.rcwi    |  15 ++
+ lx2162asom_rev2/Makefile                      |   1 +
+ lx2162asom_rev2/README                        |   0
+ .../rcw_2000_650_2900_18_11_0_auto.rcw        |  22 +++
+ .../rcw_2000_650_2900_18_7_0_auto.rcw         |  22 +++
+ .../rcw_2000_650_2900_18_9_0_auto.rcw         |  19 +++
+ lx2162asom_rev2/include/SD1_18.rcwi           |  18 +++
+ lx2162asom_rev2/include/SD2_11.rcwi           |  25 ++++
+ lx2162asom_rev2/include/SD2_7.rcwi            |  25 ++++
+ lx2162asom_rev2/include/SD2_9.rcwi            |  22 +++
+ lx2162asom_rev2/include/common.rcwi           | 128 ++++++++++++++++++
+ lx2162asom_rev2/include/common_pbi.rcwi       |  51 +++++++
+ 15 files changed, 402 insertions(+)
+ create mode 100644 lx2160acex7/include/SD1_0.rcwi
+ create mode 100644 lx2160acex7/include/SD2_0.rcwi
+ create mode 100644 lx2160acex7/include/SD3_0.rcwi
+ create mode 100644 lx2160acex7/include/pll_2000_650_xxxx.rcwi
+ create mode 100644 lx2162asom_rev2/Makefile
+ create mode 100644 lx2162asom_rev2/README
+ create mode 100644 lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_11_0_auto.rcw
+ create mode 100644 lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_7_0_auto.rcw
+ create mode 100644 lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_9_0_auto.rcw
+ create mode 100644 lx2162asom_rev2/include/SD1_18.rcwi
+ create mode 100644 lx2162asom_rev2/include/SD2_11.rcwi
+ create mode 100644 lx2162asom_rev2/include/SD2_7.rcwi
+ create mode 100644 lx2162asom_rev2/include/SD2_9.rcwi
+ create mode 100644 lx2162asom_rev2/include/common.rcwi
+ create mode 100644 lx2162asom_rev2/include/common_pbi.rcwi
+
+diff --git a/lx2160acex7/include/SD1_0.rcwi b/lx2160acex7/include/SD1_0.rcwi
+new file mode 100644
+index 0000000..718a441
+--- /dev/null
++++ b/lx2160acex7/include/SD1_0.rcwi
+@@ -0,0 +1,17 @@
++/* Serdes 1 Protocol 0: Disabled */
++SRDS_PRTCL_S1=0
++
++/* Disable Serdes 1 PLLF */
++SRDS_PLL_PD_PLL1=1
++
++/* Disable Serdes 1 PLLF reference clock */
++SRDS_REFCLKF_DIS_S2=1
++
++/* Don't use Serdes 1 PLLF as reference for PLLS */
++SRDS_INTRA_REF_CLK_S1=0
++
++/* Disable Serdes 1 PLLS */
++SRDS_PLL_PD_PLL2=1
++
++/* Select Serdes 1 PLL Default Fequencies (don't care) */
++SRDS_PLL_REF_CLK_SEL_S1=0
+diff --git a/lx2160acex7/include/SD2_0.rcwi b/lx2160acex7/include/SD2_0.rcwi
+new file mode 100644
+index 0000000..6af65a3
+--- /dev/null
++++ b/lx2160acex7/include/SD2_0.rcwi
+@@ -0,0 +1,17 @@
++/* Serdes 2 Protocol 0: Disabled */
++SRDS_PRTCL_S2=0
++
++/* Disable Serdes 2 PLLF */
++SRDS_PLL_PD_PLL3=1
++
++/* Disable Serdes 2 PLLF reference clock */
++SRDS_REFCLKF_DIS_S2=1
++
++/* Don't use Serdes 2 PLLF as reference for PLLS */
++SRDS_INTRA_REF_CLK_S2=0
++
++/* Disable Serdes 2 PLLS */
++SRDS_PLL_PD_PLL4=1
++
++/* Select Serdes 2 PLL Default Fequencies (don't care) */
++SRDS_PLL_REF_CLK_SEL_S2=0
+diff --git a/lx2160acex7/include/SD3_0.rcwi b/lx2160acex7/include/SD3_0.rcwi
+new file mode 100644
+index 0000000..250437c
+--- /dev/null
++++ b/lx2160acex7/include/SD3_0.rcwi
+@@ -0,0 +1,20 @@
++/* Serdes 3 Protocol 0: Disabled */
++SRDS_PRTCL_S3=0
++
++/* Disable Serdes 3 PLLF */
++SRDS_PLL_PD_PLL5=1
++
++/* Disable Serdes 3 PLLF reference clock */
++SRDS_REFCLKF_DIS_S3=1
++
++/* Don't use Serdes 3 PLLF as reference for PLLS */
++SRDS_INTRA_REF_CLK_S3=0
++
++/* Disable Serdes 3 PLLS */
++SRDS_PLL_PD_PLL6=1
++
++/*
++ * Select Serdes 3 PLL Default Fequencies (don't care)
++ * (See QorIQ LX2162A Reference Manual, Rev. 1, 12/2021, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 936-937)
++ */
++SRDS_PLL_REF_CLK_SEL_S3=0
+diff --git a/lx2160acex7/include/pll_2000_650_xxxx.rcwi b/lx2160acex7/include/pll_2000_650_xxxx.rcwi
+new file mode 100644
+index 0000000..0bc7e8b
+--- /dev/null
++++ b/lx2160acex7/include/pll_2000_650_xxxx.rcwi
+@@ -0,0 +1,15 @@
++/*
++ * Core and Platform Clocks:
++ * - Platform: 650MHz
++ * - Core: 2000MHz
++ */
++
++/* platform clock is system clock mul 13 div 2 = 650 */
++SYS_PLL_RAT=13
++
++/* core clocks are 2000 */
++CGA_PLL1_RAT=20
++CGA_PLL2_RAT=20
++CGB_PLL1_RAT=20
++/* same as all nxp 2000_650_* */
++CGB_PLL2_RAT=8
+diff --git a/lx2162asom_rev2/Makefile b/lx2162asom_rev2/Makefile
+new file mode 100644
+index 0000000..f77e46b
+--- /dev/null
++++ b/lx2162asom_rev2/Makefile
+@@ -0,0 +1 @@
++include ../Makefile.inc
+diff --git a/lx2162asom_rev2/README b/lx2162asom_rev2/README
+new file mode 100644
+index 0000000..e69de29
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_11_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_11_0_auto.rcw
+new file mode 100644
+index 0000000..cc1b0e5
+--- /dev/null
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_11_0_auto.rcw
+@@ -0,0 +1,22 @@
++/*
++ * SerDes Protocol 1 -  18
++ * SerDes Protocol 2 -  11
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 650  MHz
++ * DDR      -- 2900 MT/s
++ *
++ */
++
++#define HAVE_PEX3
++#define HAVE_PEX4
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_650_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2162asom_rev2/include/common.rcwi>
++#include <../lx2162asom_rev2/include/SD1_18.rcwi>
++#include <../lx2162asom_rev2/include/SD2_11.rcwi>
++#include <../lx2160acex7/include/SD3_0.rcwi>
++#include <../lx2162asom_rev2/include/common_pbi.rcwi>
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_7_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_7_0_auto.rcw
+new file mode 100644
+index 0000000..475abbb
+--- /dev/null
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_7_0_auto.rcw
+@@ -0,0 +1,22 @@
++/*
++ * SerDes Protocol 1 -  18
++ * SerDes Protocol 2 -  7
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 650  MHz
++ * DDR      -- 2900 MT/s
++ *
++ */
++
++#define HAVE_PEX3
++#define HAVE_PEX4
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_650_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2162asom_rev2/include/common.rcwi>
++#include <../lx2162asom_rev2/include/SD1_18.rcwi>
++#include <../lx2162asom_rev2/include/SD2_7.rcwi>
++#include <../lx2160acex7/include/SD3_0.rcwi>
++#include <../lx2162asom_rev2/include/common_pbi.rcwi>
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_9_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_9_0_auto.rcw
+new file mode 100644
+index 0000000..4425597
+--- /dev/null
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_9_0_auto.rcw
+@@ -0,0 +1,19 @@
++/*
++ * SerDes Protocol 1 -  18
++ * SerDes Protocol 2 -  9
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 650  MHz
++ * DDR      -- 2900 MT/s
++ *
++ */
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_650_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2162asom_rev2/include/common.rcwi>
++#include <../lx2162asom_rev2/include/SD1_18.rcwi>
++#include <../lx2162asom_rev2/include/SD2_9.rcwi>
++#include <../lx2160acex7/include/SD3_0.rcwi>
++#include <../lx2162asom_rev2/include/common_pbi.rcwi>
+diff --git a/lx2162asom_rev2/include/SD1_18.rcwi b/lx2162asom_rev2/include/SD1_18.rcwi
+new file mode 100644
+index 0000000..34c5be3
+--- /dev/null
++++ b/lx2162asom_rev2/include/SD1_18.rcwi
+@@ -0,0 +1,18 @@
++/* Serdes 1 Protocol 18: 2x10Gbps + 2x25Gbps */
++SRDS_PRTCL_S1=18
++
++/* Enable Serdes 1 PLLF */
++SRDS_PLL_PD_PLL1=0
++
++/* Enable Serdes 1 PLLS */
++SRDS_PLL_PD_PLL2=0
++
++/* Use Serdes 1 PLLF for PLLS (LX2162A has no physical input for PLLS) */
++SRDS_INTRA_REF_CLK_S1=1
++
++/*
++ * Select Serdes 1 PLLF frequency 161.1328125MHz for 25GE mode (lanes 2+3): Bit 0 = 0
++ * Select Serdes 1 PLLS frequency 161.1328125MHz for 10GE mode (not documented in RM): Bit 1 = 1
++ * (See QorIQ LX2162A Reference Manual, Rev. 1, 12/2021, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 932)
++ */
++SRDS_PLL_REF_CLK_SEL_S1=2
+diff --git a/lx2162asom_rev2/include/SD2_11.rcwi b/lx2162asom_rev2/include/SD2_11.rcwi
+new file mode 100644
+index 0000000..9434b7b
+--- /dev/null
++++ b/lx2162asom_rev2/include/SD2_11.rcwi
+@@ -0,0 +1,25 @@
++/* Serdes 2 Protocol 11: 6x1Gbps & 2x PCI-e x1 Gen 3 */
++SRDS_PRTCL_S2=11
++
++/* Enable Serdes 2 PLLF */
++SRDS_PLL_PD_PLL3=0
++
++/* Enable Serdes 2 PLLS */
++SRDS_PLL_PD_PLL4=0
++
++/* Use Serdes 2 PLLF for PLLS (to share PLLF 100MHz reference clock) */
++SRDS_INTRA_REF_CLK_S2=1
++
++/*
++ * Select Serdes 2 PLLF frequency 100MHz for PCI: Bit 0 = 0
++ * Select Serdes 2 PLLS frequency 100MHz for 1G mode: Bit 1 = 0
++ * (See QorIQ LX2162A Reference Manual, Rev. 1, 12/2021, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 934-935)
++ */
++SRDS_PLL_REF_CLK_SEL_S2=0
++
++/* Support up to PCI-e Gen 3 */
++SRDS_DIV_PEX_S2=1
++
++/* Configure Ethernet Controllers 1+2 Pins as GPIOs to avoid competing for WRIO MACs 17+18 */
++EC1_PMUX=1
++EC2_PMUX=1
+diff --git a/lx2162asom_rev2/include/SD2_7.rcwi b/lx2162asom_rev2/include/SD2_7.rcwi
+new file mode 100644
+index 0000000..eb25a86
+--- /dev/null
++++ b/lx2162asom_rev2/include/SD2_7.rcwi
+@@ -0,0 +1,25 @@
++/* Serdes 2 Protocol 7: 2x10Gbps 4x1Gbps & 2x PCI-e x1 Gen 2 */
++SRDS_PRTCL_S2=7
++
++/* Enable Serdes 2 PLLF */
++SRDS_PLL_PD_PLL3=0
++
++/* Enable Serdes 2 PLLS */
++SRDS_PLL_PD_PLL4=0
++
++/* Don't use Serdes 2 PLLF for PLLS */
++SRDS_INTRA_REF_CLK_S2=0
++
++/*
++ * Select Serdes 2 PLLF frequency 100MHz for 1G (and pcie): Bit 0 = 0
++ * Select Serdes 2 PLLS frequency 156.25MHz for 10G mode: Bit 1 = 0
++ * (See QorIQ LX2162A Reference Manual, Rev. 1, 12/2021, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 934-935)
++ */
++SRDS_PLL_REF_CLK_SEL_S2=0
++
++/* Support up to PCI-e Gen 2 */
++SRDS_DIV_PEX_S2=2
++
++/* Configure Ethernet Controllers 1+2 Pins as GPIOs to avoid competing for WRIO MACs 17+18 */
++EC1_PMUX=1
++EC2_PMUX=1
+diff --git a/lx2162asom_rev2/include/SD2_9.rcwi b/lx2162asom_rev2/include/SD2_9.rcwi
+new file mode 100644
+index 0000000..68728ba
+--- /dev/null
++++ b/lx2162asom_rev2/include/SD2_9.rcwi
+@@ -0,0 +1,22 @@
++/* Serdes 2 Protocol 9: 8x1Gbps */
++SRDS_PRTCL_S2=9
++
++/* Disable Serdes 2 PLLF */
++SRDS_PLL_PD_PLL3=1
++
++/* Enable Serdes 2 PLLS */
++SRDS_PLL_PD_PLL4=0
++
++/* Use Serdes 2 PLLF for PLLS (to share PLLF 100MHz reference clock) */
++SRDS_INTRA_REF_CLK_S2=1
++
++/*
++ * Select Serdes 2 PLLF frequency 100MHz (don't care): Bit 0 = 0
++ * Select Serdes 2 PLLS frequency 100MHz for 1G mode: Bit 1 = 0
++ * (See QorIQ LX2162A Reference Manual, Rev. 1, 12/2021, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 934-935)
++ */
++SRDS_PLL_REF_CLK_SEL_S2=0
++
++/* Configure Ethernet Controllers 1+2 Pins as GPIOs to avoid competing for WRIO MACs 17+18 */
++EC1_PMUX=1
++EC2_PMUX=1
+diff --git a/lx2162asom_rev2/include/common.rcwi b/lx2162asom_rev2/include/common.rcwi
+new file mode 100644
+index 0000000..35a6db6
+--- /dev/null
++++ b/lx2162asom_rev2/include/common.rcwi
+@@ -0,0 +1,128 @@
++/*
++ * LX2162A SoM Common Configuration
++ */
++
++/* C[5:8]_PLL are CG[5:8] div 1 */
++C5_PLL_SEL=0
++C6_PLL_SEL=0
++C7_PLL_SEL=0
++C8_PLL_SEL=0
++/* Cluster group A clock is PLL1 div 1 (unused on LX2160A) */
++HWA_CGA_M1_CLK_SEL=1
++/* Cluster group B clock is PLL2 div 2 (for DCE) */
++HWA_CGB_M1_CLK_SEL=6
++/*
++ * fall-back boot-mode when DCFG boot location pointer registers are null
++ * - 0b10101 (21): OCRAM
++ * - 0b11010 (26): XSPI
++ */
++BOOT_LOC=21
++/* SYSCLK is 100MHz */
++SYSCLK_FREQ=600
++/* USB-3.0 clock is 100MHz */
++USB3_CLK_FSEL=39
++
++/* IIC1 is I2C */
++IIC1_PMUX=0
++/* IIC2 is SD Card-Detect */
++IIC2_PMUX=6
++/* IIC3 is I2C */
++IIC3_PMUX=0
++/* IIC4 is I2C (unused) */
++IIC4_PMUX=0
++/* IIC5 is I2C */
++IIC5_PMUX=0
++/* IIC6 is I2C (unused) */
++IIC6_PMUX=0
++/*
++ * SDHC1 CMD/CLK/VBUS/DAT[0:3] are SDHC
++ * SPI3_PCS0 is VSEL
++ */
++SDHC1_BASE_PMUX=0
++/* SDHC1_DS is GPIO (unused) */
++SDHC1_DS_PMUX=1
++/* SDHC1_CMD/DAT0/DAT1_DIR (SPI3_PCS[1:3]) are GPIO1[14:12] */
++SDHC1_DIR_PMUX=1
++/* USB[1:2]_DRVVBUS/PWRFAULT are GPIO4[28:25] (unused) */
++USB_EXT_PMUX=1
++/* XSPI1_A_DQS/SCK/CS0_B/CS1_B are SPI */
++XSPI1_A_BASE_PMUX=0
++/* XSPI1_A_DATA[3:0] are SPI */
++XSPI1_A_DATA30_PMUX=0
++/* XSPI1_A_DATA[7:4] are SPI */
++XSPI1_A_DATA74_PMUX=0
++/* ASLEEP is ASLEEP (unused) */
++ASLEEP_PMUX=0
++/* EVT[2:0] are GPIO3[14:12] */
++EVT20_PMUX=1
++/* EVT[4:3] are GPIO3[16:15] */
++EVT43_PMUX=1
++/* CLK_OUT is GPIO (unused) */
++CLK_OUT_PMUX=1
++/* IRQ[3:0] are GPIO3[3:0] */
++IRQ03_00_PMUX=1
++/* IRQ[7:4] are GPIO3[7:4] */
++IRQ07_04_PMUX=1
++/* IRQ[11:8] are GPIO3[11:8] */
++IRQ11_08_PMUX=1
++/* EC1_* are RGMII */
++EC1_PMUX=0
++/* EC2_* are PTP */
++EC2_PMUX=2
++/* EC_GTX_CLK125 is PTP */
++GTX_CLK_PMUX=0
++/* UART1_SOUT/SIN are UART1 */
++UART1_SOUTSIN_PMUX=0
++/* UART1_RTS/CTS_B are GPIO (unused) */
++UART1_RTSCTS_PMUX=1
++/* UART2_SOUT/SIN are UART2 */
++UART2_SOUTSIN_PMUX=0
++/* UART2_RTS/CTS_B are GPIO (unused) */
++UART2_RTSCTS_PMUX=1
++/* SDHC2_CMD/DAT[3:0]/DS/CLK are SDHC */
++SDHC2_BASE_PMUX=0
++/* SDHC2_DAT[7:4] are SDHC */
++SDHC2_DAT74_PMUX=0
++
++
++/* configure IIC1, IIC3, IIC5, IIC6 pins for i2c */
++IIC1_PMUX=0
++IIC3_PMUX=0
++IIC5_PMUX=0
++IIC6_PMUX=0
++
++/*
++ * Configure GPIOs:
++ * EVT0_B: GPIO3_DAT12
++ * EVT1_B: GPIO3_DAT13 (SFP 25 upper LED)
++ * EVT2_B: GPIO3_DAT14 (SFP 25 lower LED)
++ * EVT3_B: GPIO3_DAT15 (SFP 25 lower MODABS)
++ * EVT4_B: GPIO3_DAT16 (SFP 10 upper MODABS)
++ * PROC_IRQ0:  GPIO3_DAT00
++ * PROC_IRQ1:  GPIO3_DAT01 (SFP 10 lower MODABS)
++ * PROC_IRQ2:  GPIO3_DAT02
++ * PROC_IRQ3:  GPIO3_DAT03
++ * PROC_IRQ4:  GPIO3_DAT04
++ * PROC_IRQ5:  GPIO3_DAT05 (SFP 10 upper LED)
++ * PROC_IRQ6:  GPIO3_DAT06
++ * PROC_IRQ7:  GPIO3_DAT07
++ * PROC_IRQ8:  GPIO3_DAT08
++ * PROC_IRQ9:  GPIO3_DAT09
++ * PROC_IRQ10: GPIO3_DAT10 (SFP 25 upper MODABS)
++ * PROC_IRQ11: GPIO3_DAT11 (SFP 10 lower LED)
++ */
++EVT20_PMUX=1
++EVT43_PMUX=1
++IRQ03_00_PMUX=1
++IRQ07_04_PMUX=1
++IRQ11_08_PMUX=1
++
++/* Configure USB1 Pins for USB */
++USB_EXT_PMUX=0
++
++
++/*
++ * Original SolidRun Settings in LSDK-21.08
++ *
++ * HWA_CGB_M1_CLK_SEL=7 // Cluster Group B PLL 2 / 3 is clock
++ */
+diff --git a/lx2162asom_rev2/include/common_pbi.rcwi b/lx2162asom_rev2/include/common_pbi.rcwi
+new file mode 100644
+index 0000000..05f19fc
+--- /dev/null
++++ b/lx2162asom_rev2/include/common_pbi.rcwi
+@@ -0,0 +1,51 @@
++/*
++ * LX2162A SoM Common Configuration
++ */
++
++/* Errata to write on scratch reg for validation */
++#include <../lx2160asi/scratchrw1.rcw>
++
++/* common PBI commands */
++#include <../lx2160asi/common.rcw>
++
++/* PCIe Errata A-009531, A-008851 */
++#ifdef HAVE_PEX1
++#include <../lx2160asi/a009531_PEX1.rcw>
++#include <../lx2160asi/a008851_PEX1.rcw>
++#endif
++#ifdef HAVE_PEX3
++#include <../lx2160asi/a009531_PEX3.rcw>
++#include <../lx2160asi/a008851_PEX3.rcw>
++#endif
++#ifdef HAVE_PEX4
++#include <../lx2160asi/a009531_PEX4.rcw>
++#include <../lx2160asi/a008851_PEX4.rcw>
++#endif
++
++/* SerDes Errata A-050479 */
++#include <../lx2160asi/a050479.rcw>
++
++/* PEX2/5/6 clock disable (not available on LX2162) */
++#include <../lx2162aqds/disable_pci2_5_6.rcw>
++
++/* USB2 clock disable (not available on LX2162) */
++#include <../lx2162aqds/disable_usb2.rcw>
++
++/* MAC7 to MAC10 clock disable (not available on LX2162) */
++#include <../lx2162aqds/disable_mac7_10.rcw>
++
++/* DDR2 clock disable*/
++#include <../lx2162aqds/disable_ddr2.rcw>
++
++/* Errata A-050426 */
++#include <../lx2160asi/a050426.rcw>
++
++/* Set Boot Location Pointer (Fall-back when unset is BOOT_LOC) */
++#if defined(LX_BOOTSOURCE_SDHC)
++#include <../lx2160asi/bootlocptr_sd.rcw>
++#elif defined(LX_BOOTSOURCE_XSPI)
++#include <../lx2160asi/bootlocptr_nor.rcw>
++#else
++#include <../lx2160asi/bootlocptr_auto.rcw>
++#endif
++
+-- 
+2.43.0
+

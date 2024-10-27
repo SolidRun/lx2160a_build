@@ -1,0 +1,27 @@
+From 40ea49cde613dad5f63d157f40180ebe4f07f7f9 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 27 May 2023 17:20:22 +0300
+Subject: [PATCH 14/15] lx2162aqds: re-enable dpmac11
+
+dpmac11 was unintentionally disabled along with dpmac7-10.
+Fix the initializer value of DEVDISR2 to only disable dpmac7-10.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2162aqds/disable_mac7_10.rcw | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lx2162aqds/disable_mac7_10.rcw b/lx2162aqds/disable_mac7_10.rcw
+index ef3edba..d52589c 100644
+--- a/lx2162aqds/disable_mac7_10.rcw
++++ b/lx2162aqds/disable_mac7_10.rcw
+@@ -11,5 +11,5 @@
+ */
+ 
+ .pbi
+-write 0x1e00074,0x00007c0
++write 0x1e00074,0x00003c0
+ .end
+-- 
+2.43.0
+
