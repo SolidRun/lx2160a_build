@@ -1,0 +1,188 @@
+From 44dd1bb169ab73e5b4d2d27a441bc52b9295e930 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 30 Oct 2024 18:56:20 +0100
+Subject: [PATCH] lx2162: som: clearfog: enable dpni connections
+
+Enable the dpni connections so that interfaces are created automatically
+during boot. Ordering ensures linux netdev numbers are sorted by dpmac
+numbers, i.e. eth0 = dpmac3, eth1=dpmac4, ...
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../LX2162A-SOM/clearfog-s1_3-s2_7-dpl.dts    | 26 ++++++++--------
+ .../LX2162A-SOM/clearfog-s1_3-s2_9-dpl.dts    | 30 +++++++++----------
+ 2 files changed, 28 insertions(+), 28 deletions(-)
+
+diff --git a/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_7-dpl.dts b/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_7-dpl.dts
+index 35afac5..b6219e9 100644
+--- a/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_7-dpl.dts
++++ b/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_7-dpl.dts
+@@ -1,6 +1,6 @@
+ /*
+  * Copyright 2020 NXP
+- * Copyright 2022 Josua Mayer <josua@solid-run.com>
++ * Copyright 2024 Josua Mayer <josua@solid-run.com>
+  *
+  * Redistribution and use in source and binary forms, with or without
+  * modification, are permitted provided that the following conditions are met:
+@@ -1482,54 +1482,54 @@
+ 	 *****************************************************************/
+ 	connections {
+ 
+-		/*connection@1{
+-			endpoint1 = "dpni@0";
++		connection@1{
++			endpoint1 = "dpni@9";
+ 			endpoint2 = "dpmac@3";
+ 		};
+ 
+ 		connection@2{
+-			endpoint1 = "dpni@1";
++			endpoint1 = "dpni@8";
+ 			endpoint2 = "dpmac@4";
+ 		};
+ 
+ 		connection@3{
+-			endpoint1 = "dpni@2";
++			endpoint1 = "dpni@7";
+ 			endpoint2 = "dpmac@5";
+ 		};
+ 
+ 		connection@4{
+-			endpoint1 = "dpni@3";
++			endpoint1 = "dpni@6";
+ 			endpoint2 = "dpmac@6";
+ 		};
+ 
+ 		connection@5{
+-			endpoint1 = "dpni@4";
++			endpoint1 = "dpni@5";
+ 			endpoint2 = "dpmac@12";
+ 		};
+ 
+ 		connection@6{
+-			endpoint1 = "dpni@5";
++			endpoint1 = "dpni@4";
+ 			endpoint2 = "dpmac@13";
+ 		};
+ 
+ 		connection@7{
+-			endpoint1 = "dpni@6";
++			endpoint1 = "dpni@3";
+ 			endpoint2 = "dpmac@14";
+ 		};
+ 
+ 		connection@8{
+-			endpoint1 = "dpni@7";
++			endpoint1 = "dpni@2";
+ 			endpoint2 = "dpmac@16";
+ 		};
+ 
+ 		connection@9{
+-			endpoint1 = "dpni@8";
++			endpoint1 = "dpni@1";
+ 			endpoint2 = "dpmac@17";
+ 		};
+ 
+ 		connection@10{
+-			endpoint1 = "dpni@9";
++			endpoint1 = "dpni@0";
+ 			endpoint2 = "dpmac@18";
+-		};*/
++		};
+ 	};
+ };
+diff --git a/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_9-dpl.dts b/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_9-dpl.dts
+index 1745da4..7acb2e2 100644
+--- a/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_9-dpl.dts
++++ b/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_9-dpl.dts
+@@ -1,6 +1,6 @@
+ /*
+  * Copyright 2020 NXP
+- * Copyright 2022 Josua Mayer <josua@solid-run.com>
++ * Copyright 2024 Josua Mayer <josua@solid-run.com>
+  *
+  * Redistribution and use in source and binary forms, with or without
+  * modification, are permitted provided that the following conditions are met:
+@@ -1696,64 +1696,64 @@
+ 	 *****************************************************************/
+ 	connections {
+ 
+-		/*connection@1{
+-			endpoint1 = "dpni@0";
++		connection@1{
++			endpoint1 = "dpni@11";
+ 			endpoint2 = "dpmac@3";
+ 		};
+ 
+ 		connection@2{
+-			endpoint1 = "dpni@1";
++			endpoint1 = "dpni@10";
+ 			endpoint2 = "dpmac@4";
+ 		};
+ 
+ 		connection@3{
+-			endpoint1 = "dpni@2";
++			endpoint1 = "dpni@9";
+ 			endpoint2 = "dpmac@5";
+ 		};
+ 
+ 		connection@4{
+-			endpoint1 = "dpni@3";
++			endpoint1 = "dpni@8";
+ 			endpoint2 = "dpmac@6";
+ 		};
+ 
+ 		connection@5{
+-			endpoint1 = "dpni@4";
++			endpoint1 = "dpni@7";
+ 			endpoint2 = "dpmac@11";
+ 		};
+ 
+ 		connection@6{
+-			endpoint1 = "dpni@5";
++			endpoint1 = "dpni@6";
+ 			endpoint2 = "dpmac@12";
+ 		};
+ 
+ 		connection@7{
+-			endpoint1 = "dpni@6";
++			endpoint1 = "dpni@5";
+ 			endpoint2 = "dpmac@13";
+ 		};
+ 
+ 		connection@8{
+-			endpoint1 = "dpni@7";
++			endpoint1 = "dpni@4";
+ 			endpoint2 = "dpmac@14";
+ 		};
+ 
+ 		connection@9{
+-			endpoint1 = "dpni@8";
++			endpoint1 = "dpni@3";
+ 			endpoint2 = "dpmac@15";
+ 		};
+ 
+ 		connection@10{
+-			endpoint1 = "dpni@9";
++			endpoint1 = "dpni@2";
+ 			endpoint2 = "dpmac@16";
+ 		};
+ 
+ 		connection@11{
+-			endpoint1 = "dpni@10";
++			endpoint1 = "dpni@1";
+ 			endpoint2 = "dpmac@17";
+ 		};
+ 
+ 		connection@12{
+-			endpoint1 = "dpni@11";
++			endpoint1 = "dpni@0";
+ 			endpoint2 = "dpmac@18";
+-		};*/
++		};
+ 	};
+ };
+-- 
+2.43.0
+
