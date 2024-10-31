@@ -183,7 +183,7 @@ for i in $QORIQ_COMPONENTS; do
 				CHECKOUT=mc_release_10.35.0
 			;;
 			qoriq-mc-binary)
-				COMMIT=73d323d2538d7fe7ae93d88c2c5c4489f5891fcb
+				CHECKOUT=mc_release_10.37.0
 			;;
 			esac
 		fi
