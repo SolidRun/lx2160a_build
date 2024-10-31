@@ -1,0 +1,93 @@
+From 6e31ab1d913c7504737876ffec434672ce07a171 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 3 Nov 2022 17:12:18 +0200
+Subject: [PATCH] net: phy: marvell10g: add initial support for 88x2580
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/phy/marvell10g.c | 35 +++++++++++++++++++++++++++++++++++
+ include/linux/marvell_phy.h  |  1 +
+ 2 files changed, 36 insertions(+)
+
+diff --git a/drivers/net/phy/marvell10g.c b/drivers/net/phy/marvell10g.c
+index df33637c5269..2b8dc1984f10 100644
+--- a/drivers/net/phy/marvell10g.c
++++ b/drivers/net/phy/marvell10g.c
+@@ -942,6 +942,13 @@ static void mv2111_init_supported_interfaces(unsigned long *mask)
+ 	__set_bit(PHY_INTERFACE_MODE_USXGMII, mask);
+ }
+ 
++static void mv2580_init_supported_interfaces(unsigned long *mask)
++{
++	__set_bit(PHY_INTERFACE_MODE_SGMII, mask);
++	__set_bit(PHY_INTERFACE_MODE_2500BASEX, mask);
++	__set_bit(PHY_INTERFACE_MODE_5GBASER, mask);
++}
++
+ static const struct mv3310_chip mv3310_type = {
+ 	.init_supported_interfaces = mv3310_init_supported_interfaces,
+ 	.get_mactype = mv3310_get_mactype,
+@@ -982,6 +989,16 @@ static const struct mv3310_chip mv2111_type = {
+ #endif
+ };
+ 
++static const struct mv3310_chip mv2580_type = {
++	.init_supported_interfaces = mv2580_init_supported_interfaces,
++	.get_mactype = mv2110_get_mactype,
++	.init_interface = mv2110_init_interface,
++
++#ifdef CONFIG_HWMON
++	.hwmon_read_temp_reg = mv2110_hwmon_read_temp_reg,
++#endif
++};
++
+ static int mv3310_get_number_of_ports(struct phy_device *phydev)
+ {
+ 	int ret;
+@@ -1192,6 +1209,23 @@ static struct phy_driver mv3310_drivers[] = {
+ 		.remove		= mv3310_remove,
+ 		.set_loopback	= genphy_c45_loopback,
+ 	},
++	{
++		.phy_id		= MARVELL_PHY_ID_88E2580,
++		.phy_id_mask	= MARVELL_PHY_ID_MASK,
++		.name		= "mv88e2580",
++		.driver_data	= &mv2580_type,
++		.probe		= mv3310_probe,
++		.suspend	= mv3310_suspend,
++		.resume		= mv3310_resume,
++		.config_init	= mv3310_config_init,
++		.config_aneg	= mv3310_config_aneg,
++		.aneg_done	= mv3310_aneg_done,
++		.read_status	= mv3310_read_status,
++		.get_tunable	= mv3310_get_tunable,
++		.set_tunable	= mv3310_set_tunable,
++		.remove		= mv3310_remove,
++		.set_loopback	= genphy_c45_loopback,
++	},
+ };
+ 
+ module_phy_driver(mv3310_drivers);
+@@ -1199,6 +1233,7 @@ module_phy_driver(mv3310_drivers);
+ static struct mdio_device_id __maybe_unused mv3310_tbl[] = {
+ 	{ MARVELL_PHY_ID_88X3310, MARVELL_PHY_ID_MASK },
+ 	{ MARVELL_PHY_ID_88E2110, MARVELL_PHY_ID_MASK },
++	{ MARVELL_PHY_ID_88E2580, MARVELL_PHY_ID_MASK },
+ 	{ },
+ };
+ MODULE_DEVICE_TABLE(mdio, mv3310_tbl);
+diff --git a/include/linux/marvell_phy.h b/include/linux/marvell_phy.h
+index 0f06c2287b52..aa3367fa6f8d 100644
+--- a/include/linux/marvell_phy.h
++++ b/include/linux/marvell_phy.h
+@@ -24,6 +24,7 @@
+ #define MARVELL_PHY_ID_88E3016		0x01410e60
+ #define MARVELL_PHY_ID_88X3310		0x002b09a0
+ #define MARVELL_PHY_ID_88E2110		0x002b09b0
++#define MARVELL_PHY_ID_88E2580		0x002b0bc3
+ #define MARVELL_PHY_ID_88X2222		0x01410f10
+ 
+ /* Marvel 88E1111 in Finisar SFP module with modified PHY ID */
+-- 
+2.43.0
+
