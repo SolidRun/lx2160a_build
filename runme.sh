@@ -21,7 +21,7 @@ set -e
 # - 2 (default)
 : ${CPU_REVISION:=2}
 # Target configuration (SoC, module, board, serdes)
-: ${TARGET:=LX2160A_CEX7_CLEARFOG-CX_8_5_2}
+: ${TARGET:=LX2160A_CEX7_HONEYCOMB_8_5_2}
 # SoC Boot Source
 # - auto
 # - sdhc1 (microSD)
@@ -96,6 +96,15 @@ case "${TARGET}" in
 		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+	;;
+	LX2160A_CEX7_HONEYCOMB_8_5_*|LX2160A_CEX7_HONEYCOMB_18_5_*)
+		ATF_PLATFORM=lx2160acex7
+		DPC=clearfog-cx-s1_8-s2_0-dpc.dtb
+		DPL=clearfog-cx-s1_8-s2_0-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-honeycomb.dtb"
+		OPTEE_PLATFORM=ls-lx2160ardb
+		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+		RCW_BOARD=CLEARFOG-CX
 	;;
 	LX2162A_SOM_CLEARFOG_18_9_0)
 		ATF_PLATFORM=lx2162asom
@@ -277,6 +286,9 @@ do_build_atf() {
 		BUILD=debug
 		DEBUG_FLAGS="DEBUG=1 LOG_LEVEL=40"
 	fi
+	if [ -z "${RCW_BOARD}" ]; then
+		RCW_BOARD=${BOARD}
+	fi
 	local BOOT_MODE=
 	case ${BOOTSOURCE} in
 	auto)
@@ -299,7 +311,7 @@ do_build_atf() {
 		echo "\"${BOOTSOURCE}\" is not a supported boot source!"
 		exit 1
 	esac
-	local rcwimg=$ROOTDIR/images/tmp/${SOC,,}${MODULE,,}${REV}/${BOARD,,}/rcw_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}_${RCW_BOOTSOURCE}.bin
+	local rcwimg=$ROOTDIR/images/tmp/${SOC,,}${MODULE,,}${REV}/${RCW_BOARD,,}/rcw_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}_${RCW_BOOTSOURCE}.bin
 	if [ ! -e "${rcwimg}" ]; then
 		echo "cannot stat \"${rcwimg}\"!"
 		echo "Please specify a supported combination of BOOTSOURCE, CPU_REVISION, CPU_SPEED, BUS_SPEED, TARGET."
