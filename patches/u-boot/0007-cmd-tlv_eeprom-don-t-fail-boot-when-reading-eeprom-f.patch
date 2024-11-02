@@ -1,0 +1,32 @@
+From fff14a56662e7f4ff86cdb5452e5c1b1e35f28bd Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 2 Nov 2024 16:31:01 +0100
+Subject: [PATCH 07/10] cmd: tlv_eeprom: don't fail boot when reading eeprom
+ fails
+
+When u-boot calls mac_read_from_eeprom during init an error return code
+will fail the boot before reaching u-boot shell.
+
+Return success error code even on error, mac addresses are not critical.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ cmd/tlv_eeprom.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/cmd/tlv_eeprom.c b/cmd/tlv_eeprom.c
+index bf8d453dc5b..cbc11ebf421 100644
+--- a/cmd/tlv_eeprom.c
++++ b/cmd/tlv_eeprom.c
+@@ -1023,7 +1023,7 @@ int mac_read_from_eeprom(void)
+ 
+ 	if (read_eeprom(eeprom)) {
+ 		printf("Read failed.\n");
+-		return -1;
++		return 0;
+ 	}
+ 
+ 	maccount = 1;
+-- 
+2.43.0
+
