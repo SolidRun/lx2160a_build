@@ -1,0 +1,58 @@
+From bc8a68d153dcfd75153d81c52531743e43f23983 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 4 Nov 2024 15:08:01 +0100
+Subject: [PATCH 12/13] cmd: tlv_eeprom: support specifying tlv eeprom in DT
+ alias tlv[0-255]
+
+Systems might have many eeproms of which only some might be used for TLV
+data.
+If present, use aliases tlv0, tlv1, ... for finding tlv eeproms.
+
+If no eeproms are found by alias, fall back to current logic if using
+first eeproms in the system.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ cmd/tlv_eeprom.c | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/cmd/tlv_eeprom.c b/cmd/tlv_eeprom.c
+index cbc11ebf421..546ede2dda2 100644
+--- a/cmd/tlv_eeprom.c
++++ b/cmd/tlv_eeprom.c
+@@ -899,9 +899,32 @@ static void show_tlv_devices(void)
+ static int find_tlv_devices(struct udevice **tlv_devices_p)
+ {
+ 	int ret;
++	char alias_name[7];
+ 	int count_dev = 0;
++	int i;
++	ofnode node;
+ 	struct udevice *dev;
+ 
++	/* find by alias */
++	for (int i = 0; i < ARRAY_SIZE(tlv_devices_p); i++) {
++		snprintf(alias_name, sizeof(alias_name), "tlv%d", i);
++		node = ofnode_get_aliases_node(alias_name);
++		if (!ofnode_valid(node))
++			continue;
++
++		ret = uclass_get_device_by_ofnode(UCLASS_I2C_EEPROM, node, &dev);
++		if (ret) {
++			debug("get device \"%s\" failed with %d\n", alias_name, ret);
++			continue;
++		}
++
++		tlv_devices_p[i] = dev;
++		count_dev++;
++	}
++	if (count_dev)
++		return 0;
++
++	/* fall-back: find among all eeproms */
+ 	for (ret = uclass_first_device_check(UCLASS_I2C_EEPROM, &dev);
+ 			dev;
+ 			ret = uclass_next_device_check(&dev)) {
+-- 
+2.43.0
+

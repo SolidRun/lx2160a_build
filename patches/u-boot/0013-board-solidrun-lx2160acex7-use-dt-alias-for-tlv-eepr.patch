@@ -1,0 +1,90 @@
+From 38e36f6ceec2ecccc97369bec7e2589933001359 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 4 Nov 2024 15:12:04 +0100
+Subject: [PATCH 13/13] board: solidrun: lx2160acex7: use dt alias for tlv
+ eeprom
+
+LX2160A CEX-7 (and LX2162A SoM) have various eeproms competing for
+tlv_eeprom command.
+
+Add tlv0 alias to u-boot dts identifying the correct eeprom.
+
+On LX2162 SoM the eeprom is directly on the bus without a mux.
+Add dt patching logic fixing the alias and eeprom nodes when running on
+lx2162 soc.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi | 19 +++++++++----------
+ arch/arm/dts/fsl-lx2160a-cex7.dtsi        |  2 +-
+ board/solidrun/lx2160acex7/lx2160a.c      |  5 +++++
+ 3 files changed, 15 insertions(+), 11 deletions(-)
+
+diff --git a/arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi b/arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi
+index 9855fcb31cc..5909af2b1b9 100644
+--- a/arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi
++++ b/arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi
+@@ -1,6 +1,10 @@
+ // SPDX-License-Identifier: GPL-2.0+
+ 
+ / {
++	aliases {
++		tlv0 = &com_eeprom;
++	};
++
+ 	fanctrl-override {
+ 		compatible = "solidrun,lx2160acex7-fanctrl-override";
+ 		override-gpios = <&gpio2 2 0>;
+@@ -8,15 +12,10 @@
+ };
+ 
+ &i2c0 {
+-	u-boot,dm-pre-reloc;
+-
+-	i2c-mux@77 {
+-		u-boot,dm-pre-reloc;
+-
+-		i2c@0 {
+-			eeprom@57 {
+-				u-boot,dm-pre-reloc;
+-			};
+-		};
++	/* for LX2162 SoM */
++	eeprom@57 {
++		compatible = "st,24c02", "atmel,24c02";
++		reg = <0x57>;
++		status = "disabled";
+ 	};
+ };
+diff --git a/arch/arm/dts/fsl-lx2160a-cex7.dtsi b/arch/arm/dts/fsl-lx2160a-cex7.dtsi
+index d32a52ab00a..ca87a21aaee 100644
+--- a/arch/arm/dts/fsl-lx2160a-cex7.dtsi
++++ b/arch/arm/dts/fsl-lx2160a-cex7.dtsi
+@@ -80,7 +80,7 @@
+ 				reg = <0x53>;
+ 			};
+ 
+-			eeprom@57 {
++			com_eeprom: eeprom@57 {
+ 				compatible = "atmel,24c02";
+ 				reg = <0x57>;
+ 			};
+diff --git a/board/solidrun/lx2160acex7/lx2160a.c b/board/solidrun/lx2160acex7/lx2160a.c
+index 17160d13154..dcd8d63ddf8 100644
+--- a/board/solidrun/lx2160acex7/lx2160a.c
++++ b/board/solidrun/lx2160acex7/lx2160a.c
+@@ -87,6 +87,11 @@ int board_fix_fdt(void *fdt)
+ 
+ 		/* LX2162 does not have second USB controller, disable */
+ 		do_fixup_by_path_string(fdt, "/usb3@3110000", "status", "disabled");
++
++		/* LX2162 SoM has different tlv eeprom - enable and patch alias */
++		do_fixup_by_path_string(fdt, "/aliases", "tlv0", "/i2c@2000000/eeprom@57");
++		do_fixup_by_path_string(fdt, "/i2c@2000000/eeprom@57", "status", "okay");
++		do_fixup_by_path_string(fdt, "/i2c@2000000/i2c-mux@77/i2c@0/eeprom@57", "status", "disabled");
+ 	}
+ 
+ 	board_fix_fdt_eth(fdt);
+-- 
+2.43.0
+
