@@ -1,0 +1,1476 @@
+From b189c0e2b7e4e73d293874ac2fea3176c1a1f652 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 7 Nov 2024 13:26:49 +0100
+Subject: [PATCH 18/19] solidrun: add script generating configs from template
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ GenerateSRConfigs.sh                          | 47 +++++++++++++++++++
+ .../rcw_2000_700_2400_18_5_2_auto.rcw         |  2 +
+ .../rcw_2000_700_2400_18_5_2_sdhc.rcw         |  2 +-
+ .../rcw_2000_700_2400_8_5_2_auto.rcw          |  2 +
+ .../rcw_2000_700_2400_8_5_2_sdhc.rcw          |  2 +-
+ .../rcw_2000_700_2600_18_5_2_auto.rcw         |  2 +
+ .../rcw_2000_700_2600_18_5_2_sdhc.rcw         |  2 +-
+ .../rcw_2000_700_2600_8_5_2_auto.rcw          |  2 +
+ .../rcw_2000_700_2600_8_5_2_sdhc.rcw          |  2 +-
+ .../rcw_2000_700_2900_18_5_2_auto.rcw         |  2 +
+ .../rcw_2000_700_2900_18_5_2_sdhc.rcw         |  2 +-
+ .../rcw_2000_700_2900_8_5_2_auto.rcw          |  2 +
+ .../rcw_2000_700_2900_8_5_2_sdhc.rcw          |  2 +-
+ .../rcw_2000_700_3200_18_5_2_auto.rcw         |  2 +
+ .../rcw_2000_700_3200_18_5_2_sdhc.rcw         |  2 +-
+ .../rcw_2000_700_3200_8_5_2_auto.rcw          |  2 +
+ .../rcw_2000_700_3200_8_5_2_sdhc.rcw          |  2 +-
+ .../rcw_2200_750_2400_18_5_2_auto.rcw         |  4 +-
+ .../rcw_2200_750_2400_18_5_2_sdhc.rcw         |  4 +-
+ .../rcw_2200_750_2400_18_5_2_xspi.rcw         |  2 +-
+ .../rcw_2200_750_2400_8_5_2_auto.rcw          |  4 +-
+ .../rcw_2200_750_2400_8_5_2_sdhc.rcw          |  4 +-
+ .../rcw_2200_750_2400_8_5_2_xspi.rcw          |  2 +-
+ .../rcw_2200_750_2600_18_5_2_auto.rcw         |  4 +-
+ .../rcw_2200_750_2600_18_5_2_sdhc.rcw         |  4 +-
+ .../rcw_2200_750_2600_18_5_2_xspi.rcw         |  2 +-
+ .../rcw_2200_750_2600_8_5_2_auto.rcw          |  4 +-
+ .../rcw_2200_750_2600_8_5_2_sdhc.rcw          |  4 +-
+ .../rcw_2200_750_2600_8_5_2_xspi.rcw          |  2 +-
+ .../rcw_2200_750_2900_18_5_2_auto.rcw         |  4 +-
+ .../rcw_2200_750_2900_18_5_2_sdhc.rcw         |  4 +-
+ .../rcw_2200_750_2900_18_5_2_xspi.rcw         |  2 +-
+ .../rcw_2200_750_2900_8_5_2_auto.rcw          |  4 +-
+ .../rcw_2200_750_2900_8_5_2_sdhc.rcw          |  4 +-
+ .../rcw_2200_750_2900_8_5_2_xspi.rcw          |  2 +-
+ .../rcw_2200_750_3200_18_5_2_auto.rcw         |  4 +-
+ .../rcw_2200_750_3200_18_5_2_sdhc.rcw         |  4 +-
+ .../rcw_2200_750_3200_18_5_2_xspi.rcw         |  2 +-
+ .../rcw_2200_750_3200_8_5_2_auto.rcw          |  4 +-
+ .../rcw_2200_750_3200_8_5_2_sdhc.rcw          |  4 +-
+ .../rcw_2200_750_3200_8_5_2_xspi.rcw          |  2 +-
+ lx2160acex7_clearfog-cx.tmpl                  | 25 ++++++++++
+ .../rcw_2000_700_2400_18_5_2_auto.rcw         |  2 +
+ .../rcw_2000_700_2400_18_5_2_sdhc.rcw         |  2 +-
+ .../rcw_2000_700_2400_8_5_2_auto.rcw          |  2 +
+ .../rcw_2000_700_2400_8_5_2_sdhc.rcw          |  2 +-
+ .../rcw_2000_700_2600_18_5_2_auto.rcw         |  2 +
+ .../rcw_2000_700_2600_18_5_2_sdhc.rcw         |  2 +-
+ .../rcw_2000_700_2600_8_5_2_auto.rcw          |  2 +
+ .../rcw_2000_700_2600_8_5_2_sdhc.rcw          |  2 +-
+ .../rcw_2000_700_2900_18_5_2_auto.rcw         |  2 +
+ .../rcw_2000_700_2900_18_5_2_sdhc.rcw         |  2 +-
+ .../rcw_2000_700_2900_8_5_2_auto.rcw          |  2 +
+ .../rcw_2000_700_2900_8_5_2_sdhc.rcw          |  2 +-
+ .../rcw_2000_700_3200_18_5_2_auto.rcw         |  2 +
+ .../rcw_2000_700_3200_18_5_2_sdhc.rcw         |  2 +-
+ .../rcw_2000_700_3200_8_5_2_auto.rcw          |  2 +
+ .../rcw_2000_700_3200_8_5_2_sdhc.rcw          |  2 +-
+ .../rcw_2200_750_2400_18_5_2_auto.rcw         |  4 +-
+ .../rcw_2200_750_2400_18_5_2_sdhc.rcw         |  4 +-
+ .../rcw_2200_750_2400_18_5_2_xspi.rcw         |  2 +-
+ .../rcw_2200_750_2400_8_5_2_auto.rcw          |  4 +-
+ .../rcw_2200_750_2400_8_5_2_sdhc.rcw          |  4 +-
+ .../rcw_2200_750_2400_8_5_2_xspi.rcw          |  2 +-
+ .../rcw_2200_750_2600_18_5_2_auto.rcw         |  4 +-
+ .../rcw_2200_750_2600_18_5_2_sdhc.rcw         |  4 +-
+ .../rcw_2200_750_2600_18_5_2_xspi.rcw         |  2 +-
+ .../rcw_2200_750_2600_8_5_2_auto.rcw          |  4 +-
+ .../rcw_2200_750_2600_8_5_2_sdhc.rcw          |  4 +-
+ .../rcw_2200_750_2600_8_5_2_xspi.rcw          |  2 +-
+ .../rcw_2200_750_2900_18_5_2_auto.rcw         |  4 +-
+ .../rcw_2200_750_2900_18_5_2_sdhc.rcw         |  4 +-
+ .../rcw_2200_750_2900_18_5_2_xspi.rcw         |  2 +-
+ .../rcw_2200_750_2900_8_5_2_auto.rcw          |  4 +-
+ .../rcw_2200_750_2900_8_5_2_sdhc.rcw          |  4 +-
+ .../rcw_2200_750_2900_8_5_2_xspi.rcw          |  2 +-
+ .../rcw_2200_750_3200_18_5_2_auto.rcw         |  4 +-
+ .../rcw_2200_750_3200_18_5_2_sdhc.rcw         |  4 +-
+ .../rcw_2200_750_3200_18_5_2_xspi.rcw         |  2 +-
+ .../rcw_2200_750_3200_8_5_2_auto.rcw          |  4 +-
+ .../rcw_2200_750_3200_8_5_2_sdhc.rcw          |  4 +-
+ .../rcw_2200_750_3200_8_5_2_xspi.rcw          |  2 +-
+ 82 files changed, 216 insertions(+), 80 deletions(-)
+ create mode 100755 GenerateSRConfigs.sh
+ create mode 100644 lx2160acex7_clearfog-cx.tmpl
+
+diff --git a/GenerateSRConfigs.sh b/GenerateSRConfigs.sh
+new file mode 100755
+index 0000000..907e359
+--- /dev/null
++++ b/GenerateSRConfigs.sh
+@@ -0,0 +1,47 @@
++#!/bin/bash -e
++
++generate() {
++	local template=${1}
++	local MODULE=${2}
++	local SOC_REVISION=${3}
++	local BOARD=${4}
++	local CPU_SPEED=${5}
++	local BUS_SPEED=${6}
++	local DDR_SPEED=${7}
++	local SD1=${8}
++	local SD2=${9}
++	local SD3=${10}
++	local BOOTSOURCE=${11}
++
++	local SOC_REVISION_SUFFIX="_rev${SOC_REVISION}"
++	if [ "${SOC_REVISION_SUFFIX}" = "_rev1" ]; then
++		SOC_REVISION_SUFFIX=
++	fi
++
++	local rcw="${MODULE,,}${SOC_REVISION_SUFFIX,,}/${BOARD,,}/rcw_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SD1}_${SD2}_${SD3}_${BOOTSOURCE,,}.rcw"
++	cat "$template" | sed \
++		-e "s;%module%;${MODULE,,};g" -e "s;%MODULE%;${MODULE^^};g" \
++		-e "s;%SOC_REVISION%;${SOC_REVISION};g" \
++		-e "s;%board%;${BOARD,,};g" -e "s;%BOARD%;${BOARD^^};g" \
++		-e "s;%CPU_SPEED%;${CPU_SPEED};g" \
++		-e "s;%BUS_SPEED%;${BUS_SPEED};g" \
++		-e "s;%DDR_SPEED%;${DDR_SPEED};g" \
++		-e "s;%bootsource%;${BOOTSOURCE,,};g" -e "s;%BOOTSOURCE%;${BOOTSOURCE^^};g" \
++		-e "s;%SD1%;${SD1};g" -e "s;%SD1%;${SD1};g" \
++		-e "s;%SD2%;${SD2};g" -e "s;%SD2%;${SD2};g" \
++		-e "s;%SD3%;${SD3};g" -e "s;%SD3%;${SD3};g" \
++		> "$rcw"
++	echo "Generated $rcw"
++}
++
++# generate LX2160A CEX-7 Clearfog-CX
++for DDR_SPEED in 2400 2600 2900 3200; do
++	for SOC_REVISION in 1 2; do
++		for BOOTSOURCE in auto sdhc xspi; do
++			for SD1 in 8 18; do
++				generate lx2160acex7_clearfog-cx.tmpl lx2160acex7 ${SOC_REVISION} clearfog-cx 2000 700 ${DDR_SPEED} ${SD1} 5 2 ${BOOTSOURCE}
++				generate lx2160acex7_clearfog-cx.tmpl lx2160acex7 ${SOC_REVISION} clearfog-cx 2200 750 ${DDR_SPEED} ${SD1} 5 2 ${BOOTSOURCE}
++			done
++		done
++	done
++done
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2400_18_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2400_18_5_2_auto.rcw
+index 9e95ac8..6941de1 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_2400_18_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2400_18_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2400.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2400_18_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2400_18_5_2_sdhc.rcw
+index 470237f..7d178e9 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_2400_18_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2400_18_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2400_8_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2400_8_5_2_auto.rcw
+index ba0f82c..438b671 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_2400_8_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2400_8_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2400.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2400_8_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2400_8_5_2_sdhc.rcw
+index 4d67915..73c6f2d 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_2400_8_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2400_8_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2600_18_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2600_18_5_2_auto.rcw
+index ff8a674..a57abb1 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_2600_18_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2600_18_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2600.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2600_18_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2600_18_5_2_sdhc.rcw
+index 8d73b20..44cf09e 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_2600_18_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2600_18_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2600_8_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2600_8_5_2_auto.rcw
+index b1723d3..9e17570 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_2600_8_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2600_8_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2600.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2600_8_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2600_8_5_2_sdhc.rcw
+index 0424418..3e5409f 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_2600_8_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2600_8_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2900_18_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2900_18_5_2_auto.rcw
+index 978d3a6..11d63a0 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_2900_18_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2900_18_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2900_18_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2900_18_5_2_sdhc.rcw
+index 1d1a869..9f5b541 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_2900_18_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2900_18_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2900_8_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2900_8_5_2_auto.rcw
+index fa59785..3ec47b4 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_2900_8_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2900_8_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_2900_8_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_2900_8_5_2_sdhc.rcw
+index be0d219..b17d672 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_2900_8_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_2900_8_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_3200_18_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_3200_18_5_2_auto.rcw
+index 732ca38..cfd8219 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_3200_18_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_3200_18_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_3200.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_3200_18_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_3200_18_5_2_sdhc.rcw
+index de60fca..bfb3a71 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_3200_18_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_3200_18_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_3200_8_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_3200_8_5_2_auto.rcw
+index 90ac8a4..ac7755c 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_3200_8_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_3200_8_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_3200.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2000_700_3200_8_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2000_700_3200_8_5_2_sdhc.rcw
+index e1f9092..565252a 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2000_700_3200_8_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2000_700_3200_8_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2400_18_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2400_18_5_2_auto.rcw
+index f69abb1..49ef64f 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2400_18_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2400_18_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2400.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2400_18_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2400_18_5_2_sdhc.rcw
+index 09c62dc..e701626 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2400_18_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2400_18_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2400_18_5_2_xspi.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2400_18_5_2_xspi.rcw
+index f1c0c96..37eee98 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2400_18_5_2_xspi.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2400_18_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 1.0
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2400_8_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2400_8_5_2_auto.rcw
+index 533fba1..53be672 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2400_8_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2400_8_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2400.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2400_8_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2400_8_5_2_sdhc.rcw
+index 845ab35..400b9a9 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2400_8_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2400_8_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2400_8_5_2_xspi.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2400_8_5_2_xspi.rcw
+index 765758e..6ee9c7a 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2400_8_5_2_xspi.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2400_8_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 1.0
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2600_18_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2600_18_5_2_auto.rcw
+index 2b75335..166b558 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2600_18_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2600_18_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2600.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2600_18_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2600_18_5_2_sdhc.rcw
+index 7839ab2..240f34f 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2600_18_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2600_18_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2600_18_5_2_xspi.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2600_18_5_2_xspi.rcw
+index 901b323..9f8ed4e 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2600_18_5_2_xspi.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2600_18_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 1.0
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2600_8_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2600_8_5_2_auto.rcw
+index c09807c..221d71a 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2600_8_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2600_8_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2600.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2600_8_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2600_8_5_2_sdhc.rcw
+index 7808b12..d3bb414 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2600_8_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2600_8_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2600_8_5_2_xspi.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2600_8_5_2_xspi.rcw
+index 33bef8b..beefc3a 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2600_8_5_2_xspi.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2600_8_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 1.0
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2900_18_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2900_18_5_2_auto.rcw
+index b430f80..925fadb 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2900_18_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2900_18_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2900_18_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2900_18_5_2_sdhc.rcw
+index c935b09..a370eab 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2900_18_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2900_18_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2900_18_5_2_xspi.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2900_18_5_2_xspi.rcw
+index b1f39b4..75851ac 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2900_18_5_2_xspi.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2900_18_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 1.0
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2900_8_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2900_8_5_2_auto.rcw
+index 0f3d8a3..fa408fa 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2900_8_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2900_8_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2900_8_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2900_8_5_2_sdhc.rcw
+index 68452e0..3cfcc61 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2900_8_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2900_8_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_2900_8_5_2_xspi.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_2900_8_5_2_xspi.rcw
+index 0069109..4f89b17 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_2900_8_5_2_xspi.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_2900_8_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 1.0
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_3200_18_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_3200_18_5_2_auto.rcw
+index d0736c2..aff7dab 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_3200_18_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_3200_18_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_3200.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_3200_18_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_3200_18_5_2_sdhc.rcw
+index 6410353..772ec32 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_3200_18_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_3200_18_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_3200_18_5_2_xspi.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_3200_18_5_2_xspi.rcw
+index daa99df..5c25062 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_3200_18_5_2_xspi.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_3200_18_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 1.0
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_3200_8_5_2_auto.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_3200_8_5_2_auto.rcw
+index aa2fb4b..7ec91ef 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_3200_8_5_2_auto.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_3200_8_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 1.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 1
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_3200.rcwi>
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_3200_8_5_2_sdhc.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_3200_8_5_2_sdhc.rcw
+index 6f06730..1756c4e 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_3200_8_5_2_sdhc.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_3200_8_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 1.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 1
+diff --git a/lx2160acex7/clearfog-cx/rcw_2200_750_3200_8_5_2_xspi.rcw b/lx2160acex7/clearfog-cx/rcw_2200_750_3200_8_5_2_xspi.rcw
+index 94dcc9b..85b9f95 100644
+--- a/lx2160acex7/clearfog-cx/rcw_2200_750_3200_8_5_2_xspi.rcw
++++ b/lx2160acex7/clearfog-cx/rcw_2200_750_3200_8_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 1.0
+diff --git a/lx2160acex7_clearfog-cx.tmpl b/lx2160acex7_clearfog-cx.tmpl
+new file mode 100644
+index 0000000..29b6fd0
+--- /dev/null
++++ b/lx2160acex7_clearfog-cx.tmpl
+@@ -0,0 +1,25 @@
++/*
++ * SerDes Protocol 1 -  %SD1%
++ * SerDes Protocol 2 -  %SD2%
++ * SerDes Protocol 3 -  %SD3%
++ *
++ * Frequencies:
++ * Core     -- %CPU_SPEED% MHz
++ * Platform -- %BUS_SPEED%  MHz
++ * DDR      -- %DDR_SPEED% MT/s
++ *
++ * Silicon %SOC_REVISION%.0
++ * Boot from %BOOTSOURCE%
++ */
++
++#define LX_SR %SOC_REVISION%
++#define LX_BOOTSOURCE_%BOOTSOURCE%
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../%module%/include/pll_%CPU_SPEED%_%BUS_SPEED%_xxxx.rcwi>
++#include <../%module%/include/pll_xxxx_xxx_%DDR_SPEED%.rcwi>
++#include <../%module%/include/common.rcwi>
++#include <../%module%/include/SD1_%SD1%.rcwi>
++#include <../%module%/include/SD2_%SD2%.rcwi>
++#include <../%module%/include/SD3_%SD3%.rcwi>
++#include <../%module%/include/common_pbi.rcwi>
++#include <../%module%/clearfog-cx/sd1_8_eq.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_18_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_18_5_2_auto.rcw
+index 6f454ad..af1b66d 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_18_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_18_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2400.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_18_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_18_5_2_sdhc.rcw
+index a3bc9c9..e3d8d98 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_18_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_18_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_8_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_8_5_2_auto.rcw
+index 1c23c5c..5359341 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_8_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_8_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2400.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_8_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_8_5_2_sdhc.rcw
+index c7b307e..ef3e91f 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_8_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2400_8_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_18_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_18_5_2_auto.rcw
+index 2a11587..c24f4c5 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_18_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_18_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2600.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_18_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_18_5_2_sdhc.rcw
+index bb3437e..3adbbd6 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_18_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_18_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_8_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_8_5_2_auto.rcw
+index 87391ab..eca9cd1 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_8_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_8_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2600.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_8_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_8_5_2_sdhc.rcw
+index a4c254c..ad3cd52 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_8_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2600_8_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_18_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_18_5_2_auto.rcw
+index 2a23f78..ce5744f 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_18_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_18_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_18_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_18_5_2_sdhc.rcw
+index cf44444..74a55e0 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_18_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_18_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_8_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_8_5_2_auto.rcw
+index 9114f36..5bdbd19 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_8_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_8_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_8_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_8_5_2_sdhc.rcw
+index 88ea5f2..532bd1f 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_8_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_2900_8_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_18_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_18_5_2_auto.rcw
+index 0067b24..15a5bb5 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_18_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_18_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_3200.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_18_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_18_5_2_sdhc.rcw
+index 290ebb1..71929a9 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_18_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_18_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_8_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_8_5_2_auto.rcw
+index 7e97984..a6e38c8 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_8_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_8_5_2_auto.rcw
+@@ -9,9 +9,11 @@
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_3200.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_8_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_8_5_2_sdhc.rcw
+index 486ade8..c3c7459 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_8_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2000_700_3200_8_5_2_sdhc.rcw
+@@ -9,7 +9,7 @@
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_18_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_18_5_2_auto.rcw
+index 02b2961..37b5ed7 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_18_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_18_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2400.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_18_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_18_5_2_sdhc.rcw
+index 1fa9e1f..2c64922 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_18_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_18_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_18_5_2_xspi.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_18_5_2_xspi.rcw
+index 12f62c1..5d42ffd 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_18_5_2_xspi.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_18_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 2.0
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_8_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_8_5_2_auto.rcw
+index 4185ea6..8143c6a 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_8_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_8_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2400.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_8_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_8_5_2_sdhc.rcw
+index 93b10d2..d4f9354 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_8_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_8_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_8_5_2_xspi.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_8_5_2_xspi.rcw
+index feb3e42..54faf81 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_8_5_2_xspi.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2400_8_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2400 MT/s
+  *
+  * Silicon 2.0
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_18_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_18_5_2_auto.rcw
+index f951e53..78a799e 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_18_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_18_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2600.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_18_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_18_5_2_sdhc.rcw
+index 227510c..bdcc867 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_18_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_18_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_18_5_2_xspi.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_18_5_2_xspi.rcw
+index 4a30d7f..5e5dd08 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_18_5_2_xspi.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_18_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 2.0
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_8_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_8_5_2_auto.rcw
+index e04fcfb..a00da7d 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_8_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_8_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2600.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_8_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_8_5_2_sdhc.rcw
+index 32225fe..b635b12 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_8_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_8_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_8_5_2_xspi.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_8_5_2_xspi.rcw
+index 6fbba40..8c8e91c 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_8_5_2_xspi.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2600_8_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2600 MT/s
+  *
+  * Silicon 2.0
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_18_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_18_5_2_auto.rcw
+index 4444769..9fd6241 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_18_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_18_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_18_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_18_5_2_sdhc.rcw
+index fc1ad2d..fb5b219 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_18_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_18_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_18_5_2_xspi.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_18_5_2_xspi.rcw
+index 311d2df..f0ef2bc 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_18_5_2_xspi.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_18_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 2.0
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_8_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_8_5_2_auto.rcw
+index b9797ca..02f9795 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_8_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_8_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_8_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_8_5_2_sdhc.rcw
+index a7b5bd2..e779da8 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_8_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_8_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_8_5_2_xspi.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_8_5_2_xspi.rcw
+index 273d91c..6903faf 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_8_5_2_xspi.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_2900_8_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 2900 MT/s
+  *
+  * Silicon 2.0
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_18_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_18_5_2_auto.rcw
+index 3665618..6ce054a 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_18_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_18_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_3200.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_18_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_18_5_2_sdhc.rcw
+index 49b4d42..22afca8 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_18_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_18_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_18_5_2_xspi.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_18_5_2_xspi.rcw
+index bdfe337..d600c86 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_18_5_2_xspi.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_18_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 2.0
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_8_5_2_auto.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_8_5_2_auto.rcw
+index 046adc8..9c0d832 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_8_5_2_auto.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_8_5_2_auto.rcw
+@@ -5,13 +5,15 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 2.0
++ * Boot from AUTO
+  */
+ 
+ #define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
+ #include <../lx2160asi/lx2160a.rcwi>
+ #include <../lx2160acex7/include/pll_2200_750_xxxx.rcwi>
+ #include <../lx2160acex7/include/pll_xxxx_xxx_3200.rcwi>
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_8_5_2_sdhc.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_8_5_2_sdhc.rcw
+index 9798b74..f037a47 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_8_5_2_sdhc.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_8_5_2_sdhc.rcw
+@@ -5,11 +5,11 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 2.0
+- * Boot from SDHC1
++ * Boot from SDHC
+  */
+ 
+ #define LX_SR 2
+diff --git a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_8_5_2_xspi.rcw b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_8_5_2_xspi.rcw
+index 6b875e7..44e93b1 100644
+--- a/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_8_5_2_xspi.rcw
++++ b/lx2160acex7_rev2/clearfog-cx/rcw_2200_750_3200_8_5_2_xspi.rcw
+@@ -5,7 +5,7 @@
+  *
+  * Frequencies:
+  * Core     -- 2200 MHz
+- * Platform -- 700  MHz
++ * Platform -- 750  MHz
+  * DDR      -- 3200 MT/s
+  *
+  * Silicon 2.0
+-- 
+2.43.0
+
