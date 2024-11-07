@@ -1,4 +1,4 @@
-From 0d1aa31950f78d41c67a9e63b65c7102e14df1f4 Mon Sep 17 00:00:00 2001
+From d232fbff1960d7f3606bb172157dd4815296be3e Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Wed, 6 Nov 2024 11:18:12 +0100
 Subject: [PATCH] lx2160acex7: add configuration for serdes 1 protocol 4
@@ -15,7 +15,7 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
 
 diff --git a/lx2160acex7/include/SD1_4.rcwi b/lx2160acex7/include/SD1_4.rcwi
 new file mode 100644
-index 0000000..20de437
+index 0000000..aea0c13
 --- /dev/null
 +++ b/lx2160acex7/include/SD1_4.rcwi
 @@ -0,0 +1,26 @@
@@ -36,8 +36,8 @@ index 0000000..20de437
 +SRDS_INTRA_REF_CLK_S1=0
 +
 +/* Enable PLLS */
-+SRDS_PLL_PD_PLL2=1
-+SRDS_REFCLKF_DIS_S2=0
++SRDS_PLL_PD_PLL2=0
++SRDS_REFCLKS_DIS_S1=0
 +
 +/*
 + * Select PLLF frequency 100MHz (don't care): Bit 0 = 0
