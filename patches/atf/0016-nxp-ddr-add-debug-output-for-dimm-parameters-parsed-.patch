@@ -1,0 +1,83 @@
+From 0591394c1257b79d9d49016476325533c1c2a14a Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 26 Sep 2024 16:35:40 +0200
+Subject: [PATCH 16/17] nxp: ddr: add debug output for dimm parameters parsed
+ from spd or static
+
+Add debug prints for all members of struct dimm_params, after either
+parsing of SPD - or from static (no-dimm) configuration.
+
+This enables comparison of parameters derived from SPD with static
+configuration.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/nxp/ddr/nxp-ddr/ddr.c | 52 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 52 insertions(+)
+
+diff --git a/drivers/nxp/ddr/nxp-ddr/ddr.c b/drivers/nxp/ddr/nxp-ddr/ddr.c
+index c051b3b25..91a6ef5dc 100644
+--- a/drivers/nxp/ddr/nxp-ddr/ddr.c
++++ b/drivers/nxp/ddr/nxp-ddr/ddr.c
+@@ -616,6 +616,58 @@ static int parse_spd(struct ddr_info *priv)
+ 	/* now we have valid and identical DIMMs on controllers */
+ #endif	/* CONFIG_DDR_NODIMM */
+ 
++	debug("DIMM: n_ranks = %u\n", dimm->n_ranks);
++	debug("DIMM: die_density = %u\n", dimm->die_density);
++	debug("DIMM: rank_density = %llu\n", dimm->rank_density);
++	debug("DIMM: capacity = %llu\n", dimm->capacity);
++	debug("DIMM: primary_sdram_width = %u\n", dimm->primary_sdram_width);
++	debug("DIMM: ec_sdram_width = %u\n", dimm->ec_sdram_width);
++	debug("DIMM: rdimm = %u\n", dimm->rdimm);
++	debug("DIMM: package_3ds = %u\n", dimm->package_3ds);
++	debug("DIMM: device_width = %u\n", dimm->device_width);
++	debug("DIMM: rc = %u\n", dimm->rc);
++
++	debug("DIMM: n_row_addr = %u\n", dimm->n_row_addr);
++	debug("DIMM: n_col_addr = %u\n", dimm->n_col_addr);
++	debug("DIMM: edc_config = %u\n", dimm->edc_config);
++	debug("DIMM: bank_addr_bits = %u\n", dimm->bank_addr_bits);
++	debug("DIMM: bank_group_bits = %u\n", dimm->bank_group_bits);
++	debug("DIMM: burst_lengths_bitmask = %u\n", dimm->burst_lengths_bitmask);
++
++	debug("DIMM: mirrored_dimm = %u\n", dimm->mirrored_dimm);
++
++	debug("DIMM: mtb_ps = %d\n", dimm->mtb_ps);
++	debug("DIMM: ftb_10th_ps = %d\n", dimm->ftb_10th_ps);
++	debug("DIMM: taa_ps = %d\n", dimm->taa_ps);
++	debug("DIMM: tfaw_ps = %d\n", dimm->tfaw_ps);
++
++	debug("DIMM: tckmin_x_ps = %d\n", dimm->tckmin_x_ps);
++	debug("DIMM: tckmax_ps = %d\n", dimm->tckmax_ps);
++
++	debug("DIMM: caslat_x = %u\n", dimm->caslat_x);
++
++	debug("DIMM: trcd_ps = %d\n", dimm->trcd_ps);
++	debug("DIMM: trp_ps = %d\n", dimm->trp_ps);
++	debug("DIMM: tras_ps = %d\n", dimm->tras_ps);
++
++	debug("DIMM: trfc1_ps = %d\n", dimm->trfc1_ps);
++	debug("DIMM: trfc2_ps = %d\n", dimm->trfc2_ps);
++	debug("DIMM: trfc4_ps = %d\n", dimm->trfc4_ps);
++	debug("DIMM: trrds_ps = %d\n", dimm->trrds_ps);
++	debug("DIMM: trrdl_ps = %d\n", dimm->trrdl_ps);
++	debug("DIMM: tccdl_ps = %d\n", dimm->tccdl_ps);
++	debug("DIMM: trfc_slr_ps = %d\n", dimm->trfc_slr_ps);
++
++	debug("DIMM: trc_ps = %d\n", dimm->trc_ps);
++	debug("DIMM: twr_ps = %d\n", dimm->twr_ps);
++
++	debug("DIMM: refresh_rate_ps = %u\n", dimm->refresh_rate_ps);
++	debug("DIMM: extended_op_srt = %u\n", dimm->extended_op_srt);
++
++	debug("DIMM: rcw = [%u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u]\n", (unsigned int)dimm->rcw[0], (unsigned int)dimm->rcw[1], (unsigned int)dimm->rcw[2], (unsigned int)dimm->rcw[3], (unsigned int)dimm->rcw[4], (unsigned int)dimm->rcw[5], (unsigned int)dimm->rcw[6], (unsigned int)dimm->rcw[7], (unsigned int)dimm->rcw[8], (unsigned int)dimm->rcw[9], (unsigned int)dimm->rcw[10], (unsigned int)dimm->rcw[11], (unsigned int)dimm->rcw[12], (unsigned int)dimm->rcw[13], (unsigned int)dimm->rcw[14], (unsigned int)dimm->rcw[15]);
++	debug("DIMM: dq_mapping = [%u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u, %u]\n", dimm->dq_mapping[0], dimm->dq_mapping[1], dimm->dq_mapping[2], dimm->dq_mapping[3], dimm->dq_mapping[4], dimm->dq_mapping[5], dimm->dq_mapping[6], dimm->dq_mapping[7], dimm->dq_mapping[8], dimm->dq_mapping[9], dimm->dq_mapping[10], dimm->dq_mapping[11], dimm->dq_mapping[12], dimm->dq_mapping[13], dimm->dq_mapping[14], dimm->dq_mapping[15], dimm->dq_mapping[16], dimm->dq_mapping[17]);
++	debug("DIMM: dq_mapping_ors = %u\n", dimm->dq_mapping_ors);
++
+ 	debug("cal cs\n");
+ 	conf->cs_in_use = 0;
+ 	for (j = 0; j < DDRC_NUM_DIMM; j++) {
+-- 
+2.43.0
+
