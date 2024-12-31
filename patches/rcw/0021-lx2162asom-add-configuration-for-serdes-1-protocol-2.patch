@@ -1,0 +1,132 @@
+From 2b1985294275e363693f8425c71f5f77c814ef32 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 31 Dec 2024 13:46:14 +0100
+Subject: [PATCH] lx2162asom: add configuration for serdes 1 protocol 2
+
+This configuration requires changing clock generator U10 on the SoM from
+161MHz to 100MHz.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../rcw_2000_650_2900_2_11_0_auto.rcw         | 22 +++++++++++++++++++
+ .../clearfog/rcw_2000_650_2900_2_7_0_auto.rcw | 22 +++++++++++++++++++
+ .../clearfog/rcw_2000_650_2900_2_9_0_auto.rcw | 19 ++++++++++++++++
+ lx2162asom_rev2/include/SD1_2.rcwi            | 22 +++++++++++++++++++
+ 4 files changed, 85 insertions(+)
+ create mode 100644 lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_11_0_auto.rcw
+ create mode 100644 lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_7_0_auto.rcw
+ create mode 100644 lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_9_0_auto.rcw
+ create mode 100644 lx2162asom_rev2/include/SD1_2.rcwi
+
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_11_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_11_0_auto.rcw
+new file mode 100644
+index 0000000..683028a
+--- /dev/null
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_11_0_auto.rcw
+@@ -0,0 +1,22 @@
++/*
++ * SerDes Protocol 1 -  2
++ * SerDes Protocol 2 -  11
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 650  MHz
++ * DDR      -- 2900 MT/s
++ *
++ */
++
++#define HAVE_PEX3
++#define HAVE_PEX4
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_650_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2162asom_rev2/include/common.rcwi>
++#include <../lx2162asom_rev2/include/SD1_2.rcwi>
++#include <../lx2162asom_rev2/include/SD2_11.rcwi>
++#include <../lx2160acex7/include/SD3_0.rcwi>
++#include <../lx2162asom_rev2/include/common_pbi.rcwi>
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_7_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_7_0_auto.rcw
+new file mode 100644
+index 0000000..b08b804
+--- /dev/null
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_7_0_auto.rcw
+@@ -0,0 +1,22 @@
++/*
++ * SerDes Protocol 1 -  2
++ * SerDes Protocol 2 -  7
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 650  MHz
++ * DDR      -- 2900 MT/s
++ *
++ */
++
++#define HAVE_PEX3
++#define HAVE_PEX4
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_650_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2162asom_rev2/include/common.rcwi>
++#include <../lx2162asom_rev2/include/SD1_2.rcwi>
++#include <../lx2162asom_rev2/include/SD2_7.rcwi>
++#include <../lx2160acex7/include/SD3_0.rcwi>
++#include <../lx2162asom_rev2/include/common_pbi.rcwi>
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_9_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_9_0_auto.rcw
+new file mode 100644
+index 0000000..d1a53ae
+--- /dev/null
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_9_0_auto.rcw
+@@ -0,0 +1,19 @@
++/*
++ * SerDes Protocol 1 -  2
++ * SerDes Protocol 2 -  9
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 650  MHz
++ * DDR      -- 2900 MT/s
++ *
++ */
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_650_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2162asom_rev2/include/common.rcwi>
++#include <../lx2162asom_rev2/include/SD1_2.rcwi>
++#include <../lx2162asom_rev2/include/SD2_9.rcwi>
++#include <../lx2160acex7/include/SD3_0.rcwi>
++#include <../lx2162asom_rev2/include/common_pbi.rcwi>
+diff --git a/lx2162asom_rev2/include/SD1_2.rcwi b/lx2162asom_rev2/include/SD1_2.rcwi
+new file mode 100644
+index 0000000..d2877db
+--- /dev/null
++++ b/lx2162asom_rev2/include/SD1_2.rcwi
+@@ -0,0 +1,22 @@
++/*
++ * This conmfiguration requires changing reference clock on SoM U10 from 161MHz to 100MHz.
++ */
++
++/* Serdes 1 Protocol 2: 4x1Gbps */
++SRDS_PRTCL_S1=2
++
++/* Disable Serdes 1 PLLF */
++SRDS_PLL_PD_PLL1=1
++
++/* Enable Serdes 1 PLLS */
++SRDS_PLL_PD_PLL2=0
++
++/* Use Serdes 1 PLLF for PLLS (LX2162A has no physical input for PLLS) */
++SRDS_INTRA_REF_CLK_S1=1
++
++/*
++ * Select Serdes 1 PLLF frequency 100MHz for 1GE mode (don't care): Bit 0 = 0
++ * Select Serdes 1 PLLS frequency 100MHz for 1GE mode: Bit 1 = 0
++ * (See QorIQ LX2162A Reference Manual, Rev. 1, 12/2021, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 932)
++ */
++SRDS_PLL_REF_CLK_SEL_S1=0
+-- 
+2.43.0
+
