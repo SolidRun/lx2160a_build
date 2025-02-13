@@ -284,7 +284,7 @@ do_build_atf() {
 	fi
 	if $ATF_DEBUG; then
 		BUILD=debug
-		DEBUG_FLAGS="DEBUG=1 LOG_LEVEL=40"
+		DEBUG_FLAGS="DEBUG=1 LOG_LEVEL=40 DDR_DEBUG=yes"
 	fi
 	if [ -z "${RCW_BOARD}" ]; then
 		RCW_BOARD=${BOARD}

@@ -1,0 +1,40 @@
+From 5bbef016b167010b14968efb471da6a0460df1ce Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 12 Feb 2025 17:33:41 +0100
+Subject: [PATCH 18/19] nxp: ddr: dump SPD EEPROM content on debug builds
+
+When building with DDR_DEBUG=yes dump the raw SPD EEPROM byte for byte
+on each DIMM.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/nxp/ddr/nxp-ddr/ddr.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/drivers/nxp/ddr/nxp-ddr/ddr.c b/drivers/nxp/ddr/nxp-ddr/ddr.c
+index 91a6ef5dc..d4ab55906 100644
+--- a/drivers/nxp/ddr/nxp-ddr/ddr.c
++++ b/drivers/nxp/ddr/nxp-ddr/ddr.c
+@@ -550,6 +550,19 @@ static int parse_spd(struct ddr_info *priv)
+ 				continue;
+ 			}
+ 
++#ifdef DDR_DEBUG
++			/* dump SPD */
++			printf("RAW SPD:");
++			for (size_t k = 0; k < sizeof(struct ddr4_spd); k++) {
++				unsigned char byte = ((unsigned char *)&spd[spd_idx])[k];
++				if (!(k % 16))
++					printf("\n%02x", byte);
++				else
++					printf(" %02x", byte);
++			}
++			printf("\n");
++#endif
++
+ 			spd_checksum[spd_idx] =
+ 				(spd[spd_idx].crc[1] << 24) |
+ 				(spd[spd_idx].crc[0] << 16) |
+-- 
+2.43.0
+
