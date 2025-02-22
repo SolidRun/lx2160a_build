@@ -1,0 +1,82 @@
+From 90603740ecfd8a087213fa7763540e0bd2b6ffd7 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 21 Feb 2025 14:34:32 +0100
+Subject: [PATCH 28/35] Revert "phy: lynx-28g: add support for specifying
+ unmanaged lanes"
+
+This reverts commit 7c9762a97177fe98b27c9ea76ad6a6b1287d2692.
+---
+ .../devicetree/bindings/phy/fsl,lynx-28g.yaml |  6 ------
+ drivers/phy/freescale/phy-fsl-lynx-28g.c      | 19 +------------------
+ 2 files changed, 1 insertion(+), 24 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/phy/fsl,lynx-28g.yaml b/Documentation/devicetree/bindings/phy/fsl,lynx-28g.yaml
+index 71ff57927e32..4d91e2f4f247 100644
+--- a/Documentation/devicetree/bindings/phy/fsl,lynx-28g.yaml
++++ b/Documentation/devicetree/bindings/phy/fsl,lynx-28g.yaml
+@@ -20,12 +20,6 @@ properties:
+   "#phy-cells":
+     const: 1
+ 
+-  fsl,unmanaged-lanes:
+-    $ref: /schemas/types.yaml#definitions/uint8
+-    description: Select which lanes not to touch via bitmask: 0 = managed by driver, 1 = unmanaged.
+-    minimum: 0
+-    maximum: 255
+-
+ required:
+   - compatible
+   - reg
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index e7a9a6499fd0..2152066f2dbc 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -5,7 +5,6 @@
+ #include <linux/phy.h>
+ #include <linux/phy/phy.h>
+ #include <linux/platform_device.h>
+-#include <linux/property.h>
+ #include <linux/workqueue.h>
+ #include <linux/workqueue.h>
+ 
+@@ -645,9 +644,7 @@ static int lynx_28g_probe(struct platform_device *pdev)
+ 	struct device *dev = &pdev->dev;
+ 	struct phy_provider *provider;
+ 	struct lynx_28g_priv *priv;
+-	struct fwnode_handle *fwnode;
+-	int i, ret;
+-	u32 unmanaged_lanes;
++	int i;
+ 
+ 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+ 	if (!priv)
+@@ -658,26 +655,12 @@ static int lynx_28g_probe(struct platform_device *pdev)
+ 	if (IS_ERR(priv->base))
+ 		return PTR_ERR(priv->base);
+ 
+-	fwnode = dev_fwnode(dev);
+-	if (fwnode && is_of_node(fwnode)) {
+-		ret = of_property_read_u32(to_of_node(fwnode), "fsl,unmanaged-lanes", &unmanaged_lanes);
+-		if (ret && ret != -EINVAL) {
+-			dev_err(dev, "failed to read fsl,unmanaged-lanes property: %d\n", ret);
+-			return ret;
+-		}
+-	}
+-
+ 	lynx_28g_pll_read_configuration(priv);
+ 
+ 	for (i = 0; i < LYNX_28G_NUM_LANE; i++) {
+ 		struct lynx_28g_lane *lane = &priv->lane[i];
+ 		struct phy *phy;
+ 
+-		if (unmanaged_lanes & (1 << i)) {
+-			dev_info(dev, "unmanaged lane %d!\n", i);
+-			continue;
+-		}
+-
+ 		memset(lane, 0, sizeof(*lane));
+ 
+ 		phy = devm_phy_create(&pdev->dev, NULL, &lynx_28g_ops);
+-- 
+2.43.0
+

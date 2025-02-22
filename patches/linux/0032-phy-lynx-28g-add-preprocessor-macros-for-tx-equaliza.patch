@@ -1,0 +1,209 @@
+From 9dd1c219fa2225b131d3b81cef595027ac09b605 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 30 Jan 2025 14:00:18 +0100
+Subject: [PATCH 32/35] phy: lynx-28g: add preprocessor macros for tx
+ equalization register 0
+
+When switching between network protocols different equalization
+parameters are being applied to each lane individually. Those parameters
+are currently written as magic numbers in code.
+
+Equalization parameters are board-specific and individual per lane.
+Hardware description should in the future override driver defaults on
+platforms that require it.
+
+Add verbose preprocessor macros defining all documented bits of the Tx
+Equalization Register 0 as described in LX2160A Reference Manual.
+
+Initialize the protocol-specific default values for this single register
+during probe to the same magic numbers previously used but translated to
+the new preprocessor macros.
+
+In preparation for overriding defaults store the respective default
+values in each lane's private structure.
+
+No functional change is intended.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 110 ++++++++++++++++++++++-
+ 1 file changed, 107 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index e5d008fab7dc..f3583e305243 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -77,7 +77,18 @@
+ #define LYNX_28G_LNaTGCR0_N_RATE_DOUBLE		0x3000000
+ #define LYNX_28G_LNaTGCR0_N_RATE_MSK		GENMASK(26, 24)
+ 
++/* Lane Tx Equalization Register 0 */
+ #define LYNX_28G_LNaTECR0(lane)			(0x800 + (lane) * 0x100 + 0x30)
++#define LYNX_28G_LNaTECR0_EQ_TYPE_MSK		GENMASK(30, 28)
++#define LYNX_28G_LNaTECR0_EQ_TYPE_VAL(val)	(val << 28)
++#define LYNX_28G_LNaTECR0_EQ_SGN_PREQ(pos)	(pos << 23)
++#define LYNX_28G_LNaTECR0_EQ_PREQ_MSK		GENMASK(19, 16)
++#define LYNX_28G_LNaTECR0_EQ_PREQ_VAL(val)	(val << 16)
++#define LYNX_28G_LNaTECR0_EQ_SGN_POST1Q(pos)	(pos << 15)
++#define LYNX_28G_LNaTECR0_EQ_POST1Q_MSK		GENMASK(12, 8)
++#define LYNX_28G_LNaTECR0_EQ_POST1Q_VAL(val)	(val << 8)
++#define LYNX_28G_LNaTECR0_EQ_AMP_RED_MSK	GENMASK(5, 0)
++#define LYNX_28G_LNaTECR0_EQ_AMP_RED_VAL(val)	(val)
+ 
+ /* Lane a Rx Reset Control Register */
+ #define LYNX_28G_LNaRRSTCTL(lane)		(0x800 + (lane) * 0x100 + 0x40)
+@@ -97,8 +108,18 @@
+ #define LYNX_28G_LNaRGCR0_N_RATE_QUARTER	0x2000000
+ #define LYNX_28G_LNaRGCR0_N_RATE_DOUBLE		0x3000000
+ #define LYNX_28G_LNaRGCR0_N_RATE_MSK		GENMASK(26, 24)
++#define LYNX_28G_LNaRGCR0_UNK1			GENMASK(9, 8)
++#define LYNX_28G_LNaRGCR0_K5_BOOST_EN		BIT(5)
++#define LYNX_28G_LNaRGCR0_K2_BOOST_EN		BIT(4)
+ 
++/* Lane a Rx General Control Register 1 */
+ #define LYNX_28G_LNaRGCR1(lane)			(0x800 + (lane) * 0x100 + 0x48)
++#define LYNX_28G_LNaRGCR1_ENTER_IDLE_FLT(val)	(val << 24)
++#define LYNX_28G_LNaRGCR1_ENTER_IDLE_FLT_MSK	GENMASK(26, 24)
++#define LYNX_28G_LNaRGCR1_EXIT_IDLE_FLT(val)	(val << 20)
++#define LYNX_28G_LNaRGCR1_EXIT_IDLE_FLT_MSK	GENMASK(22, 20)
++#define LYNX_28G_LNaRGCR1_DATA_LOST_TH(val)	(val << 16)
++#define LYNX_28G_LNaRGCR1_DATA_LOST_TH_MSK	GENMASK(18, 16)
+ 
+ #define LYNX_28G_LNaRECR0(lane)			(0x800 + (lane) * 0x100 + 0x50)
+ #define LYNX_28G_LNaRECR1(lane)			(0x800 + (lane) * 0x100 + 0x54)
+@@ -121,8 +142,56 @@
+ #define LYNX_28G_SGMIIaCR1_SGPCS_DIS		0x0
+ #define LYNX_28G_SGMIIaCR1_SGPCS_MSK		BIT(11)
+ 
++enum lynx_28g_eq_type {
++	LYNX_28G_EQ_TYPE_NONE = 0,
++	LYNX_28G_EQ_TYPE_2TAP,
++	LYNX_28G_EQ_TYPE_3TAP,
++};
++
++enum lynx_28g_eq_cursor_sign {
++	LYNX_28G_EQ_CURSOR_NEGATIVE = 0,
++	LYNX_28G_EQ_CURSOR_POSITIVE,
++};
++
++enum lynx_28g_eq_cursor_rate {
++	LYNX_28G_EQ_RATE_1P00 = 0,
++	LYNX_28G_EQ_RATE_1P04,
++	LYNX_28G_EQ_RATE_1P09,
++	LYNX_28G_EQ_RATE_1P14,
++	LYNX_28G_EQ_RATE_1P20,
++	LYNX_28G_EQ_RATE_1P26,
++	LYNX_28G_EQ_RATE_1P33,
++	LYNX_28G_EQ_RATE_1P40,
++	LYNX_28G_EQ_RATE_1P50,
++	LYNX_28G_EQ_RATE_1P60,
++	LYNX_28G_EQ_RATE_1P71,
++	LYNX_28G_EQ_RATE_1P84,
++	LYNX_28G_EQ_RATE_2P00,
++};
++
++enum lynx_28g_eq_amp_red_rate {
++	LYNX_28G_EQ_AMP_RED_RATE_1P000 = 0x00,
++	LYNX_28G_EQ_AMP_RED_RATE_0P917,
++	LYNX_28G_EQ_AMP_RED_RATE_0P752,
++	LYNX_28G_EQ_AMP_RED_RATE_0P840,
++	LYNX_28G_EQ_AMP_RED_RATE_0P667 = 0x06,
++	LYNX_28G_EQ_AMP_RED_RATE_0P585,
++	LYNX_28G_EQ_AMP_RED_RATE_0P500 = 0x10,
++	LYNX_28G_EQ_AMP_RED_RATE_0P485,
++	LYNX_28G_EQ_AMP_RED_RATE_0P376,
++	LYNX_28G_EQ_AMP_RED_RATE_0P420,
++	LYNX_28G_EQ_AMP_RED_RATE_0P333 = 0x16,
++	LYNX_28G_EQ_AMP_RED_RATE_0P292,
++	LYNX_28G_EQ_AMP_RED_RATE_0P170 = 0x1f,
++	LYNX_28G_EQ_AMP_RED_RATE_1P100,
++};
++
+ struct lynx_28g_priv;
+ 
++struct lynx_28g_eq {
++	u32 lnatecr0;
++};
++
+ struct lynx_28g_pll {
+ 	struct lynx_28g_priv *priv;
+ 	u32 rstctl, cr0, cr1;
+@@ -137,6 +206,7 @@ struct lynx_28g_lane {
+ 	bool init;
+ 	unsigned int id;
+ 	phy_interface_t interface;
++	struct lynx_28g_eq eq_sgmii, eq_10gbaser, eq_25gbaser;
+ };
+ 
+ struct lynx_28g_priv {
+@@ -322,7 +392,8 @@ static void lynx_28g_lane_set_sgmii(struct lynx_28g_lane *lane)
+ 	lynx_28g_lane_rmw(lane, SGMIIaCR1, SGPCS_EN, SGPCS_MSK);
+ 
+ 	/* Configure the appropriate equalization parameters for the protocol */
+-	iowrite32(0x00808006, priv->base + LYNX_28G_LNaTECR0(lane->id));
++	iowrite32(lane->eq_sgmii.lnatecr0,
++		  priv->base + LYNX_28G_LNaTECR0(lane->id));
+ 	iowrite32(0x04310000, priv->base + LYNX_28G_LNaRGCR1(lane->id));
+ 	iowrite32(0x9f800000, priv->base + LYNX_28G_LNaRECR0(lane->id));
+ 	iowrite32(0x001f0000, priv->base + LYNX_28G_LNaRECR1(lane->id));
+@@ -355,7 +426,8 @@ static void lynx_28g_lane_set_10gbaser(struct lynx_28g_lane *lane)
+ 	lynx_28g_lane_set_nrate(lane, pll, PHY_INTERFACE_MODE_10GBASER);
+ 
+ 	/* Configure the appropriate equalization parameters for the protocol */
+-	iowrite32(0x10808307, priv->base + LYNX_28G_LNaTECR0(lane->id));
++	iowrite32(lane->eq_10gbaser.lnatecr0,
++		  priv->base + LYNX_28G_LNaTECR0(lane->id));
+ 	iowrite32(0x10000000, priv->base + LYNX_28G_LNaRGCR1(lane->id));
+ 	iowrite32(0x00000000, priv->base + LYNX_28G_LNaRECR0(lane->id));
+ 	iowrite32(0x001f0000, priv->base + LYNX_28G_LNaRECR1(lane->id));
+@@ -390,7 +462,8 @@ static void lynx_28g_lane_set_25gbaser(struct lynx_28g_lane *lane)
+ 	lynx_28g_lane_set_nrate(lane, pll, PHY_INTERFACE_MODE_25GBASER);
+ 
+ 	/* Configure the appropriate equalization parameters for 25GBASE-R */
+-	iowrite32(0x20828700, priv->base + LYNX_28G_LNaTECR0(lane->id));
++	iowrite32(lane->eq_25gbaser.lnatecr0,
++		  priv->base + LYNX_28G_LNaTECR0(lane->id));
+ 	iowrite32(0x10000000, priv->base + LYNX_28G_LNaRGCR1(lane->id));
+ 	iowrite32(0x00000085, priv->base + LYNX_28G_LNaRECR0(lane->id));
+ 	iowrite32(0x001f0000, priv->base + LYNX_28G_LNaRECR1(lane->id));
+@@ -716,6 +789,37 @@ static int lynx_28g_probe(struct platform_device *pdev)
+ 		}
+ 	}
+ 
++	for (i = 0; i < LYNX_28G_NUM_LANE; i++) {
++		struct lynx_28g_lane *lane = &priv->lane[i];
++		struct phy *phy = lane->phy;
++
++		if (!phy)
++			continue;
++
++		/* set default equalization parameters */
++		lane->eq_sgmii.lnatecr0 =
++			LYNX_28G_LNaTECR0_EQ_TYPE_VAL(LYNX_28G_EQ_TYPE_NONE) |
++			LYNX_28G_LNaTECR0_EQ_SGN_PREQ(1) |
++			LYNX_28G_LNaTECR0_EQ_PREQ_VAL(LYNX_28G_EQ_RATE_1P00) |
++			LYNX_28G_LNaTECR0_EQ_SGN_POST1Q(1) |
++			LYNX_28G_LNaTECR0_EQ_POST1Q_VAL(LYNX_28G_EQ_RATE_1P00) |
++			LYNX_28G_LNaTECR0_EQ_AMP_RED_VAL(LYNX_28G_EQ_AMP_RED_RATE_0P667);
++		lane->eq_10gbaser.lnatecr0 =
++			LYNX_28G_LNaTECR0_EQ_TYPE_VAL(LYNX_28G_EQ_TYPE_2TAP) |
++			LYNX_28G_LNaTECR0_EQ_SGN_PREQ(1) |
++			LYNX_28G_LNaTECR0_EQ_PREQ_VAL(LYNX_28G_EQ_RATE_1P00) |
++			LYNX_28G_LNaTECR0_EQ_SGN_POST1Q(1) |
++			LYNX_28G_LNaTECR0_EQ_POST1Q_VAL(LYNX_28G_EQ_RATE_1P14) |
++			LYNX_28G_LNaTECR0_EQ_AMP_RED_VAL(LYNX_28G_EQ_AMP_RED_RATE_0P585);
++		lane->eq_25gbaser.lnatecr0 =
++			LYNX_28G_LNaTECR0_EQ_TYPE_VAL(LYNX_28G_EQ_TYPE_3TAP) |
++			LYNX_28G_LNaTECR0_EQ_SGN_PREQ(1) |
++			LYNX_28G_LNaTECR0_EQ_PREQ_VAL(LYNX_28G_EQ_RATE_1P09) |
++			LYNX_28G_LNaTECR0_EQ_SGN_POST1Q(1) |
++			LYNX_28G_LNaTECR0_EQ_POST1Q_VAL(LYNX_28G_EQ_RATE_1P40) |
++			LYNX_28G_LNaTECR0_EQ_AMP_RED_VAL(LYNX_28G_EQ_AMP_RED_RATE_1P000);
++	}
++
+ 	dev_set_drvdata(dev, priv);
+ 
+ 	INIT_DELAYED_WORK(&priv->cdr_check, lynx_28g_cdr_lock_check);
+-- 
+2.43.0
+

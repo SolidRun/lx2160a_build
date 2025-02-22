@@ -1,0 +1,74 @@
+From bdc75916e7e87878480c830e52cf0f33d79794fd Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 19 Feb 2025 18:06:53 +0100
+Subject: [PATCH 33/35] phy: lynx-28g: set lane tx equalization register 1
+ default value
+
+Layerscape serdes blocks have a second tx equalization register after
+the one already described by preprocessor macros and set during protocol
+change.
+
+Add preprocessor macros describing the bits of this register and define
+its protocol-specific defaults in probe, and apply it during protocol
+change.
+
+The default value was chosen according to the recommended value defined
+in the LX2160A reference manual.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index f3583e305243..591aa351f1f6 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -90,6 +90,12 @@
+ #define LYNX_28G_LNaTECR0_EQ_AMP_RED_MSK	GENMASK(5, 0)
+ #define LYNX_28G_LNaTECR0_EQ_AMP_RED_VAL(val)	(val)
+ 
++/* Lane Tx Equalization Register 1 */
++#define LYNX_28G_LNaTECR1(lane)			(0x800 + (lane) * 0x100 + 0x34)
++#define LYNX_28G_LNaTECR1_EQ_ADPT_EQ_DRVR_DIS	BIT(31)
++#define LYNX_28G_LNaTECR1_EQ_ADPT_EQ_MSK	GENMASK(29, 24)
++#define LYNX_28G_LNaTECR1_EQ_ADPT_EQ(val)	(val << 24)
++
+ /* Lane a Rx Reset Control Register */
+ #define LYNX_28G_LNaRRSTCTL(lane)		(0x800 + (lane) * 0x100 + 0x40)
+ #define LYNX_28G_LNaRRSTCTL_HLT_REQ		BIT(27)
+@@ -190,6 +196,7 @@ struct lynx_28g_priv;
+ 
+ struct lynx_28g_eq {
+ 	u32 lnatecr0;
++	u32 lnatecr1;
+ };
+ 
+ struct lynx_28g_pll {
+@@ -804,6 +811,7 @@ static int lynx_28g_probe(struct platform_device *pdev)
+ 			LYNX_28G_LNaTECR0_EQ_SGN_POST1Q(1) |
+ 			LYNX_28G_LNaTECR0_EQ_POST1Q_VAL(LYNX_28G_EQ_RATE_1P00) |
+ 			LYNX_28G_LNaTECR0_EQ_AMP_RED_VAL(LYNX_28G_EQ_AMP_RED_RATE_0P667);
++		lane->eq_sgmii.lnatecr1 = LYNX_28G_LNaTECR1_EQ_ADPT_EQ(48);
+ 		lane->eq_10gbaser.lnatecr0 =
+ 			LYNX_28G_LNaTECR0_EQ_TYPE_VAL(LYNX_28G_EQ_TYPE_2TAP) |
+ 			LYNX_28G_LNaTECR0_EQ_SGN_PREQ(1) |
+@@ -811,6 +819,7 @@ static int lynx_28g_probe(struct platform_device *pdev)
+ 			LYNX_28G_LNaTECR0_EQ_SGN_POST1Q(1) |
+ 			LYNX_28G_LNaTECR0_EQ_POST1Q_VAL(LYNX_28G_EQ_RATE_1P14) |
+ 			LYNX_28G_LNaTECR0_EQ_AMP_RED_VAL(LYNX_28G_EQ_AMP_RED_RATE_0P585);
++		lane->eq_10gbaser.lnatecr1 = LYNX_28G_LNaTECR1_EQ_ADPT_EQ(32);
+ 		lane->eq_25gbaser.lnatecr0 =
+ 			LYNX_28G_LNaTECR0_EQ_TYPE_VAL(LYNX_28G_EQ_TYPE_3TAP) |
+ 			LYNX_28G_LNaTECR0_EQ_SGN_PREQ(1) |
+@@ -818,6 +827,7 @@ static int lynx_28g_probe(struct platform_device *pdev)
+ 			LYNX_28G_LNaTECR0_EQ_SGN_POST1Q(1) |
+ 			LYNX_28G_LNaTECR0_EQ_POST1Q_VAL(LYNX_28G_EQ_RATE_1P40) |
+ 			LYNX_28G_LNaTECR0_EQ_AMP_RED_VAL(LYNX_28G_EQ_AMP_RED_RATE_1P000);
++		lane->eq_25gbaser.lnatecr1 = LYNX_28G_LNaTECR1_EQ_ADPT_EQ(48);
+ 	}
+ 
+ 	dev_set_drvdata(dev, priv);
+-- 
+2.43.0
+

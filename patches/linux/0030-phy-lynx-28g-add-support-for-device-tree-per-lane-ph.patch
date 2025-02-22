@@ -1,0 +1,159 @@
+From d00623ab4a500f46113c4a3a0566b0856a075148 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 21 Feb 2025 14:05:28 +0100
+Subject: [PATCH 30/35] phy: lynx-28g: add support for device-tree per-lane phy
+ sub-nodes
+
+The layerscape serdes phy driver already manages each lane of a serdes
+block individually. Firmware does however not currently describe each
+lane, and the driver creates a phy object for each lane unconditionally.
+
+It should be noted that some configurations of QorIQ SoCs use split the
+lanes of a serdes block between networking and pci functions. The driver
+configures all lanes during probe unconditionally even if they are
+already configured pci. This leads to issues for example on LX2160A with
+serdes block #1 protocol 3 which uses 4 lanes for networking and the
+remaining 4 for pci.
+
+The driver also applies the same protocol-specific equalization
+parameters to each lane, while those may not be optimal for all lanes
+and all boards.
+
+Update probe function to create the phy objects for each lane described
+in device-tree using the sub-node ofnode handle.
+
+If device-tree does not specify any sub-nodes fall back to the current
+behaviour creating a phy object for each lane linked to the serdes block
+node.
+
+Extend xlate to handle both phandle reference to the serdes block node
+with numeric argumetn specifying lane id, as well as the new option of
+phandle reference direct to a lane's sub-node.
+
+These changes accomplish two goals:
+Firstly device-tree can explicitly describe which lanes should not be
+managed by the driver by omission or status property.
+
+Secondly it structurally simplifies future work supporting lane-specific
+equalization parameters.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 86 ++++++++++++++++++------
+ 1 file changed, 64 insertions(+), 22 deletions(-)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index 2152066f2dbc..e5d008fab7dc 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -630,13 +630,28 @@ static void lynx_28g_lane_read_configuration(struct lynx_28g_lane *lane)
+ static struct phy *lynx_28g_xlate(struct device *dev,
+ 				  struct of_phandle_args *args)
+ {
+-	struct lynx_28g_priv *priv = dev_get_drvdata(dev);
+-	int idx = args->args[0];
+-
+-	if (WARN_ON(idx >= LYNX_28G_NUM_LANE))
+-		return ERR_PTR(-EINVAL);
++	struct lynx_28g_priv *priv;
++	struct phy *phy;
++	int idx;
++
++	if (args->args_count == 0) {
++		/* direct look-up */
++		phy = of_phy_simple_xlate(dev, args);
++	} else if (args->args_count == 1) {
++		/* look-up from parent by index */
++		idx = args->args[0];
++		if (WARN_ON(idx >= LYNX_28G_NUM_LANE))
++			return ERR_PTR(-EINVAL);
++
++		priv = dev_get_drvdata(dev);
++		phy = priv->lane[idx].phy;
++		if (!phy)
++			phy = ERR_PTR(-ENODEV);
++	} else {
++		phy = ERR_PTR(-EINVAL);
++	}
+ 
+-	return priv->lane[idx].phy;
++	return phy;
+ }
+ 
+ static int lynx_28g_probe(struct platform_device *pdev)
+@@ -644,7 +659,8 @@ static int lynx_28g_probe(struct platform_device *pdev)
+ 	struct device *dev = &pdev->dev;
+ 	struct phy_provider *provider;
+ 	struct lynx_28g_priv *priv;
+-	int i;
++	struct device_node *child;
++	int i, ret;
+ 
+ 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+ 	if (!priv)
+@@ -657,21 +673,47 @@ static int lynx_28g_probe(struct platform_device *pdev)
+ 
+ 	lynx_28g_pll_read_configuration(priv);
+ 
+-	for (i = 0; i < LYNX_28G_NUM_LANE; i++) {
+-		struct lynx_28g_lane *lane = &priv->lane[i];
+-		struct phy *phy;
+-
+-		memset(lane, 0, sizeof(*lane));
+-
+-		phy = devm_phy_create(&pdev->dev, NULL, &lynx_28g_ops);
+-		if (IS_ERR(phy))
+-			return PTR_ERR(phy);
+-
+-		lane->priv = priv;
+-		lane->phy = phy;
+-		lane->id = i;
+-		phy_set_drvdata(phy, lane);
+-		lynx_28g_lane_read_configuration(lane);
++	if (of_get_child_count(dev->of_node) > 0) {
++		/* parse phy sub-nodes */
++		for_each_available_child_of_node(dev->of_node, child) {
++			struct lynx_28g_lane *lane;
++			struct phy *phy;
++			u32 val;
++
++			ret = of_property_read_u32(child, "reg", &val);
++			if (ret)
++				return dev_err_probe(dev, ret, "failed to get 'reg' property\n");
++
++			if (val >= LYNX_28G_NUM_LANE)
++				return dev_err_probe(dev, -EINVAL, "'reg' property out of range\n");
++			lane = &priv->lane[val];
++
++			phy = devm_phy_create(dev, child, &lynx_28g_ops);
++			if (IS_ERR(phy))
++				return dev_err_probe(dev, PTR_ERR(phy), "failed to create phy\n");
++
++			lane->priv = priv;
++			lane->phy = phy;
++			lane->id = val;
++			phy_set_drvdata(phy, lane);
++			lynx_28g_lane_read_configuration(lane);
++		}
++	} else {
++		/* create phys all lanes */
++		for (i = 0; i < LYNX_28G_NUM_LANE; i++) {
++			struct lynx_28g_lane *lane = &priv->lane[i];
++			struct phy *phy;
++
++			phy = devm_phy_create(&pdev->dev, NULL, &lynx_28g_ops);
++			if (IS_ERR(phy))
++				return PTR_ERR(phy);
++
++			lane->priv = priv;
++			lane->phy = phy;
++			lane->id = i;
++			phy_set_drvdata(phy, lane);
++			lynx_28g_lane_read_configuration(lane);
++		}
+ 	}
+ 
+ 	dev_set_drvdata(dev, priv);
+-- 
+2.43.0
+
