@@ -360,6 +360,7 @@ echo "Building the kernel"
 cd $ROOTDIR/build/linux
 ./scripts/kconfig/merge_config.sh arch/arm64/configs/defconfig arch/arm64/configs/lsdk.config $ROOTDIR/configs/linux/lx2k_additions.config
 make olddefconfig
+#make menuconfig
 make -j${PARALLEL} all #Image dtbs
 KRELEASE=`make kernelrelease`
 
