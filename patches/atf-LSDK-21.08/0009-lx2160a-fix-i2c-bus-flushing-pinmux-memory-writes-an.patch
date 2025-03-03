@@ -1,4 +1,4 @@
-From 980038838509d681bcef1d0d0504f6bc809038a5 Mon Sep 17 00:00:00 2001
+From 2c1c61561ec5c2f50655f57a99dd58c62985e6f7 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Fri, 28 Feb 2025 15:30:55 +0100
 Subject: [PATCH] lx2160a: fix i2c bus flushing pinmux memory writes and remove
