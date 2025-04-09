@@ -1,0 +1,39 @@
+From 7e20219cd595e05897e1b849cd435b8e82f66d22 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 21 Feb 2025 15:22:54 +0100
+Subject: [PATCH] arm64: dts: lx2160a-cex6-evb: define serdes 1 lane G
+ equalization config
+
+Define optimized equalization parameters for serdes 1 lane G at 10Gbps
+rate on SFP+ connector.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../arm64/boot/dts/freescale/fsl-lx2160a-cex6-evb.dts | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6-evb.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6-evb.dts
+index 97a7597c252e..e18b3746f30f 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6-evb.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6-evb.dts
+@@ -238,6 +238,17 @@ &serdes_1_lane_d {
+ 	status = "disabled";
+ };
+ 
++&serdes_1_lane_g {
++	fsl,eq-names = "10gbase-r";
++	fsl,eq-type = "3-tap";
++	fsl,eq-preq-sign = "positive";
++	fsl,eq-preq-rate = "1.33";
++	fsl,eq-post1q-sign = "negative";
++	fsl,eq-post1q-rate = "1.26";
++	fsl,eq-amp-red = "1.000";
++	fsl,eq-adaptive = <32>;
++};
++
+ &usb0 {
+ 	vbus-supply = <&reg_usb_vbus0>;
+ 	status = "okay";
+-- 
+2.43.0
+
