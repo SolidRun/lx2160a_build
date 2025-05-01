@@ -1,0 +1,73 @@
+From dd06f423be111747f12a8bbf0316890215dc0231 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 6 May 2025 11:51:11 +0300
+Subject: [PATCH 77/79] i2c: imx: remove auto-suspend support and keep
+ controller clock active
+
+imx i2c controller supports multi-master mode where multiple masters may
+be active on a shared bus at the same time.
+In this mode all devices must monitor the bus at all times to catch
+start- and stop conditions and avoid interrupting active transactions.
+
+As a power optimisation the driver was starting the controller reference
+clock for every xfer and stopping it immediately after.
+Very likely this stops the controller state machine and other
+transactions on the bus are not seen.
+
+The LX2160 reference manual does not define what happens when the
+controller clock is stopped.
+However it does describe the rather similar "DOZE" feature which allows
+the controller itself to signal to the system the correct time for
+stopping the clock and save power.
+
+It is not clear whether the controller must remain active in
+single-master mode.
+As a precaution to avoid potential issues remove the explicit clock
+management from the atomic xfer function so that clock is always on.
+
+The power-management path also starts and stops the controller clock for
+non-atomic transactions.
+Considering existence of the doze bit this seems rather wrong relying on
+undocumented behaviour.
+
+Disable the power-management function as a precaution to ensure
+controller clock is always on.
+
+Platforms that need power-management should consider implementing doze
+mode instead.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/i2c/busses/i2c-imx.c | 7 -------
+ 1 file changed, 7 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-imx.c b/drivers/i2c/busses/i2c-imx.c
+index c2f3f9d4a660..d65d3318ccb6 100644
+--- a/drivers/i2c/busses/i2c-imx.c
++++ b/drivers/i2c/busses/i2c-imx.c
+@@ -1277,14 +1277,8 @@ static int i2c_imx_xfer_atomic(struct i2c_adapter *adapter,
+ 	struct imx_i2c_struct *i2c_imx = i2c_get_adapdata(adapter);
+ 	int result;
+ 
+-	result = clk_enable(i2c_imx->clk);
+-	if (result)
+-		return result;
+-
+ 	result = i2c_imx_xfer_common(adapter, msgs, num, true);
+ 
+-	clk_disable(i2c_imx->clk);
+-
+ 	return result;
+ }
+ 
+@@ -1791,7 +1785,6 @@ static struct platform_driver i2c_imx_driver = {
+ 	.remove = i2c_imx_remove,
+ 	.driver = {
+ 		.name = DRIVER_NAME,
+-		.pm = &i2c_imx_pm_ops,
+ 		.of_match_table = i2c_imx_dt_ids,
+ 		.acpi_match_table = i2c_imx_acpi_ids,
+ 	},
+-- 
+2.43.0
+

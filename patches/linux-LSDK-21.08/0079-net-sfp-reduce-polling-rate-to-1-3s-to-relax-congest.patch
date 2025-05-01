@@ -1,0 +1,36 @@
+From e806c4c09ec8bdccdcfc2f132e0242f748c33f6b Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 1 May 2025 14:13:56 +0300
+Subject: [PATCH 79/79] net: sfp: reduce polling rate to 1/3s to relax
+ congested buses
+
+SFP module insertion is a manual and comparably slow process where
+immediate feedback is not strictly necessary.
+
+Some systems may have multiple SFPs with multiple i2c muxes and io
+expanders on a shared bus where polling causes extreme amounts of
+traffic.
+
+Reduce polling rate to once every 3 seconds to relax affected buses.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/phy/sfp.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/phy/sfp.c b/drivers/net/phy/sfp.c
+index ee261f35ee77..21fee08ff1dc 100644
+--- a/drivers/net/phy/sfp.c
++++ b/drivers/net/phy/sfp.c
+@@ -2618,7 +2618,7 @@ static struct platform_driver sfp_driver = {
+ 
+ static int sfp_init(void)
+ {
+-	poll_jiffies = msecs_to_jiffies(100);
++	poll_jiffies = msecs_to_jiffies(3000);
+ 
+ 	return platform_driver_register(&sfp_driver);
+ }
+-- 
+2.43.0
+

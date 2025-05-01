@@ -1,0 +1,120 @@
+From 185b05646e6448c6f120a713b423f0590f970d26 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 1 May 2025 20:36:33 +0300
+Subject: [PATCH 78/79] i2c: imx: add verbose messages on unexpected state
+ changes
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/i2c/busses/i2c-imx.c | 13 +++++++++++--
+ drivers/i2c/i2c-core-base.c  |  6 ++++--
+ 2 files changed, 15 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-imx.c b/drivers/i2c/busses/i2c-imx.c
+index d65d3318ccb6..6c66075c50c5 100644
+--- a/drivers/i2c/busses/i2c-imx.c
++++ b/drivers/i2c/busses/i2c-imx.c
+@@ -529,6 +529,7 @@ static void i2c_imx_clr_al_bit(unsigned int status, struct imx_i2c_struct *i2c_i
+ 	status &= ~I2SR_IAL;
+ 	status |= (i2c_imx->hwdata->i2sr_clr_opcode & I2SR_IAL);
+ 	imx_i2c_write_reg(status, i2c_imx, IMX_I2C_I2SR);
++	dev_info(&i2c_imx->adapter.dev, "cleared arbitration-lost status\n");
+ }
+ 
+ static int i2c_imx_bus_busy(struct imx_i2c_struct *i2c_imx, int for_busy, bool atomic)
+@@ -543,6 +544,7 @@ static int i2c_imx_bus_busy(struct imx_i2c_struct *i2c_imx, int for_busy, bool a
+ 
+ 		/* check for arbitration lost */
+ 		if (temp & I2SR_IAL) {
++			dev_err(&i2c_imx->adapter.dev, "ARBITRATION LOST\n");
+ 			i2c_imx_clr_al_bit(temp, i2c_imx);
+ 			return -EAGAIN;
+ 		}
+@@ -556,7 +558,7 @@ static int i2c_imx_bus_busy(struct imx_i2c_struct *i2c_imx, int for_busy, bool a
+ 			break;
+ 		}
+ 		if (time_after(jiffies, orig_jiffies + msecs_to_jiffies(500))) {
+-			dev_dbg(&i2c_imx->adapter.dev,
++			dev_err(&i2c_imx->adapter.dev,
+ 				"<%s> I2C bus is busy\n", __func__);
+ 			return -ETIMEDOUT;
+ 		}
+@@ -1073,6 +1075,7 @@ static int i2c_imx_xfer_common(struct i2c_adapter *adapter,
+ 	/* Start I2C transfer */
+ 	result = i2c_imx_start(i2c_imx, atomic);
+ 	if (result) {
++		dev_info(&i2c_imx->adapter.dev, "i2c_imx_start failed with %d\n", result);
+ 		/*
+ 		 * Bus recovery uses gpiod_get_value_cansleep() which is not
+ 		 * allowed within atomic context.
+@@ -1080,6 +1083,8 @@ static int i2c_imx_xfer_common(struct i2c_adapter *adapter,
+ 		if (!atomic && i2c_imx->adapter.bus_recovery_info) {
+ 			i2c_recover_bus(&i2c_imx->adapter);
+ 			result = i2c_imx_start(i2c_imx, atomic);
++			if (result)
++				dev_info(&i2c_imx->adapter.dev, "i2c_imx_start failed again with %d\n", result);
+ 		}
+ 	}
+ 
+@@ -1250,6 +1255,7 @@ static int i2c_imx_xfer(struct i2c_adapter *adapter,
+ 	 */
+ 	result =  i2c_imx_bus_busy(i2c_imx, 0, false);
+ 	if (result) {
++		dev_err(&adapter->dev, "i2c_imx_bus_busy %d\n", result);
+ 		/* timeout */
+ 		if ((result == -ETIMEDOUT) && (i2c_imx->layerscape_bus_recover == 1))
+ 			i2c_imx_recovery_for_layerscape(i2c_imx);
+@@ -1332,7 +1338,7 @@ static int i2c_imx_init_recovery_info(struct imx_i2c_struct *i2c_imx,
+ 		   IS_ERR(rinfo->scl_gpiod) ||
+ 		   IS_ERR(i2c_imx->pinctrl_pins_default) ||
+ 		   IS_ERR(i2c_imx->pinctrl_pins_gpio)) {
+-		dev_dbg(&pdev->dev, "recovery information incomplete\n");
++		dev_warn(&pdev->dev, "recovery information incomplete\n");
+ 		return 0;
+ 	}
+ 
+@@ -1344,6 +1350,8 @@ static int i2c_imx_init_recovery_info(struct imx_i2c_struct *i2c_imx,
+ 	rinfo->recover_bus = i2c_generic_scl_recovery;
+ 	i2c_imx->adapter.bus_recovery_info = rinfo;
+ 
++	dev_info(&pdev->dev, "initialised generic recovery\n");
++
+ 	return 0;
+ }
+ 
+@@ -1388,6 +1396,7 @@ static int i2c_imx_init_recovery_for_layerscape(
+ 		}
+ 	}
+ 	i2c_imx->layerscape_bus_recover = 1;
++	dev_info(&i2c_imx->adapter.dev, "initialised recovery for layerscape\n");
+ 	return 0;
+ }
+ 
+diff --git a/drivers/i2c/i2c-core-base.c b/drivers/i2c/i2c-core-base.c
+index c13e7f107dd3..de03e60029c3 100644
+--- a/drivers/i2c/i2c-core-base.c
++++ b/drivers/i2c/i2c-core-base.c
+@@ -228,8 +228,10 @@ int i2c_generic_scl_recovery(struct i2c_adapter *adap)
+ 
+ 		if (scl) {
+ 			ret = i2c_generic_bus_free(adap);
+-			if (ret == 0)
++			if (ret == 0) {
++				dev_info(&adap->dev, "completed recovery early after %d clock changes\n", i);
+ 				break;
++			}
+ 		}
+ 	}
+ 
+@@ -251,7 +253,7 @@ int i2c_recover_bus(struct i2c_adapter *adap)
+ 	if (!adap->bus_recovery_info)
+ 		return -EOPNOTSUPP;
+ 
+-	dev_dbg(&adap->dev, "Trying i2c bus recovery\n");
++	dev_info(&adap->dev, "Trying i2c bus recovery\n");
+ 	return adap->bus_recovery_info->recover_bus(adap);
+ }
+ EXPORT_SYMBOL_GPL(i2c_recover_bus);
+-- 
+2.43.0
+

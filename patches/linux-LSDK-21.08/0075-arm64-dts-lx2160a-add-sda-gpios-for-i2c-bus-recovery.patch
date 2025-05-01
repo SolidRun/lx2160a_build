@@ -1,0 +1,94 @@
+From 8af7687b18dc260617521cd62afac6ab6f834d06 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 1 May 2025 14:55:13 +0300
+Subject: [PATCH 75/79] arm64: dts: lx2160a: add sda-gpios for i2c bus recovery
+
+LX2160A i2c signals sda and scl both support gpio as alternate function.
+The existing i2c?_i2c/i2c?_i2c_gpio pinmux definitions configure both at
+the same time.
+
+On platforms other than LS1012A, LS1043A, LS1046A, imx-i2c driver only
+enables bus recovery when both sda- and scl-gpios are specified.
+In case either was missing a debug message is printed to the console
+which should probably be a warning at least.
+
+Add description for each i2c controller for the sda line so that bus
+recovery is enabled.
+
+Fiixes: 8a1365c7bbc1 ("arm64: dts: lx2160a: add pinmux and i2c gpio to support bus recovery")
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+index 636e5ce2efc0..2709ae9699f9 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+@@ -735,6 +735,7 @@ i2c0: i2c@2000000 {
+ 			pinctrl-0 = <&i2c0_scl>;
+ 			pinctrl-1 = <&i2c0_scl_gpio>;
+ 			scl-gpios = <&gpio0 3 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
++			sda-gpios = <&gpio0 2 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+ 			status = "disabled";
+ 		};
+ 
+@@ -750,6 +751,7 @@ i2c1: i2c@2010000 {
+ 			pinctrl-0 = <&i2c1_scl>;
+ 			pinctrl-1 = <&i2c1_scl_gpio>;
+ 			scl-gpios = <&gpio0 31 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
++			sda-gpios = <&gpio0 30 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+ 			status = "disabled";
+ 		};
+ 
+@@ -765,6 +767,7 @@ i2c2: i2c@2020000 {
+ 			pinctrl-0 = <&i2c2_scl>;
+ 			pinctrl-1 = <&i2c2_scl_gpio>;
+ 			scl-gpios = <&gpio0 29 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
++			sda-gpios = <&gpio0 28 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+ 			status = "disabled";
+ 		};
+ 
+@@ -780,6 +783,7 @@ i2c3: i2c@2030000 {
+ 			pinctrl-0 = <&i2c3_scl>;
+ 			pinctrl-1 = <&i2c3_scl_gpio>;
+ 			scl-gpios = <&gpio0 27 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
++			sda-gpios = <&gpio0 26 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+ 			status = "disabled";
+ 		};
+ 
+@@ -795,6 +799,7 @@ i2c4: i2c@2040000 {
+ 			pinctrl-0 = <&i2c4_scl>;
+ 			pinctrl-1 = <&i2c4_scl_gpio>;
+ 			scl-gpios = <&gpio0 25 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
++			sda-gpios = <&gpio0 24 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+ 			status = "disabled";
+ 		};
+ 
+@@ -810,6 +815,7 @@ i2c5: i2c@2050000 {
+ 			pinctrl-0 = <&i2c5_scl>;
+ 			pinctrl-1 = <&i2c5_scl_gpio>;
+ 			scl-gpios = <&gpio0 23 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
++			sda-gpios = <&gpio0 22 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+ 			status = "disabled";
+ 		};
+ 
+@@ -825,6 +831,7 @@ i2c6: i2c@2060000 {
+ 			pinctrl-0 = <&i2c6_scl>;
+ 			pinctrl-1 = <&i2c6_scl_gpio>;
+ 			scl-gpios = <&gpio1 16 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
++			sda-gpios = <&gpio1 15 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+ 			status = "disabled";
+ 		};
+ 
+@@ -840,6 +847,7 @@ i2c7: i2c@2070000 {
+ 			pinctrl-0 = <&i2c7_scl>;
+ 			pinctrl-1 = <&i2c7_scl_gpio>;
+ 			scl-gpios = <&gpio1 18 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
++			sda-gpios = <&gpio1 17 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+ 			status = "disabled";
+ 		};
+ 
+-- 
+2.43.0
+

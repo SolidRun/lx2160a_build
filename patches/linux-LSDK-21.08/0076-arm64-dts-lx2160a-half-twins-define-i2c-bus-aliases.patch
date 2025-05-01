@@ -1,0 +1,95 @@
+From 806daa5ac0fac58a2597acc7f07d5a659b5bef39 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 1 May 2025 20:31:24 +0300
+Subject: [PATCH 76/79] arm64: dts: lx2160a-half-twins: define i2c bus aliases
+
+Define i2c bus alises for every native bus, and each bus behind a mux to
+ensure predictable numbering regardless of probe order.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../boot/dts/freescale/fsl-lx2160a-cex7.dtsi  |  8 +++---
+ .../dts/freescale/fsl-lx2160a-half-twins.dts  | 27 +++++++++++++++++++
+ 2 files changed, 31 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+index afb455210bd0..91230ac132da 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+@@ -60,7 +60,7 @@ i2c-switch@77 {
+ 		#size-cells = <0>;
+ 		reg = <0x77>;
+ 
+-		i2c@0 {
++		ddr_i2c: i2c@0 {
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 			reg = <0>;
+@@ -86,7 +86,7 @@ eeprom@57 {
+ 			};
+ 		};
+ 
+-		i2c@1 {
++		fan_i2c: i2c@1 {
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 			reg = <1>;
+@@ -100,7 +100,7 @@ fan-temperature-ctrlr@18 {
+ 			};
+ 		};
+ 
+-		i2c@2 {
++		power_i2c: i2c@2 {
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 			reg = <2>;
+@@ -111,7 +111,7 @@ regulator@5c {
+ 			};
+ 		};
+ 
+-		i2c@3 {
++		sensor_i2c: i2c@3 {
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 			reg = <3>;
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+index 2dd8553ebd1f..8527dbdc095b 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+@@ -17,6 +17,33 @@ / {
+ 	aliases {
+ 		serial0 = &uart0;
+ 		serial1 = &uart1;
++		i2c0 = &i2c0;
++		i2c1 = &i2c2;
++		i2c2 = &i2c4;
++		i2c3 = &ddr_i2c;
++		i2c3 = &fan_i2c;
++		i2c4 = &power_i2c;
++		i2c5 = &sensor_i2c;
++		i2c6 = &sfp0_i2c;
++		i2c7 = &sfp1_i2c;
++		i2c8 = &sfp2_i2c;
++		i2c9 = &sfp3_i2c;
++		i2c10 = &twins_sfp_c1_at_i2c;
++		i2c11 = &twins_sfp_c1_ab_i2c;
++		i2c12 = &twins_sfp_c1_bt_i2c;
++		i2c13 = &twins_sfp_c1_bb_i2c;
++		i2c14 = &twins_sfp_c2_at_i2c;
++		i2c15 = &twins_sfp_c2_ab_i2c;
++		i2c16 = &twins_sfp_c2_bt_i2c;
++		i2c17 = &twins_sfp_c2_bb_i2c;
++		i2c18 = &twins_sfp_c3_at_i2c;
++		i2c19 = &twins_sfp_c3_ab_i2c;
++		i2c20 = &twins_sfp_c3_bt_i2c;
++		i2c21 = &twins_sfp_c3_bb_i2c;
++		i2c22 = &htwins_sfp_c3_at_i2c;
++		i2c23 = &htwins_sfp_c3_ab_i2c;
++		i2c24 = &htwins_sfp_c3_bt_i2c;
++		i2c25 = &htwins_sfp_c3_bb_i2c;
+ 	};
+ 
+ 	chosen {
+-- 
+2.43.0
+
