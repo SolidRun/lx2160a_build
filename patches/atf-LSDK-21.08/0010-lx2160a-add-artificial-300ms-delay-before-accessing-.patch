@@ -1,0 +1,36 @@
+From 153bb216a02fc8d606f0a2ecde3e8ba379659e01 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 1 May 2025 13:59:29 +0300
+Subject: [PATCH] lx2160a: add artificial 300ms delay before accessing i2c bus
+
+Some i2c muxes require a delay after power-on before the bus may be
+active. Add 300ms before accessing i2c.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/common/setup/ls_i2c_init.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/plat/nxp/common/setup/ls_i2c_init.c b/plat/nxp/common/setup/ls_i2c_init.c
+index 232f52c99..90b74c667 100644
+--- a/plat/nxp/common/setup/ls_i2c_init.c
++++ b/plat/nxp/common/setup/ls_i2c_init.c
+@@ -53,6 +53,15 @@ static void ls_i2c_flush(uint8_t busno, const char *busname);
+  * in case the system was reset during a transaction.
+  */
+ void bl2_i2c_init() {
++	/*
++	 * Some peripherals require delay after power-up before initiating transfers.
++	 * Add 300ms to satisfy on-semi i2c muxes.
++	 *
++	 * On half-twins board 180ms implicit delay was observed from power-good till
++	 * this function was called. Hence 120ms would suffice.
++	 */
++	udelay(300000);
++
+ 	/* IIC5 */
+ 	i2c_init(NXP_IIC5_ADDR);
+ 	ls_i2c_flush(4, "IIC5");
+-- 
+2.43.0
+
