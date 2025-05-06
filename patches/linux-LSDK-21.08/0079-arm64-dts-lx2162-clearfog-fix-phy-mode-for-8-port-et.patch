@@ -1,0 +1,98 @@
+From b41ec76166676325e4ac505b6d806e0bd21773e9 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 6 May 2025 17:23:42 +0300
+Subject: [PATCH] arm64: dts: lx2162-clearfog: fix phy-mode for 8-port ethernet
+ phy
+
+Each port of the ethernet phy is connected to a serdes lane from the
+SoC. The phy-mode must hence be set as "sgmii".
+
+The previous setting "rgmii" causes failure in the pcs driver:
+[   59.979901] fsl_dpaa2_eth dpni.11 eth10: configuring for phy/rgmii link mode
+[   59.994047] mdio_bus 0x0000000008c4b000:00: unsupported mode rgmii
+[   60.000223] fsl_dpaa2_eth dpni.11 eth10: pcs_config failed: -EOPNOTSUPP
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../boot/dts/freescale/fsl-lx2162a-clearfog.dts  | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+index 3496697c7e36..49d3b0c193ac 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+@@ -295,7 +295,7 @@ &dpmac11 {
+ 	status = "okay";
+ 	phys = <&serdes_2 0>;
+ 	phy-handle = <&ethernet_phy2>;
+-	phy-mode = "rgmii";
++	phy-mode = "sgmii";
+ };
+ 
+ &pcs_mdio11 {
+@@ -307,7 +307,7 @@ &dpmac12 {
+ 	phys = <&serdes_2 1>;
+ 	phy-names = "serdes";
+ 	phy-handle = <&ethernet_phy0>;
+-	phy-mode = "rgmii";
++	phy-mode = "sgmii";
+ };
+ 
+ &pcs_mdio12 {
+@@ -323,7 +323,7 @@ &dpmac17 {
+ 	phys = <&serdes_2 2>;
+ 	phy-names = "serdes";
+ 	phy-handle = <&ethernet_phy4>;
+-	phy-mode = "rgmii";
++	phy-mode = "sgmii";
+ };
+ 
+ &pcs_mdio17 {
+@@ -335,7 +335,7 @@ &dpmac18 {
+ 	phys = <&serdes_2 3>;
+ 	phy-names = "serdes";
+ 	phy-handle = <&ethernet_phy6>;
+-	phy-mode = "rgmii";
++	phy-mode = "sgmii";
+ };
+ 
+ &pcs_mdio18 {
+@@ -347,7 +347,7 @@ &dpmac15 {
+ 	phys = <&serdes_2 4>;
+ 	phy-names = "serdes";
+ 	phy-handle = <&ethernet_phy3>;
+-	phy-mode = "rgmii";
++	phy-mode = "sgmii";
+ };
+ 
+ &pcs_mdio15 {
+@@ -359,7 +359,7 @@ &dpmac16 {
+ 	phys = <&serdes_2 5>;
+ 	phy-names = "serdes";
+ 	phy-handle = <&ethernet_phy1>;
+-	phy-mode = "rgmii";
++	phy-mode = "sgmii";
+ };
+ 
+ &pcs_mdio16 {
+@@ -371,7 +371,7 @@ &dpmac13 {
+ 	phys = <&serdes_2 6>;
+ 	phy-names = "serdes";
+ 	phy-handle = <&ethernet_phy5>;
+-	phy-mode = "rgmii";
++	phy-mode = "sgmii";
+ };
+ 
+ &pcs_mdio13 {
+@@ -383,7 +383,7 @@ &dpmac14 {
+ 	phys = <&serdes_2 7>;
+ 	phy-names = "serdes";
+ 	phy-handle = <&ethernet_phy7>;
+-	phy-mode = "rgmii";
++	phy-mode = "sgmii";
+ };
+ 
+ &pcs_mdio14 {
+-- 
+2.43.0
+
