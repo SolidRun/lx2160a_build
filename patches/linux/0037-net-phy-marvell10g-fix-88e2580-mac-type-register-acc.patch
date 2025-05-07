@@ -1,0 +1,32 @@
+From 4168e24de50a1a47314c7be583b8372d6681929c Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 7 May 2025 16:48:45 +0300
+Subject: [PATCH] net: phy: marvell10g: fix 88e2580 mac type register access
+
+MV88E2580 uses the same port-control register as 3310, update driver to
+use the correct get_mactype function.
+
+Fixes: "net: phy: marvell10g: add initial support for 88x2580"
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/phy/marvell10g.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/phy/marvell10g.c b/drivers/net/phy/marvell10g.c
+index 2b8dc1984f10..d968f7de861a 100644
+--- a/drivers/net/phy/marvell10g.c
++++ b/drivers/net/phy/marvell10g.c
+@@ -991,8 +991,8 @@ static const struct mv3310_chip mv2111_type = {
+ 
+ static const struct mv3310_chip mv2580_type = {
+ 	.init_supported_interfaces = mv2580_init_supported_interfaces,
+-	.get_mactype = mv2110_get_mactype,
+-	.init_interface = mv2110_init_interface,
++	.get_mactype = mv3310_get_mactype,
++	.init_interface = mv3310_init_interface,
+ 
+ #ifdef CONFIG_HWMON
+ 	.hwmon_read_temp_reg = mv2110_hwmon_read_temp_reg,
+-- 
+2.43.0
+
