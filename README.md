@@ -99,7 +99,7 @@ Build options can be customised by passing environment variables to the runme sc
 For example:
 
 - `./runme.sh TARGET=LX2162A_SOM_CLEARFOG_18_9_0 CPU_REVISION=1` **or**
-- `docker run --rm -i -t -v "$PWD":/work -e TARGET=LX2162A_SOM_CLEARFOG_18_9_0 -e CPU_REVISION=1 -e BUS_SPEED=650 lx2160a_build -u $(id -u) -g $(id -g)`
+- `docker run --rm -i -t -v "$PWD":/work -e TARGET=LX2162A_SOM_CLEARFOG_18_9_0 -e CPU_REVISION=2 -e BUS_SPEED=650 lx2160a_build -u $(id -u) -g $(id -g)`
 
 #### Available Options:
 
