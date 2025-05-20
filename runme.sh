@@ -38,6 +38,7 @@ set -e
 # Ubuntu Version
 # - focal (20.04)
 # - jammy (22.04)
+# - noble (24.04)
 : ${UBUNTU_VERSION:=jammy}
 : ${UBUNTU_ROOTFS_SIZE:=350M}
 # Debian Version
@@ -476,10 +477,10 @@ if [[ $DISTRO == ubuntu ]]; then
 			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.5-base-arm64.tar.gz
 		;;
 		jammy)
-			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/ubuntu-base-22.04.4-base-arm64.tar.gz
+			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/ubuntu-base-22.04.5-base-arm64.tar.gz
 		;;
 		noble)
-			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04-base-arm64.tar.gz
+			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.2-base-arm64.tar.gz
 		;;
 		*)
 			echo "Error: Unsupported Ubuntu Version \"\${UBUNTU_VERSION}\"! To proceed please add support to runme.sh."
