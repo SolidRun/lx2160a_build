@@ -1,0 +1,41 @@
+From 635a28cb5ac852a2dc48b4d05afad2821a78eaaf Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 16 Jun 2025 14:21:14 +0300
+Subject: [PATCH] arm64: dts: lx2160a-half-twins: fix i2c3 alias conflict
+
+There was duplicate alias definition for "i2c3" pointing to two
+different buses. This lead to the first declared bus being assigned
+number 26 rather than the intended 3, causing unexpected failures
+accessing configuration eeprom at bus 3.
+
+Redefine this specific bus to number 26 making the accidental assignment
+above permanent and predictable.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+index 8527dbdc095b..4ed936d93735 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+@@ -20,7 +20,6 @@ aliases {
+ 		i2c0 = &i2c0;
+ 		i2c1 = &i2c2;
+ 		i2c2 = &i2c4;
+-		i2c3 = &ddr_i2c;
+ 		i2c3 = &fan_i2c;
+ 		i2c4 = &power_i2c;
+ 		i2c5 = &sensor_i2c;
+@@ -44,6 +43,7 @@ aliases {
+ 		i2c23 = &htwins_sfp_c3_ab_i2c;
+ 		i2c24 = &htwins_sfp_c3_bt_i2c;
+ 		i2c25 = &htwins_sfp_c3_bb_i2c;
++		i2c26 = &ddr_i2c;
+ 	};
+ 
+ 	chosen {
+-- 
+2.43.0
+
