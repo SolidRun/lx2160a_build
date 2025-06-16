@@ -63,6 +63,13 @@ it must be built as part of a full image. See [runme.sh](https://github.com/Soli
 
 ## Build Full Image from Source with Docker
 
+### Download Build Scripts
+
+The full build process is managed by the [runme.sh](runme.sh) script in this very repository.
+Clone the current branch to a build directory of choice:
+
+    git clone -b develop-ls-5.15.71-2.2.0 https://github.com/SolidRun/lx2160a_build.git
+
 ### Build Full Image from Source with Docker
 
 A docker image providing a consistent build environment can be used as below:
