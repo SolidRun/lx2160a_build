@@ -742,14 +742,28 @@ fi
 ROOTFS_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/$ROOTFS.ext4)
 
 
+function build_dpdk() {
+	cd $ROOTDIR/build
+	rm -rf "${ROOTDIR}/images/tmp/dpdk"
+
+	meson setup --reconfigure -Dexamples=all --buildtype release --strip --cross-file dpdk/config/arm/arm64_dpaa_linux_gcc dpdk-build dpdk
+	meson compile -C dpdk-build
+
+	export DESTDIR="$ROOTDIR/images/tmp/dpdk"
+	meson install -C dpdk-build
+	install -v -m755 dpdk/nxp/dpaa2/dynamic_dpl.sh $DESTDIR/usr/local/bin/
+	install -v -m755 dpdk/nxp/dpaa2/destroy_dynamic_dpl.sh $DESTDIR/usr/local/bin/
+}
+
+function pkg_dpdk() {
+	# package dpdk individually
+	rm -f "${ROOTDIR}/images/dpdk.tar*"
+	cd "${ROOTDIR}/images/tmp/dpdk"; tar -c --owner=root:0 -f "${ROOTDIR}/images/dpdk-${REPO_PREFIX}.tar" *; cd "${ROOTDIR}"
+}
+
 echo "Building DPDK"
-cd $ROOTDIR/build/dpdk
-export CROSS=$CROSS_COMPILE
-export RTE_SDK=$ROOTDIR/build/dpdk
-export DESTDIR=$ROOTDIR/build/dpdk/install
-export RTE_TARGET=arm64-dpaa-linuxapp-gcc
-meson arm64-dpaa-build -Dexamples=all --cross-file config/arm/arm64_dpaa_linux_gcc
-ninja -C arm64-dpaa-build
+build_dpdk
+pkg_dpdk
 
 
 ###############################################################################
