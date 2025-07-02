@@ -746,7 +746,12 @@ function build_dpdk() {
 	cd $ROOTDIR/build
 	rm -rf "${ROOTDIR}/images/tmp/dpdk"
 
-	meson setup --reconfigure -Dexamples=all --buildtype release --strip --cross-file dpdk/config/arm/arm64_dpaa_linux_gcc dpdk-build dpdk
+	RECONFIGURE=
+	if [ -d "$ROOTDIR/images/tmp/dpdk-build" ]; then
+		RECONFIGURE=--reconfigure
+	fi
+
+	meson setup $RECONFIGURE -Dexamples=all --buildtype release --strip --cross-file dpdk/config/arm/arm64_dpaa_linux_gcc dpdk-build dpdk
 	meson compile -C dpdk-build
 
 	export DESTDIR="$ROOTDIR/images/tmp/dpdk"
