@@ -522,7 +522,7 @@ test -n "$APTPROXY" && printf 'Acquire::http { Proxy "%s"; }\n' $APTPROXY | tee 
 
 apt-get update
 env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C \
-	apt-get install --no-install-recommends -y apt apt-utils ethtool fdisk htop i2c-tools ifupdown iproute2 iptables iputils-ping isc-dhcp-client kmod less lm-sensors locales net-tools network-manager ntpdate openssh-server pciutils procps psmisc rng-tools sudo systemd-sysv tee-supplicant wget
+	apt-get install --no-install-recommends -y apt apt-utils ethtool fdisk htop i2c-tools ifupdown iproute2 iptables iputils-ping isc-dhcp-client kmod less libatomic1 lm-sensors locales net-tools network-manager ntpdate openssh-server pciutils procps psmisc python3 rng-tools sudo systemd-sysv tee-supplicant wget
 apt-get clean
 
 # set root password
@@ -751,10 +751,13 @@ function build_dpdk() {
 		RECONFIGURE=--reconfigure
 	fi
 
-	meson setup $RECONFIGURE -Dexamples=all --buildtype release --strip --cross-file dpdk/config/arm/arm64_dpaa_linux_gcc dpdk-build dpdk
+	meson setup $RECONFIGURE -Dexamples=all --buildtype release --strip --default-library shared --cross-file dpdk/config/arm/arm64_dpaa_linux_gcc dpdk-build dpdk
 	meson compile -C dpdk-build
 
 	export DESTDIR="$ROOTDIR/images/tmp/dpdk"
+	mkdir -p $DESTDIR/usr/local/bin
+	find dpdk-build/examples -type f -executable -maxdepth 1 -exec install -v -m755 {} $DESTDIR/usr/local/bin/ \;
+	aarch64-linux-gnu-strip --strip-unneeded $DESTDIR/usr/local/bin/*
 	meson install -C dpdk-build
 	install -v -m755 dpdk/nxp/dpaa2/dynamic_dpl.sh $DESTDIR/usr/local/bin/
 	install -v -m755 dpdk/nxp/dpaa2/destroy_dynamic_dpl.sh $DESTDIR/usr/local/bin/
