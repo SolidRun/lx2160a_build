@@ -86,6 +86,7 @@ jobs:
         shell: bash -e {0}
         run: |
             mkdir deploy
+            cp -L images/dpdk-*.tar deploy/
             cp -L images/linux-*.tar deploy/
             cp -L images/linux-headers-*.tar deploy/
             cp -L images/*.img deploy/
