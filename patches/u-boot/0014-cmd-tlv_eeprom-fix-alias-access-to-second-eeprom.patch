@@ -1,7 +1,7 @@
-From 413ad975194c929a09199e6a67cf3d2b2f0fb337 Mon Sep 17 00:00:00 2001
+From 2b1b532628f03a160a046414f57fd392801051e0 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Wed, 20 Nov 2024 13:43:02 +0100
-Subject: [PATCH] cmd: tlv_eeprom: fix alias access to second eeprom
+Subject: [PATCH 14/16] cmd: tlv_eeprom: fix alias access to second eeprom
 
 find function wrongly used ARRAY_SIZE function on a 2d pointer, always
 returning 1. Thus second eeprom can not be found.
@@ -15,10 +15,10 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/cmd/tlv_eeprom.c b/cmd/tlv_eeprom.c
-index 546ede2dda2..881d7a8e3e6 100644
+index 9dd50ea63a8..27eb4e3488a 100644
 --- a/cmd/tlv_eeprom.c
 +++ b/cmd/tlv_eeprom.c
-@@ -906,7 +906,7 @@ static int find_tlv_devices(struct udevice **tlv_devices_p)
+@@ -919,7 +919,7 @@ static int find_tlv_devices(struct udevice **tlv_devices_p)
  	struct udevice *dev;
  
  	/* find by alias */

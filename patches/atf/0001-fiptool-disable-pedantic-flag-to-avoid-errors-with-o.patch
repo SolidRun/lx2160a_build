@@ -1,0 +1,31 @@
+From 16002464625b0841b4adc537e53a5fb357ff907c Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 28 Jul 2025 12:37:46 +0200
+Subject: [PATCH 01/23] fiptool: disable pedantic flag to avoid errors with
+ older libc
+
+This change disarms soime pedantic errors encountered when using a new
+gcc-13 with older system glibc headers. In particular when using yocto
+with a buildtools tarball thius situation can occur.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ tools/fiptool/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/fiptool/Makefile b/tools/fiptool/Makefile
+index fda7c7795..3c0084a16 100644
+--- a/tools/fiptool/Makefile
++++ b/tools/fiptool/Makefile
+@@ -16,7 +16,7 @@ V ?= 0
+ STATIC ?= 0
+ 
+ override CPPFLAGS += -D_GNU_SOURCE -D_XOPEN_SOURCE=700
+-HOSTCCFLAGS := -Wall -Werror -pedantic -std=c99
++HOSTCCFLAGS := -Wall -Werror -std=c99
+ ifeq (${DEBUG},1)
+   HOSTCCFLAGS += -g -O0 -DDEBUG
+ else
+-- 
+2.43.0
+

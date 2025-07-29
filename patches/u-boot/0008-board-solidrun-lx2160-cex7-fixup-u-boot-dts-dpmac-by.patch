@@ -1,7 +1,7 @@
-From 23e2133cf0e5bdd8d2556fe0fe63f5b9ab534e65 Mon Sep 17 00:00:00 2001
+From f4bc0446be62655390681ad1a471c0ec2f77a275 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 2 Nov 2024 17:55:53 +0100
-Subject: [PATCH 08/10] board: solidrun: lx2160-cex7: fixup u-boot dts dpmac by
+Subject: [PATCH 08/16] board: solidrun: lx2160-cex7: fixup u-boot dts dpmac by
  serdes protocol
 
 LX2160A network interface availability and speed depend on serdes

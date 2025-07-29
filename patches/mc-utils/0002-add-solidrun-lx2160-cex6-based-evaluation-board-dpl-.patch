@@ -1,7 +1,7 @@
-From 8933c2fac644bd9e4553bee466fab6d11a0b661a Mon Sep 17 00:00:00 2001
+From 28884a2879f0dc07bc4dce074234e7cceb73fded Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sun, 13 Oct 2024 11:59:53 +0200
-Subject: [PATCH] add solidrun lx2160 cex6 based evaluation board dpl/dpc
+Subject: [PATCH 2/5] add solidrun lx2160 cex6 based evaluation board dpl/dpc
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---

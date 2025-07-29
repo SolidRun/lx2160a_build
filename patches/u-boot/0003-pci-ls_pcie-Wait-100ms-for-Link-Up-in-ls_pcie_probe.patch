@@ -1,7 +1,7 @@
-From 1abb4b0ba3dd29f3b52c839cc3d2844e8bf78790 Mon Sep 17 00:00:00 2001
+From 909dd7b58f0a67cb97fa30ae606b4b6977fe58e8 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sun, 14 Apr 2024 16:45:42 +0200
-Subject: [PATCH 3/3] pci: ls_pcie: Wait 100ms for Link Up in ls_pcie_probe
+Subject: [PATCH 03/16] pci: ls_pcie: Wait 100ms for Link Up in ls_pcie_probe
 
 PCI Link-up can be delayed especially with pci bridges or fpga starting
 up slowly.
@@ -14,7 +14,7 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
  1 file changed, 20 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/pci/pcie_layerscape_rc.c b/drivers/pci/pcie_layerscape_rc.c
-index 17969e2f236..c78b8efd521 100644
+index 6a5bf88da23..33bd14ad81a 100644
 --- a/drivers/pci/pcie_layerscape_rc.c
 +++ b/drivers/pci/pcie_layerscape_rc.c
 @@ -19,6 +19,9 @@
@@ -60,5 +60,5 @@ index 17969e2f236..c78b8efd521 100644
  		printf(": no link\n");
  		return 0;
 -- 
-2.35.3
+2.43.0
 

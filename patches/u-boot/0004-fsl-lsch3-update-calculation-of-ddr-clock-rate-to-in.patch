@@ -1,8 +1,8 @@
-From 7320dd540f97a56f7f7cfcbd0dc2e9fae393a8a1 Mon Sep 17 00:00:00 2001
+From 41537060c9327e7ccc57512387269a2f293a3557 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Tue, 8 Oct 2024 13:29:36 +0200
-Subject: [PATCH] fsl-lsch3: update calculation of ddr clock rate to include
- divider
+Subject: [PATCH 04/16] fsl-lsch3: update calculation of ddr clock rate to
+ include divider
 
 DDR clock is passes through a divider and a multiplier - and is then
 again doubled once by the phy and once by the controller.
@@ -18,10 +18,10 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
  2 files changed, 12 insertions(+)
 
 diff --git a/arch/arm/cpu/armv8/fsl-layerscape/fsl_lsch3_speed.c b/arch/arm/cpu/armv8/fsl-layerscape/fsl_lsch3_speed.c
-index 1c04a5b5b7e..29a786bf26c 100644
+index 137778dc136..04045839a27 100644
 --- a/arch/arm/cpu/armv8/fsl-layerscape/fsl_lsch3_speed.c
 +++ b/arch/arm/cpu/armv8/fsl-layerscape/fsl_lsch3_speed.c
-@@ -97,11 +97,19 @@ void get_sys_info(struct sys_info *sys_info)
+@@ -92,11 +92,19 @@ void get_sys_info(struct sys_info *sys_info)
  	sys_info->freq_ddrbus *= (gur_in32(&gur->rcwsr[0]) >>
  			FSL_CHASSIS3_RCWSR0_MEM_PLL_RAT_SHIFT) &
  			FSL_CHASSIS3_RCWSR0_MEM_PLL_RAT_MASK;
@@ -42,10 +42,10 @@ index 1c04a5b5b7e..29a786bf26c 100644
  		sys_info->freq_ddrbus2 = 0;
  	}
 diff --git a/arch/arm/include/asm/arch-fsl-layerscape/immap_lsch3.h b/arch/arm/include/asm/arch-fsl-layerscape/immap_lsch3.h
-index 863618a5f3d..ec9505fb6f1 100644
+index ca5e33379ba..968173480f4 100644
 --- a/arch/arm/include/asm/arch-fsl-layerscape/immap_lsch3.h
 +++ b/arch/arm/include/asm/arch-fsl-layerscape/immap_lsch3.h
-@@ -374,8 +374,12 @@ struct ccsr_gur {
+@@ -375,8 +375,12 @@ struct ccsr_gur {
  
  #define FSL_CHASSIS3_RCWSR0_SYS_PLL_RAT_SHIFT	2
  #define FSL_CHASSIS3_RCWSR0_SYS_PLL_RAT_MASK	0x1f

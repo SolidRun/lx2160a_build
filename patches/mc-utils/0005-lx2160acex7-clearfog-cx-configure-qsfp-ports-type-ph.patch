@@ -1,7 +1,7 @@
-From 35dffd4f4a82a18897bf0b78df8f1402ef5e2d03 Mon Sep 17 00:00:00 2001
+From efd9218d02e2faded698c0178fd0b4d8c114f3a2 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Thu, 31 Oct 2024 17:35:21 +0100
-Subject: [PATCH] lx2160acex7: clearfog-cx: configure qsfp ports type phy
+Subject: [PATCH 5/5] lx2160acex7: clearfog-cx: configure qsfp ports type phy
 
 Interface type PHY allows Linux to configure ethernet speed at runtime
 for each port, rather than sticking to assignment from serdes protocols.

@@ -1,0 +1,171 @@
+From dfa21012c65e1aeeaa0fb7635c90327900a4086c Mon Sep 17 00:00:00 2001
+From: Ahmad Shtewe <ahmad.shtewe@solid-run.com>
+Date: Fri, 28 Feb 2025 15:30:55 +0100
+Subject: [PATCH 23/23] lx2160a: fix i2c bus flushing pinmux memory writes
+
+The i2c bus flushing was broken by the previous commit in such a way
+that the intended clock cycles never actually propagated to the physical
+pads since changes to the memory location used did not actually impact
+the pin muxing.
+
+Update pinmux configuration to read startup settings from the RCW area,
+then writing changes to the runtime configuration area.
+
+Note that it is also required for this area to be properly mapped during
+BL2.
+
+Signed-off-by: Ahmad Shtewe <ahmad.shtewe@solid-run.com>
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/common/setup/ls_i2c_init.c | 42 ++++++++++++++++++-----------
+ 1 file changed, 27 insertions(+), 15 deletions(-)
+
+diff --git a/plat/nxp/common/setup/ls_i2c_init.c b/plat/nxp/common/setup/ls_i2c_init.c
+index 4ef374c8f..bbb59c476 100644
+--- a/plat/nxp/common/setup/ls_i2c_init.c
++++ b/plat/nxp/common/setup/ls_i2c_init.c
+@@ -17,7 +17,8 @@
+ #define NXP_IIC7_ADDR	0x02060000
+ #define NXP_IIC8_ADDR	0x02070000
+ 
+-#define RCWSR12				0x01e0012c
++#define RCWSR12R			0x01e0012c
++#define RCWSR12W			0x70010012c
+ #define RCWSR12_IIC2_PMUX_MASK		0x00000007 /* [0..2] */
+ #define RCWSR12_IIC2_PMUX_IIC2		0x00000000
+ #define RCWSR12_IIC2_PMUX_GPIO		0x00000001
+@@ -33,11 +34,13 @@
+ #define RCWSR12_IIC6_PMUX_MASK		0x00007000 /* [12..14] */
+ #define RCWSR12_IIC6_PMUX_IIC6		0x00000000
+ #define RCWSR12_IIC6_PMUX_GPIO		0x00001000
+-#define RCWSR13				0x01e00130
++#define RCWSR13R			0x01e00130
++#define RCWSR13W			0x700100130
+ #define RCWSR12_SDHC2_DAT74_PMUX_MASK	0x00000003
+ #define RCWSR12_SDHC2_DAT74_PMUX_SDHC2	0x00000000
+ #define RCWSR12_SDHC2_DAT74_PMUX_IIC78	0x00000001
+-#define RCWSR14				0x01e00134
++#define RCWSR14R			0x01e00134
++#define RCWSR14W			0x700100134
+ #define RCWSR14_IIC1_PMUX_MASK		0x00000400 /* [10] */
+ #define RCWSR14_IIC1_PMUX_IIC1		0x00000000
+ #define RCWSR14_IIC1_PMUX_GPIO		0x00000400
+@@ -128,7 +131,8 @@ static void ls_i2c_flush_pca9547(uint8_t busno, const char *busname, uint8_t chi
+ }
+ 
+ static struct i2c_bus_info {
+-	uintptr_t pinmux_addr;
++	uintptr_t pinmux_addr_r;
++	uintptr_t pinmux_addr_w;
+ 	uint32_t pinmux_mask;
+ 	uint32_t pinmux_sel;
+ 	uintptr_t gpio_addr;
+@@ -136,7 +140,8 @@ static struct i2c_bus_info {
+ 	uint8_t gpio_sda;
+ } ls_i2c_bus_info[] = {
+ 	{
+-		.pinmux_addr = RCWSR14,
++		.pinmux_addr_r = RCWSR14R,
++		.pinmux_addr_w = RCWSR14W,
+ 		.pinmux_mask = RCWSR14_IIC1_PMUX_MASK,
+ 		.pinmux_sel = RCWSR14_IIC1_PMUX_GPIO,
+ 		.gpio_addr = NXP_GPIO1_ADDR,
+@@ -144,7 +149,8 @@ static struct i2c_bus_info {
+ 		.gpio_sda = 2, /* GPIO1_DAT02 */
+ 	},
+ 	{
+-		.pinmux_addr = RCWSR12,
++		.pinmux_addr_r = RCWSR12R,
++		.pinmux_addr_w = RCWSR12W,
+ 		.pinmux_mask = RCWSR12_IIC2_PMUX_MASK,
+ 		.pinmux_sel = RCWSR12_IIC2_PMUX_GPIO,
+ 		.gpio_addr = NXP_GPIO1_ADDR,
+@@ -152,7 +158,8 @@ static struct i2c_bus_info {
+ 		.gpio_sda = 30, /* GPIO1_DAT30 */
+ 	},
+ 	{
+-		.pinmux_addr = RCWSR12,
++		.pinmux_addr_r = RCWSR12R,
++		.pinmux_addr_w = RCWSR12W,
+ 		.pinmux_mask = RCWSR12_IIC3_PMUX_MASK,
+ 		.pinmux_sel = RCWSR12_IIC3_PMUX_GPIO,
+ 		.gpio_addr = NXP_GPIO1_ADDR,
+@@ -160,7 +167,8 @@ static struct i2c_bus_info {
+ 		.gpio_sda = 28, /* GPIO1_DAT28 */
+ 	},
+ 	{
+-		.pinmux_addr = RCWSR12,
++		.pinmux_addr_r = RCWSR12R,
++		.pinmux_addr_w = RCWSR12W,
+ 		.pinmux_mask = RCWSR12_IIC4_PMUX_MASK,
+ 		.pinmux_sel = RCWSR12_IIC4_PMUX_GPIO,
+ 		.gpio_addr = NXP_GPIO1_ADDR,
+@@ -168,7 +176,8 @@ static struct i2c_bus_info {
+ 		.gpio_sda = 26, /* GPIO1_DAT26 */
+ 	},
+ 	{
+-		.pinmux_addr = RCWSR12,
++		.pinmux_addr_r = RCWSR12R,
++		.pinmux_addr_w = RCWSR12W,
+ 		.pinmux_mask = RCWSR12_IIC5_PMUX_MASK,
+ 		.pinmux_sel = RCWSR12_IIC5_PMUX_GPIO,
+ 		.gpio_addr = NXP_GPIO1_ADDR,
+@@ -176,7 +185,8 @@ static struct i2c_bus_info {
+ 		.gpio_sda = 24, /* GPIO1_DAT24 */
+ 	},
+ 	{
+-		.pinmux_addr = RCWSR12,
++		.pinmux_addr_r = RCWSR12R,
++		.pinmux_addr_w = RCWSR12W,
+ 		.pinmux_mask = RCWSR12_IIC6_PMUX_MASK,
+ 		.pinmux_sel = RCWSR12_IIC6_PMUX_GPIO,
+ 		.gpio_addr = NXP_GPIO1_ADDR,
+@@ -184,7 +194,8 @@ static struct i2c_bus_info {
+ 		.gpio_sda = 22, /* GPIO1_DAT22 */
+ 	},
+ 	{
+-		.pinmux_addr = RCWSR13,
++		.pinmux_addr_r = RCWSR13R,
++		.pinmux_addr_w = RCWSR13W,
+ 		.pinmux_mask = RCWSR12_SDHC2_DAT74_PMUX_MASK,
+ 		.pinmux_sel = RCWSR12_SDHC2_DAT74_PMUX_IIC78,
+ 		.gpio_addr = NXP_GPIO2_ADDR,
+@@ -192,7 +203,8 @@ static struct i2c_bus_info {
+ 		.gpio_sda = 15, /* GPIO2_DAT15 */
+ 	},
+ 	{
+-		.pinmux_addr = RCWSR13,
++		.pinmux_addr_r = RCWSR13R,
++		.pinmux_addr_w = RCWSR13W,
+ 		.pinmux_mask = RCWSR12_SDHC2_DAT74_PMUX_MASK,
+ 		.pinmux_sel = RCWSR12_SDHC2_DAT74_PMUX_IIC78,
+ 		.gpio_addr = NXP_GPIO2_ADDR,
+@@ -231,14 +243,14 @@ static void ls_i2c_flush(uint8_t busno, const char *busname) {
+ 	sda_mask = 0x80000000 >> info->gpio_sda;
+ 
+ 	/* backup configuration registers */
+-	pinmux = backup.pinmux = mmio_read_32(info->pinmux_addr);
++	pinmux = backup.pinmux = mmio_read_32(info->pinmux_addr_r);
+ 	gpdir = backup.gpdir = mmio_read_32(gpdir_addr);
+ 	gpodr = backup.gpodr = mmio_read_32(gpodr_addr);
+ 	gpdat = backup.gpdat = mmio_read_32(gpdat_addr);
+ 
+ 	/* configure SCL+SDA as GPIOs */
+ 	pinmux = (pinmux & ~info->pinmux_mask) | info->pinmux_sel;
+-	mmio_write_32(info->pinmux_addr, pinmux);
++	mmio_write_32(info->pinmux_addr_w, pinmux);
+ 
+ 	/* configure SCL+SDA as output open drain */
+ 	gpdir |= scl_mask | sda_mask;
+@@ -271,7 +283,7 @@ static void ls_i2c_flush(uint8_t busno, const char *busname) {
+ 	mmio_write_32(gpdir_addr, backup.gpdir);
+ 	mmio_write_32(gpodr_addr, backup.gpodr);
+ 	mmio_write_32(gpdat_addr, backup.gpdat);
+-	mmio_write_32(info->pinmux_addr, backup.pinmux);
++	mmio_write_32(info->pinmux_addr_w, backup.pinmux);
+ 
+ 	return;
+ }
+-- 
+2.43.0
+

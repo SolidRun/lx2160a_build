@@ -1,7 +1,7 @@
-From bcabe078a2a27eecaa592e1f2ea640a5f1fc6cda Mon Sep 17 00:00:00 2001
+From 3a376e789fb1dde718eda814318a6e4e4d47c1c7 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Mon, 4 Nov 2024 15:16:27 +0100
-Subject: [PATCH 11/13] board: solidrun: lx2160acex7: allocate memory before
+Subject: [PATCH 11/16] board: solidrun: lx2160acex7: allocate memory before
  patching lx2162 fdt
 
 Update of second usb controller fdt node during board_fix_fdt fails due

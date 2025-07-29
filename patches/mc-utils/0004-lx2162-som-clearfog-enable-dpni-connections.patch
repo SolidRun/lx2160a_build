@@ -1,7 +1,7 @@
-From 44dd1bb169ab73e5b4d2d27a441bc52b9295e930 Mon Sep 17 00:00:00 2001
+From 4173b71f0142f1a36d131c67ffd770b0493b765b Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Wed, 30 Oct 2024 18:56:20 +0100
-Subject: [PATCH] lx2162: som: clearfog: enable dpni connections
+Subject: [PATCH 4/5] lx2162: som: clearfog: enable dpni connections
 
 Enable the dpni connections so that interfaces are created automatically
 during boot. Ordering ensures linux netdev numbers are sorted by dpmac

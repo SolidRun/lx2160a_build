@@ -1,0 +1,141 @@
+From 78a42ad004997015879f2c4d58b7918ee973cdd3 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 26 Oct 2024 13:20:48 +0200
+Subject: [PATCH 06/21] arm64: dts: lx2160a-cex6-evb: update spi bus
+ descriptions
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../dts/freescale/fsl-lx2160a-cex6-evb.dts    | 80 +++++++++----------
+ .../boot/dts/freescale/fsl-lx2160a-cex6.dtsi  |  2 +-
+ 2 files changed, 41 insertions(+), 41 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6-evb.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6-evb.dts
+index 55a4c81023a5..2258ab3c04b8 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6-evb.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6-evb.dts
+@@ -135,61 +135,45 @@ &dpmac6 {
+ };
+ 
+ &dspi2 {
+-	w25q32fvzpig0: flash@0 {
+-		#address-cells = <1>;
+-		#size-cells = <1>;
+-		compatible = "jedec,spi-nor";
+-		m25p,fast-read;
+-		spi-max-frequency = <50000000>;
++	/* 1x W25Q32FVZPIG (U7) shared by 4 chip-select */
++	spi-num-chipselects = <4>;
++
++	flash@0 {
++		compatible = "winbond,w25q32", "jedec,spi-nor";
+ 		reg = <0>;
+-		spi-rx-bus-width = <1>;
+-		spi-tx-bus-width = <1>;
++		spi-max-frequency = <104000000>;
++		m25p,fast-read;
+ 	};
+ 
+-	w25q32fvzpig1: flash@1 {
+-		#address-cells = <1>;
+-		#size-cells = <1>;
+-		compatible = "jedec,spi-nor";
+-		m25p,fast-read;
+-		spi-max-frequency = <50000000>;
++	flash@1 {
++		compatible = "winbond,w25q32", "jedec,spi-nor";
+ 		reg = <1>;
+-		spi-rx-bus-width = <1>;
+-		spi-tx-bus-width = <1>;
++		spi-max-frequency = <104000000>;
++		m25p,fast-read;
+ 	};
+ 
+-	w25q32fvzpig2: flash@2 {
+-		#address-cells = <1>;
+-		#size-cells = <1>;
+-		compatible = "jedec,spi-nor";
+-		m25p,fast-read;
+-		spi-max-frequency = <50000000>;
++	flash@2 {
++		compatible = "winbond,w25q32", "jedec,spi-nor";
+ 		reg = <2>;
+-		spi-rx-bus-width = <1>;
+-		spi-tx-bus-width = <1>;
++		spi-max-frequency = <104000000>;
++		m25p,fast-read;
+ 	};
+ 
+-	w25q32fvzpig3: dflash@3 {
+-		#address-cells = <1>;
+-		#size-cells = <1>;
+-		compatible = "jedec,spi-nor";
+-		m25p,fast-read;
+-		spi-max-frequency = <50000000>;
++	flash@3 {
++		compatible = "winbond,w25q32", "jedec,spi-nor";
+ 		reg = <3>;
+-		spi-rx-bus-width = <1>;
+-		spi-tx-bus-width = <1>;
++		spi-max-frequency = <104000000>;
++		m25p,fast-read;
+ 	};
+ };
+ 
+ &fspi {
+-	mt35xu512aba1: flash@1 {
+-		#address-cells = <1>;
+-		#size-cells = <1>;
+-		compatible = "jedec,spi-nor";
+-		m25p,fast-read;
+-		spi-max-frequency = <50000000>;
++	/* flash / xspi extension header @ 1 */
++	spi@1 {
++		compatible = "rohm,dh2228fv";
+ 		reg = <1>;
+-		spi-rx-bus-width = <8>;
+-		spi-tx-bus-width = <8>;
++		/* level shifter on COM may limit speed */
++		spi-max-frequency = <20000000>;
+ 	};
+ };
+ 
+@@ -206,6 +190,22 @@ expander2: gpio@21 {
+ 	};
+ };
+ 
++&pcie2 {
++	status = "okay";
++};
++
++&pcie3 {
++	status = "okay";
++};
++
++&pcie4 {
++	status = "okay";
++};
++
++&pcie5 {
++	status = "okay";
++};
++
+ &pcs_mdio4 {
+ 	status = "okay";
+ };
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6.dtsi
+index 17a8047e25f4..1d97a25bc57f 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6.dtsi
+@@ -60,7 +60,7 @@ &fspi {
+ 	status = "okay";
+ 
+ 	flash@0 {
+-		compatible = "jedec,spi-nor";
++		compatible = "micron,mt35xu512aba", "jedec,spi-nor";
+ 		reg = <0>;
+ 		m25p,fast-read;
+ 		spi-max-frequency = <50000000>;
+-- 
+2.43.0
+

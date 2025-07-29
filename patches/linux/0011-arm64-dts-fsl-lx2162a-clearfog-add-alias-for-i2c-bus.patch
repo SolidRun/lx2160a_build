@@ -1,0 +1,32 @@
+From 4c563b063acbf0bbe586bec68e371af0209d03be Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 12 Mar 2024 20:56:55 +0100
+Subject: [PATCH 11/21] arm64: dts: fsl-lx2162a-clearfog: add alias for i2c bus
+ iic6
+
+SoM dts has enabled  i2c bus IIC6 (dts i2c5), but defines no aliases.
+
+LX2162A Clearfog dts has aliases for all i2c buses to ensure predictable
+numbering for userspace. Add an additional alias for this extra bus.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+Signed-off-by: Shawn Guo <shawnguo@kernel.org>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+index 9f88583aa25e..eafef8718a0f 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+@@ -25,6 +25,7 @@ aliases {
+ 		i2c7 = &mpcie1_i2c;
+ 		i2c8 = &mpcie0_i2c;
+ 		i2c9 = &pcieclk_i2c;
++		i2c10 = &i2c5;
+ 		mmc0 = &esdhc0;
+ 		mmc1 = &esdhc1;
+ 		serial0 = &uart0;
+-- 
+2.43.0
+

@@ -1,7 +1,7 @@
-From 30773f1070b4a315bcaa041e85ee2bdf8e04bf5b Mon Sep 17 00:00:00 2001
+From 7418af9c1338c019a471e2b63b9da01ebaa30d5a Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sun, 20 Oct 2024 15:45:00 +0200
-Subject: [PATCH 12/13] lx2160acex6: enable pci errata workarounds for all
+Subject: [PATCH 12/22] lx2160acex6: enable pci errata workarounds for all
  active ports
 
 SolidRun internal cex6 evaluation baord uses PEX2, PEX3, PEX4 and PEX5.

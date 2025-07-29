@@ -1,7 +1,8 @@
-From 51af4e2a98e234e27a0127b2455b6049ce8097e2 Mon Sep 17 00:00:00 2001
+From 4d6d38e4449e113a9a12f1711d4d992a0ba529ad Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Tue, 8 Oct 2024 12:44:10 +0200
-Subject: [PATCH] lx2160acex7: add configuration for fraction ddr speed 2666
+Subject: [PATCH 09/22] lx2160acex7: add configuration for fraction ddr speed
+ 2666
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---

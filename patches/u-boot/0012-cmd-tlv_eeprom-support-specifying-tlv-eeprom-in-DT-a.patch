@@ -1,7 +1,7 @@
-From bc8a68d153dcfd75153d81c52531743e43f23983 Mon Sep 17 00:00:00 2001
+From 69a4bf46e2985466c0cae5fe5f609e06be7aa610 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Mon, 4 Nov 2024 15:08:01 +0100
-Subject: [PATCH 12/13] cmd: tlv_eeprom: support specifying tlv eeprom in DT
+Subject: [PATCH 12/16] cmd: tlv_eeprom: support specifying tlv eeprom in DT
  alias tlv[0-255]
 
 Systems might have many eeproms of which only some might be used for TLV
@@ -17,10 +17,10 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
  1 file changed, 23 insertions(+)
 
 diff --git a/cmd/tlv_eeprom.c b/cmd/tlv_eeprom.c
-index cbc11ebf421..546ede2dda2 100644
+index b178c23d394..9dd50ea63a8 100644
 --- a/cmd/tlv_eeprom.c
 +++ b/cmd/tlv_eeprom.c
-@@ -899,9 +899,32 @@ static void show_tlv_devices(void)
+@@ -912,9 +912,32 @@ static void show_tlv_devices(int current_dev)
  static int find_tlv_devices(struct udevice **tlv_devices_p)
  {
  	int ret;

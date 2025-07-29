@@ -1,7 +1,7 @@
-From 16dccb51dec1c08fcf5dfcf5ca6778bb387f6b32 Mon Sep 17 00:00:00 2001
+From 58274398234bac131909e01ea5ca8125c0157ea8 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Tue, 26 Nov 2024 11:11:57 +0100
-Subject: [PATCH] lx2160acex6: add configuration for each ddr speed
+Subject: [PATCH 20/22] lx2160acex6: add configuration for each ddr speed
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---

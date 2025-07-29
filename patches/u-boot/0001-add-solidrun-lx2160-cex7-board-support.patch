@@ -1,7 +1,7 @@
-From 9e4a5468f62cf4f639a2d6224d33f545c67d1a88 Mon Sep 17 00:00:00 2001
+From 5f441b4f2f4287c28c68d3025894aa38c555cab3 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Thu, 13 Jun 2024 17:26:47 +0200
-Subject: [PATCH] add solidrun lx2160-cex7 board support
+Subject: [PATCH 01/16] add solidrun lx2160-cex7 board support
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---
@@ -18,8 +18,7 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
  configs/lx2160acex7_tfa_SECURE_BOOT_defconfig |  86 +++++
  configs/lx2160acex7_tfa_defconfig             |  96 ++++++
  include/configs/lx2160acex7.h                 | 324 ++++++++++++++++++
- scripts/config_whitelist.txt                  |   6 +
- 14 files changed, 1199 insertions(+)
+ 13 files changed, 1193 insertions(+)
  create mode 100644 arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi
  create mode 100644 arch/arm/dts/fsl-lx2160a-cex7.dts
  create mode 100644 arch/arm/dts/fsl-lx2160a-cex7.dtsi
@@ -33,10 +32,10 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
  create mode 100644 include/configs/lx2160acex7.h
 
 diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index 39b6a2b1b5..7c51c37c93 100644
+index eaf2c5d3df7..786d05d8d0c 100644
 --- a/arch/arm/Kconfig
 +++ b/arch/arm/Kconfig
-@@ -1375,6 +1375,19 @@ config TARGET_LS2081ARDB
+@@ -1462,6 +1462,19 @@ config TARGET_LS2081ARDB
  	  development platform that supports the QorIQ LS2081A/LS2041A
  	  Layerscape Architecture processor.
  
@@ -56,19 +55,19 @@ index 39b6a2b1b5..7c51c37c93 100644
  config TARGET_LX2160ARDB
  	bool "Support lx2160ardb"
  	select ARCH_LX2160A
-@@ -2261,6 +2274,7 @@ source "board/kontron/sl28/Kconfig"
- source "board/myir/mys_6ulx/Kconfig"
+@@ -2371,6 +2384,7 @@ source "board/samsung/common/Kconfig"
+ source "board/siemens/common/Kconfig"
  source "board/seeed/npi_imx6ull/Kconfig"
  source "board/socionext/developerbox/Kconfig"
 +source "board/solidrun/lx2160acex7/Kconfig"
  source "board/st/stv0991/Kconfig"
  source "board/tcl/sl50/Kconfig"
- source "board/toradex/colibri_pxa270/Kconfig"
+ source "board/traverse/ten64/Kconfig"
 diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
-index 709fdaecd7..8f6f5bf7cc 100644
+index 737e959a6b5..e12136af4ab 100644
 --- a/arch/arm/dts/Makefile
 +++ b/arch/arm/dts/Makefile
-@@ -454,6 +454,7 @@ dtb-$(CONFIG_FSL_LSCH3) += fsl-ls2080a-qds.dtb \
+@@ -598,6 +598,7 @@ dtb-$(CONFIG_FSL_LSCH3) += fsl-ls2080a-qds.dtb \
  	fsl-ls1028a-rdb.dtb \
  	fsl-ls1028a-qds-duart.dtb \
  	fsl-ls1028a-qds-lpuart.dtb \
@@ -78,7 +77,7 @@ index 709fdaecd7..8f6f5bf7cc 100644
  	fsl-lx2160a-qds-3-x-x.dtb \
 diff --git a/arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi b/arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi
 new file mode 100644
-index 0000000000..9855fcb31c
+index 00000000000..9855fcb31cc
 --- /dev/null
 +++ b/arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi
 @@ -0,0 +1,22 @@
@@ -106,7 +105,7 @@ index 0000000000..9855fcb31c
 +};
 diff --git a/arch/arm/dts/fsl-lx2160a-cex7.dts b/arch/arm/dts/fsl-lx2160a-cex7.dts
 new file mode 100644
-index 0000000000..60f99f143c
+index 00000000000..60f99f143ce
 --- /dev/null
 +++ b/arch/arm/dts/fsl-lx2160a-cex7.dts
 @@ -0,0 +1,20 @@
@@ -132,7 +131,7 @@ index 0000000000..60f99f143c
 +};
 diff --git a/arch/arm/dts/fsl-lx2160a-cex7.dtsi b/arch/arm/dts/fsl-lx2160a-cex7.dtsi
 new file mode 100644
-index 0000000000..d32a52ab00
+index 00000000000..d32a52ab00a
 --- /dev/null
 +++ b/arch/arm/dts/fsl-lx2160a-cex7.dtsi
 @@ -0,0 +1,187 @@
@@ -325,7 +324,7 @@ index 0000000000..d32a52ab00
 +};
 diff --git a/board/solidrun/lx2160acex7/Kconfig b/board/solidrun/lx2160acex7/Kconfig
 new file mode 100644
-index 0000000000..85673846a4
+index 00000000000..85673846a4a
 --- /dev/null
 +++ b/board/solidrun/lx2160acex7/Kconfig
 @@ -0,0 +1,15 @@
@@ -346,7 +345,7 @@ index 0000000000..85673846a4
 +endif
 diff --git a/board/solidrun/lx2160acex7/Makefile b/board/solidrun/lx2160acex7/Makefile
 new file mode 100644
-index 0000000000..4a3b039a5c
+index 00000000000..4a3b039a5cf
 --- /dev/null
 +++ b/board/solidrun/lx2160acex7/Makefile
 @@ -0,0 +1,10 @@
@@ -362,7 +361,7 @@ index 0000000000..4a3b039a5c
 +obj-$(CONFIG_TARGET_LX2160ACEX7) += eth_lx2160acex7.o
 diff --git a/board/solidrun/lx2160acex7/ddr.c b/board/solidrun/lx2160acex7/ddr.c
 new file mode 100644
-index 0000000000..d872e57530
+index 00000000000..d872e575306
 --- /dev/null
 +++ b/board/solidrun/lx2160acex7/ddr.c
 @@ -0,0 +1,22 @@
@@ -390,7 +389,7 @@ index 0000000000..d872e57530
 +}
 diff --git a/board/solidrun/lx2160acex7/eth_lx2160acex7.c b/board/solidrun/lx2160acex7/eth_lx2160acex7.c
 new file mode 100644
-index 0000000000..d2c68d3424
+index 00000000000..d2c68d34243
 --- /dev/null
 +++ b/board/solidrun/lx2160acex7/eth_lx2160acex7.c
 @@ -0,0 +1,88 @@
@@ -484,7 +483,7 @@ index 0000000000..d2c68d3424
 +}
 diff --git a/board/solidrun/lx2160acex7/lx2160a.c b/board/solidrun/lx2160acex7/lx2160a.c
 new file mode 100644
-index 0000000000..08fa607067
+index 00000000000..08fa6070672
 --- /dev/null
 +++ b/board/solidrun/lx2160acex7/lx2160a.c
 @@ -0,0 +1,308 @@
@@ -798,7 +797,7 @@ index 0000000000..08fa607067
 +#endif
 diff --git a/configs/lx2160acex7_tfa_SECURE_BOOT_defconfig b/configs/lx2160acex7_tfa_SECURE_BOOT_defconfig
 new file mode 100644
-index 0000000000..12f236aad0
+index 00000000000..12f236aad06
 --- /dev/null
 +++ b/configs/lx2160acex7_tfa_SECURE_BOOT_defconfig
 @@ -0,0 +1,86 @@
@@ -890,7 +889,7 @@ index 0000000000..12f236aad0
 +CONFIG_EFI_LOADER_BOUNCE_BUFFER=y
 diff --git a/configs/lx2160acex7_tfa_defconfig b/configs/lx2160acex7_tfa_defconfig
 new file mode 100644
-index 0000000000..9f24e12a85
+index 00000000000..9f24e12a85d
 --- /dev/null
 +++ b/configs/lx2160acex7_tfa_defconfig
 @@ -0,0 +1,96 @@
@@ -992,7 +991,7 @@ index 0000000000..9f24e12a85
 +CONFIG_EFI_LOADER_BOUNCE_BUFFER=y
 diff --git a/include/configs/lx2160acex7.h b/include/configs/lx2160acex7.h
 new file mode 100644
-index 0000000000..83f64e65a8
+index 00000000000..83f64e65a8b
 --- /dev/null
 +++ b/include/configs/lx2160acex7.h
 @@ -0,0 +1,324 @@
@@ -1320,23 +1319,6 @@ index 0000000000..83f64e65a8
 +#include <asm/fsl_secure_boot.h>
 +
 +#endif /* __CONFIG_LX2160ACEX7_H */
-diff --git a/scripts/config_whitelist.txt b/scripts/config_whitelist.txt
-index 8abfe47888..b8c0735d75 100644
---- a/scripts/config_whitelist.txt
-+++ b/scripts/config_whitelist.txt
-@@ -1858,6 +1858,12 @@ CONFIG_SYS_SATA1_OFFSET
- CONFIG_SYS_SATA2
- CONFIG_SYS_SATA2_FLAGS
- CONFIG_SYS_SATA2_OFFSET
-+CONFIG_SYS_SATA3
-+CONFIG_SYS_SATA3_FLAGS
-+CONFIG_SYS_SATA3_OFFSET
-+CONFIG_SYS_SATA4
-+CONFIG_SYS_SATA4_FLAGS
-+CONFIG_SYS_SATA4_OFFSET
- CONFIG_SYS_SATA_ENV_DEV
- CONFIG_SYS_SATA_FAT_BOOT_PARTITION
- CONFIG_SYS_SBFHDR_DATA_OFFSET
 -- 
-2.35.3
+2.43.0
 

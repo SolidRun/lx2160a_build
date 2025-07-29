@@ -1,7 +1,7 @@
-From e42d8bf470388b16c4addb47b17669a6967bebe2 Mon Sep 17 00:00:00 2001
+From 6cf1f98fea20c8a4ecae2973d8439328241ee79f Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sun, 20 Oct 2024 15:39:21 +0200
-Subject: [PATCH] lx2160acex7: enable A-050426 workaround for silicon one
+Subject: [PATCH 11/22] lx2160acex7: enable A-050426 workaround for silicon one
 
 A-050426 affects both Silicon revisions 1 and 2, enable for 1 as well.
 

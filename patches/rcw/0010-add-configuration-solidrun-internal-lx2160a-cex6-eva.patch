@@ -1,8 +1,8 @@
-From 19067dac1cea330e12cf3594cf6ca2a7a3d257be Mon Sep 17 00:00:00 2001
+From fd4f0a16daa142d3daf29d8154d6ba2ed4656df1 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Fri, 11 Oct 2024 16:39:12 +0200
-Subject: [PATCH] add configuration solidrun internal lx2160a-cex6 evaluation
- board
+Subject: [PATCH 10/22] add configuration solidrun internal lx2160a-cex6
+ evaluation board
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---

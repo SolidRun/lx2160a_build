@@ -1,7 +1,7 @@
-From 9d49cf46a3fde08abd3ba48169c7688dfeed74bb Mon Sep 17 00:00:00 2001
+From 48f5bcf65d069c6dc6aa56cff070314a90bcd86d Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Fri, 27 Sep 2024 17:58:11 +0200
-Subject: [PATCH] lx2160acex7: move MEM_PLL_CFG into ddr-speed-specific
+Subject: [PATCH 02/22] lx2160acex7: move MEM_PLL_CFG into ddr-speed-specific
  includes
 
 Both MEM_PLL_RAT and MEM_PLL_CFG together create the final ddr clock

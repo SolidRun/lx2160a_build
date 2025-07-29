@@ -1,7 +1,7 @@
-From 4cd3955a69be423a48eefccc27442c148ece8ffd Mon Sep 17 00:00:00 2001
+From e49ec5c73e8e117db43cbd06dba4b347f40b545d Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sun, 20 Oct 2024 15:51:12 +0200
-Subject: [PATCH 13/13] lx2160acex6: add configuration for 2.2GHz binned soc
+Subject: [PATCH 13/22] lx2160acex6: add configuration for 2.2GHz binned soc
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---

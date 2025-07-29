@@ -1,0 +1,40 @@
+From c633298f40fb288b52ac799ad9da72d7361df804 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 20 Oct 2024 14:19:43 +0200
+Subject: [PATCH 04/21] arm64: dts: lx2160a-clearfog-itx: enable pcie nodes for
+ x4 and x8 slots
+
+SolidRun Clearfog CX and Honeycomb have LX2160A PEX3 and PEX5 exposed on
+physical connectors.
+Vendor U-Boot used to patch status properties such that it went
+undiscovered these nodes have their status set disabled.
+
+Set status okay for pcie3 and pcie5 nodes.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi      | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+index a7dcbecc1f41..af6258b2fe82 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+@@ -96,6 +96,14 @@ &esdhc0 {
+ 	status = "okay";
+ };
+ 
++&pcie3 {
++	status = "okay";
++};
++
++&pcie5 {
++	status = "okay";
++};
++
+ &pcs_mdio7 {
+ 	status = "okay";
+ };
+-- 
+2.43.0
+

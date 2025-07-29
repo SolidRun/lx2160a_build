@@ -1,0 +1,86 @@
+From 47a633809e52aa2a68cd05f8469f724048d098dd Mon Sep 17 00:00:00 2001
+From: Jon Nettleton <jon@solid-run.com>
+Date: Tue, 8 Oct 2024 04:56:45 +0200
+Subject: [PATCH 03/23] dcfg: Take into account MEM_PLL_CFG_SHIFT for ddr
+ frequency
+
+The base ddr clock frequency is 1/4 the speed of the final
+ddr clock frequency. By default the RCW config is setting
+the CFG_SHIFT to be a 1/4 divider of the memory speed,
+i.e.  3200 / 4 (800MHz).  The parent DDRCLK is 100MHz so PLL_RAT
+needs to be rounded to 100MHz. However using a divider of / 3 for
+a lower speed always us to match industry standard ddr4 speeds
+2666 and 2933 (2000 / 3 * 4 = 2666.67)
+
+This patch takes into account the PLL_CFG_SHIFT divider so these
+speeds can be configured in the RCW and then updates the helper
+function that reports ddr_clk_freq to properly multiply the
+clock fed into the DDRC * 4 to properly reflect the actual MTs
+that the memory is being configured for.
+
+Signed-off-by: Jon Nettleton <jon@solid-run.com>
+---
+ drivers/nxp/dcfg/dcfg.c               | 6 ++++++
+ drivers/nxp/ddr/nxp-ddr/utility.c     | 6 +++---
+ include/drivers/nxp/dcfg/dcfg_lsch3.h | 4 ++++
+ 3 files changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/nxp/dcfg/dcfg.c b/drivers/nxp/dcfg/dcfg.c
+index e5c4db437..4a5820a64 100644
+--- a/drivers/nxp/dcfg/dcfg.c
++++ b/drivers/nxp/dcfg/dcfg.c
+@@ -104,9 +104,15 @@ int get_clocks(struct sysinfo *sys)
+ 	sys->freq_ddr_pll0 *= (gur_in32(rcwsr0) >>
+ 				RCWSR0_MEM_PLL_RAT_SHIFT) &
+ 				RCWSR0_MEM_PLL_RAT_MASK;
++	sys->freq_ddr_pll0 /= ((gur_in32(rcwsr0) >>
++				RCWSR0_MEM_PLL_CFG_SHIFT) &
++				RCWSR0_MEM_PLL_CFG_MASK) + 1;
+ 	sys->freq_ddr_pll1 *= (gur_in32(rcwsr0) >>
+ 				RCWSR0_MEM2_PLL_RAT_SHIFT) &
+ 				RCWSR0_MEM2_PLL_RAT_MASK;
++	sys->freq_ddr_pll1 /= ((gur_in32(rcwsr0) >>
++				RCWSR0_MEM2_PLL_CFG_SHIFT) &
++				RCWSR0_MEM2_PLL_CFG_MASK) + 1;
+ 	if (sys->freq_platform == 0) {
+ 		return 1;
+ 	} else {
+diff --git a/drivers/nxp/ddr/nxp-ddr/utility.c b/drivers/nxp/ddr/nxp-ddr/utility.c
+index b6dffc872..3920b4488 100644
+--- a/drivers/nxp/ddr/nxp-ddr/utility.c
++++ b/drivers/nxp/ddr/nxp-ddr/utility.c
+@@ -47,11 +47,11 @@ unsigned long get_ddr_freq(struct sysinfo *sys, int ctrl_num)
+ 
+ 	switch (ctrl_num) {
+ 	case 0:
+-		return sys->freq_ddr_pll0;
++		return sys->freq_ddr_pll0 * 4;
+ 	case 1:
+-		return sys->freq_ddr_pll0;
++		return sys->freq_ddr_pll0 * 4;
+ 	case 2:
+-		return sys->freq_ddr_pll1;
++		return sys->freq_ddr_pll1 * 4;
+ 	}
+ 
+ 	return 0;
+diff --git a/include/drivers/nxp/dcfg/dcfg_lsch3.h b/include/drivers/nxp/dcfg/dcfg_lsch3.h
+index cde86fe19..f9409d1a7 100644
+--- a/include/drivers/nxp/dcfg/dcfg_lsch3.h
++++ b/include/drivers/nxp/dcfg/dcfg_lsch3.h
+@@ -53,8 +53,12 @@
+ #define RCWSR0_OFFSET				0x100
+ #define RCWSR0_SYS_PLL_RAT_SHIFT	2
+ #define RCWSR0_SYS_PLL_RAT_MASK		0x1f
++#define RCWSR0_MEM_PLL_CFG_SHIFT	8
++#define RCWSR0_MEM_PLL_CFG_MASK		0x3
+ #define RCWSR0_MEM_PLL_RAT_SHIFT	10
+ #define RCWSR0_MEM_PLL_RAT_MASK		0x3f
++#define RCWSR0_MEM2_PLL_CFG_SHIFT	16
++#define RCWSR0_MEM2_PLL_CFG_MASK	0x3
+ #define RCWSR0_MEM2_PLL_RAT_SHIFT	18
+ #define RCWSR0_MEM2_PLL_RAT_MASK	0x3f
+ 
+-- 
+2.43.0
+

@@ -1,8 +1,8 @@
-From 8756b34d63f7357f7309bfa27fd175b198285bae Mon Sep 17 00:00:00 2001
+From bfed380b7886ff4351c57bd021b25a8e98ddf461 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 28 Sep 2024 14:54:36 +0200
-Subject: [PATCH] lx2160acex7:  rename sdhc1 config to generic sdhc, for both
- sd & emmc
+Subject: [PATCH 04/22] lx2160acex7: rename sdhc1 config to generic sdhc, for
+ both sd & emmc
 
 Both sdhc1 and sdhc2 boot can share same rcw.
 They use identical boot location pointer values, differences were only

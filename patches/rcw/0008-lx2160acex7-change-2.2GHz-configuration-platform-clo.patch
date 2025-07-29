@@ -1,7 +1,7 @@
-From 7ef0c57ae7c852bb8f35310b0bd5708bb2a98c4a Mon Sep 17 00:00:00 2001
+From 43e2a8c55ec8f116436740a509510c20354aae1c Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Tue, 8 Oct 2024 12:30:42 +0200
-Subject: [PATCH 8/9] lx2160acex7: change 2.2GHz configuration platform clock
+Subject: [PATCH 08/22] lx2160acex7: change 2.2GHz configuration platform clock
  to 750MHz
 
 2.2GHz cpu clock is only for accordingly binned part number from NXP.

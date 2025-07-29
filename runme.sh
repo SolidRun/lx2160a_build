@@ -12,7 +12,7 @@ set -e
 ###############################################################################
 # Misc
 ###############################################################################
-: ${RELEASE:=ls-5.15.71-2.2.0}
+: ${RELEASE:=ls-6.6.52-2.2.0}
 : ${CPU_SPEED:=2000}
 : ${DDR_SPEED:=2900}
 : ${BUS_SPEED:=700}
@@ -39,12 +39,12 @@ set -e
 # - focal (20.04)
 # - jammy (22.04)
 # - noble (24.04)
-: ${UBUNTU_VERSION:=jammy}
-: ${UBUNTU_ROOTFS_SIZE:=350M}
+: ${UBUNTU_VERSION:=noble}
+: ${UBUNTU_ROOTFS_SIZE:=400M}
 # Debian Version
 # - bullseye (11)
 # - bookworm (12)
-: ${DEBIAN_VERSION:=bullseye}
+: ${DEBIAN_VERSION:=bookworm}
 : ${DEBIAN_ROOTFS_SIZE:=350M}
 : ${APTPROXY:=}
 
@@ -171,32 +171,14 @@ for i in $QORIQ_COMPONENTS; do
 	if [[ ! -d $ROOTDIR/build/$i ]]; then
 		echo "Cloning https://github.com/nxp-qoriq/$i release $RELEASE"
 		cd $ROOTDIR/build
-		CHECKOUT=$RELEASE
+		CHECKOUT=${RELEASE/ls/lf}
 		COMMIT=
 
-		# Release ls-5.15.71-2.2.0
-		if [ "x$RELEASE" == "xls-5.15.71-2.2.0" ]; then
-			case "$i" in
-			u-boot|atf|linux|dpdk|optee_os)
-				CHECKOUT=lf-5.15.71-2.2.0
-			;;
-			ddr-phy-binary)
-				CHECKOUT=lf-5.15.5-1.0.0
-			;;
-			rcw|restool)
-				CHECKOUT=lf-5.15.52-2.1.0
-			;;
-			mc-utils|cst|mdio-proxy-module)
-				CHECKOUT=lf-5.15.32-2.0.0
-			;;
-			mc-utils)
-				CHECKOUT=mc_release_10.35.0
-			;;
-			qoriq-mc-binary)
-				CHECKOUT=mc_release_10.37.0
-			;;
-			esac
-		fi
+		case "$i" in
+		mc-utils|qoriq-mc-binary)
+			CHECKOUT=mc_release_10.39.0
+		;;
+		esac
 
 		if [ -z "${COMMIT}" ]; then
 			git clone $SHALLOW_FLAG https://github.com/nxp-qoriq/$i -b $CHECKOUT
@@ -425,7 +407,7 @@ mkimage -f kernel2160cex7.its kernel-lx2160acex7.itb
 \rm -rf $ROOTDIR/images/tmp/linux
 mkdir -p $ROOTDIR/images/tmp/linux
 mkdir -p $ROOTDIR/images/tmp/linux/boot/freescale
-make INSTALL_MOD_PATH=$ROOTDIR/images/tmp/linux/ INSTALL_MOD_STRIP=1 modules_install
+make -j${PARALLEL} INSTALL_MOD_PATH=$ROOTDIR/images/tmp/linux/ INSTALL_MOD_STRIP=1 modules_install
 cp $ROOTDIR/build/linux/arch/arm64/boot/Image $ROOTDIR/images/tmp/linux/boot
 cp $ROOTDIR/build/linux/arch/arm64/boot/Image.gz $ROOTDIR/images/tmp/linux/boot
 cp $ROOTDIR/build/linux/arch/arm64/boot/dts/freescale/fsl-lx216*.dtb $ROOTDIR/images/tmp/linux/boot/freescale/
@@ -472,6 +454,7 @@ if [[ $DISTRO == ubuntu ]]; then
 	mkdir -p $ROOTDIR/build/ubuntu
 	cd $ROOTDIR/build/ubuntu
 
+	EXTRA_PKGS=
 	case "${UBUNTU_VERSION}" in
 		focal)
 			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.5-base-arm64.tar.gz
@@ -481,6 +464,7 @@ if [[ $DISTRO == ubuntu ]]; then
 		;;
 		noble)
 			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.2-base-arm64.tar.gz
+			EXTRA_PKGS="unminimize"
 		;;
 		*)
 			echo "Error: Unsupported Ubuntu Version \"\${UBUNTU_VERSION}\"! To proceed please add support to runme.sh."
@@ -522,7 +506,7 @@ test -n "$APTPROXY" && printf 'Acquire::http { Proxy "%s"; }\n' $APTPROXY | tee 
 
 apt-get update
 env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C \
-	apt-get install --no-install-recommends -y apt apt-utils ethtool fdisk htop i2c-tools ifupdown iproute2 iptables iputils-ping isc-dhcp-client kmod less libatomic1 lm-sensors locales net-tools network-manager ntpdate openssh-server pciutils procps psmisc python3 rng-tools sudo systemd-sysv tee-supplicant wget
+	apt-get install --no-install-recommends -y apt apt-utils ethtool fdisk htop i2c-tools ifupdown iproute2 iptables iputils-ping isc-dhcp-client kmod less libatomic1 lm-sensors locales net-tools network-manager ntpdate openssh-server pciutils procps psmisc python3 rng-tools sudo systemd-sysv tee-supplicant wget $EXTRA_PKGS
 apt-get clean
 
 # set root password

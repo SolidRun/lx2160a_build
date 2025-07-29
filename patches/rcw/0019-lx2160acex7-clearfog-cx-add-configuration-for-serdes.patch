@@ -1,7 +1,7 @@
-From b40f6920f1f572bf5cfce1f8a0be20a45ce6af9f Mon Sep 17 00:00:00 2001
+From b091c8b36cf787646234183c05942b0aeee1a573 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Thu, 7 Nov 2024 13:39:05 +0100
-Subject: [PATCH 19/19] lx2160acex7: clearfog-cx: add configuration for serdes
+Subject: [PATCH 19/22] lx2160acex7: clearfog-cx: add configuration for serdes
  1 protocol 4
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>

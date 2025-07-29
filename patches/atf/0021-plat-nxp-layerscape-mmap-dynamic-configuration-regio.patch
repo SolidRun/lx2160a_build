@@ -1,0 +1,48 @@
+From 9b2188e6f0ef0e07cb85a40e33688b350e24f1b1 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 1 Mar 2025 12:32:03 +0100
+Subject: [PATCH 21/23] plat: nxp: layerscape: mmap dynamic configuration
+ region in bl2
+
+Even before DDR configuration BL2 may wish to modify dynamic
+configuration registers e.g. for changing pinmux and implementing an
+unstucking procedure on i2c bus.
+
+Add mapping for DCFG area in BL2 and increment MAX_MMAP_REGIONS by one.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/common/include/default/plat_default_def.h | 2 +-
+ plat/nxp/common/setup/ls_common.c                  | 3 +++
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/plat/nxp/common/include/default/plat_default_def.h b/plat/nxp/common/include/default/plat_default_def.h
+index 7f3298006..5669cbad9 100644
+--- a/plat/nxp/common/include/default/plat_default_def.h
++++ b/plat/nxp/common/include/default/plat_default_def.h
+@@ -147,7 +147,7 @@
+ /* Check if this size can be determined from array size */
+ #if defined(IMAGE_BL2)
+ #ifndef MAX_MMAP_REGIONS
+-#define MAX_MMAP_REGIONS	8
++#define MAX_MMAP_REGIONS	9
+ #endif
+ #ifndef MAX_XLAT_TABLES
+ #define MAX_XLAT_TABLES		6
+diff --git a/plat/nxp/common/setup/ls_common.c b/plat/nxp/common/setup/ls_common.c
+index 28d6b7266..bb9b3f565 100644
+--- a/plat/nxp/common/setup/ls_common.c
++++ b/plat/nxp/common/setup/ls_common.c
+@@ -31,6 +31,9 @@ const mmap_region_t *plat_ls_get_mmap(void);
+ #ifdef IMAGE_BL2
+ const mmap_region_t plat_ls_mmap[] = {
+ 	LS_MAP_CCSR,
++#ifdef NXP_DCSR_ADDR
++	LS_MAP_DCSR,
++#endif
+ 	{0}
+ };
+ #endif
+-- 
+2.43.0
+

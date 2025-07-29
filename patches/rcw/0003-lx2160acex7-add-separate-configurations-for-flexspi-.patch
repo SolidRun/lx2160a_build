@@ -1,8 +1,8 @@
-From 229c609e139b5f95ea96c03dc084ba53b4f09d5e Mon Sep 17 00:00:00 2001
+From 596aadd6e1772b0801a330e5fa526c667794b2e2 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 28 Sep 2024 12:24:13 +0200
-Subject: [PATCH] lx2160acex7: add separate configurations for flexspi and
- sdhc1 boot
+Subject: [PATCH 03/22] lx2160acex7: add separate configurations for flexspi
+ and sdhc1 boot
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---

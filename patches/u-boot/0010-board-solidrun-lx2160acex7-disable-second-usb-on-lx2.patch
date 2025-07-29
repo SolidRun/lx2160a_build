@@ -1,7 +1,7 @@
-From 86421a6f1f41ea90124e4de2f8b73e43049bc1d4 Mon Sep 17 00:00:00 2001
+From 66a91c35782618063cc2c1e5fc1bc3714f31862c Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 2 Nov 2024 19:52:31 +0100
-Subject: [PATCH 10/10] board: solidrun: lx2160acex7: disable second usb on
+Subject: [PATCH 10/16] board: solidrun: lx2160acex7: disable second usb on
  lx2162
 
 LX2162 only has single USB controller, disable the second one from

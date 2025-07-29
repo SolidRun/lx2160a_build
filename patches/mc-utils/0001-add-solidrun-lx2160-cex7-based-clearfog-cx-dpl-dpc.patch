@@ -1,7 +1,7 @@
-From 24334396edb16fbebe5f0b07a8264d53493dbff4 Mon Sep 17 00:00:00 2001
+From cd2100cf0eab703c65c1bee9c083eac1df3700ce Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Fri, 28 Jun 2024 19:16:57 +0200
-Subject: [PATCH] add solidrun lx2160 cex7 based clearfog-cx dpl/dpc
+Subject: [PATCH 1/5] add solidrun lx2160 cex7 based clearfog-cx dpl/dpc
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---
@@ -933,5 +933,5 @@ index 0000000..9847cc3
 +	};
 +};
 -- 
-2.35.3
+2.43.0
 

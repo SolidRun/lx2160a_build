@@ -1,8 +1,8 @@
-From 8d1b1a3c9d9154875181ba50c5b18e9fb618008b Mon Sep 17 00:00:00 2001
+From c65a4f4bea15d85b944623933a2f9c64421eddaa Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Mon, 3 Mar 2025 21:36:00 +0100
-Subject: [PATCH] lx2160acex7: clearfog-cx: add configuration for serdes 1
- protocol 8S
+Subject: [PATCH 22/22] lx2160acex7: clearfog-cx: add configuration for serdes
+ 1 protocol 8S
 
 Add configuration for serdes 1 protocol 8 and swapped PLLS/PLLF.
 Note this  configuration  can support runtime switchover between 1Gbps

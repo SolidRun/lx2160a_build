@@ -1,8 +1,8 @@
-From a12abaab41ec9ffe381a655c4763d0b44988ec3a Mon Sep 17 00:00:00 2001
+From af75bf1a59ffd8c20e3e632f59a69f364dc28848 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Fri, 28 Jun 2024 16:19:32 +0200
-Subject: [PATCH] arm64: dts: lx2160a-cex7: add gpio hog for fan-controller
- therm signal
+Subject: [PATCH 01/21] arm64: dts: lx2160a-cex7: add gpio hog for
+ fan-controller therm signal
 
 AMC6821 fan-controller has an open-drain inpu/output signal "THERM"
 which is driven low in case of thermal warning, but can also be driven
@@ -17,7 +17,7 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
  1 file changed, 17 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
-index afb455210bd0..feb6d02494df 100644
+index d32a52ab00a4..3251c55fb7d8 100644
 --- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
 +++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
 @@ -51,6 +51,23 @@ &esdhc1 {
@@ -45,5 +45,5 @@ index afb455210bd0..feb6d02494df 100644
  	status = "okay";
  
 -- 
-2.35.3
+2.43.0
 

@@ -1,7 +1,7 @@
-From 402f33f4a31ebfa8b4a03adee2b1940878cadc74 Mon Sep 17 00:00:00 2001
+From 896bc6aa5f6c64f7ef145fd74a7ad636bc18db05 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 2 Nov 2024 18:30:53 +0100
-Subject: [PATCH 09/10] board: solidrun: lx2160acex7: enable reading tlv eeprom
+Subject: [PATCH 09/16] board: solidrun: lx2160acex7: enable reading tlv eeprom
  mac addresses
 
 Enable tlv eeprom support in u-boot configuration to execute

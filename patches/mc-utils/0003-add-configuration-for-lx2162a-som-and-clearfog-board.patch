@@ -1,7 +1,7 @@
-From 6e7355c062f643227f7d80029bad46f8542048d2 Mon Sep 17 00:00:00 2001
+From 7ee024fee510f314ebb4434b306cf4a4c0dd2d08 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Mon, 28 Oct 2024 17:01:33 +0100
-Subject: [PATCH] add configuration for lx2162a som and clearfog board
+Subject: [PATCH 3/5] add configuration for lx2162a som and clearfog board
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---

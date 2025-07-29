@@ -1,0 +1,119 @@
+From 53911c00d9d8301fb11788a2124edfcdbc3b8188 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 31 Oct 2024 17:14:25 +0100
+Subject: [PATCH 17/21] arm64: dts: lx2160a-clearfog-itx: set fixed link for
+ qsfp ports
+
+As QSFP is not currenly supported in the Linux kernel no attempt is made
+to model this detail of Honeycomb and Clearfog-CX boards.
+
+Vendor bootloader used to set up the ethernet ports which are routed to
+qsfp connector as fixed links in MC firmware depending on selected
+serdes protocol.
+These firmware side fixed links worked on linux side without any
+explicit configuration.
+
+The LX2160A also supports runtime configuration of network protocols on
+ethernet ports and serdes lanes using generic phys. This requires
+changing the interface type on firmware side to type "PHY".
+
+The standard SFP ports on Honeycomb / Clearfog-CX already rely on
+interface type "PHY" to report link and switch ethernet protocol at
+runtime based on SFP module properties.
+
+When interface type is on firmware side is "PHY", dpaa2 driver
+configures ethernet ports based on runtime information such as SFP
+modules properties and reported link status, or a dedicated phy on mdio
+bus.
+
+In lack of actual QSFP support set up the affected ethernet ports for
+fixed 10Gbps link, and enable their respective pcs nodes.
+This ensures that when firmware set interface type "PHY", the port and
+serdes lanes are configured properly to allow TX and RX of packets.
+
+It also simplifies configuration for users by allowing selection of
+interface speed (e.g. 10 or 25Gbps with serdes 1 protocol 18) in
+device-tree rather than firmware.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../freescale/fsl-lx2160a-clearfog-itx.dtsi   | 56 +++++++++++++++++++
+ 1 file changed, 56 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+index af6258b2fe82..4815f005278f 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+@@ -60,6 +60,46 @@ sfp3: sfp-3 {
+ 	};
+ };
+ 
++&dpmac3 {
++	phys = <&serdes_1 7>;
++	phy-connection-type = "10gbase-r";
++
++	fixed-link {
++	      speed = <10000>;
++	      full-duplex;
++	};
++};
++
++&dpmac4 {
++	phys = <&serdes_1 6>;
++	phy-connection-type = "10gbase-r";
++
++	fixed-link {
++	      speed = <10000>;
++	      full-duplex;
++	};
++};
++
++&dpmac5 {
++	phys = <&serdes_1 5>;
++	phy-connection-type = "10gbase-r";
++
++	fixed-link {
++	      speed = <10000>;
++	      full-duplex;
++	};
++};
++
++&dpmac6 {
++	phys = <&serdes_1 4>;
++	phy-connection-type = "10gbase-r";
++
++	fixed-link {
++	      speed = <10000>;
++	      full-duplex;
++	};
++};
++
+ &dpmac7 {
+ 	sfp = <&sfp0>;
+ 	managed = "in-band-status";
+@@ -104,6 +144,22 @@ &pcie5 {
+ 	status = "okay";
+ };
+ 
++&pcs_mdio3 {
++	status = "okay";
++};
++
++&pcs_mdio4 {
++	status = "okay";
++};
++
++&pcs_mdio5 {
++	status = "okay";
++};
++
++&pcs_mdio6 {
++	status = "okay";
++};
++
+ &pcs_mdio7 {
+ 	status = "okay";
+ };
+-- 
+2.43.0
+

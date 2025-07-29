@@ -1,7 +1,7 @@
-From cbb5b8743e3790dd9172a6b9146e60dfaec221ac Mon Sep 17 00:00:00 2001
+From de8adfb90d280f731e0c45c17d382186280413fb Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Wed, 6 Nov 2024 11:18:12 +0100
-Subject: [PATCH] lx2160acex7: add configuration for serdes 1 protocol 4
+Subject: [PATCH 17/22] lx2160acex7: add configuration for serdes 1 protocol 4
 
 This configuration can boot, but currently leads to issues on
 clearfog-cx in linux.

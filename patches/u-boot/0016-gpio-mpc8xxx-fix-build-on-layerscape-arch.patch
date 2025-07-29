@@ -1,0 +1,29 @@
+From 3b3cff1e3f56f9ecd532f1fdc9b01963640bd2bd Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 29 Jul 2025 11:09:55 +0200
+Subject: [PATCH 16/16] gpio: mpc8xxx: fix build on layerscape arch
+
+asm/gpio.h include does not pull in the arch-specific gpio header for
+layerscape - include it explicitly for now (likely breaking powerpc
+platforms)
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/gpio/mpc8xxx_gpio.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/gpio/mpc8xxx_gpio.c b/drivers/gpio/mpc8xxx_gpio.c
+index f7ffd8926ad..e30d434ae82 100644
+--- a/drivers/gpio/mpc8xxx_gpio.c
++++ b/drivers/gpio/mpc8xxx_gpio.c
+@@ -13,6 +13,7 @@
+ #include <dm.h>
+ #include <mapmem.h>
+ #include <asm/gpio.h>
++#include <asm/arch-fsl-layerscape/gpio.h>
+ #include <asm/io.h>
+ #include <dm/of_access.h>
+ 
+-- 
+2.43.0
+

@@ -1,7 +1,8 @@
-From 5a5ec65c0eb53efbcb69894576d7d04f671a730e Mon Sep 17 00:00:00 2001
+From d02b7c37d5db76421f98970ffeeba754c2aa3923 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Wed, 12 Jun 2024 15:19:39 +0200
-Subject: [PATCH] add configuration solidrun lx2160a-cex-7 on clearfog-cx board
+Subject: [PATCH 01/22] add configuration solidrun lx2160a-cex-7 on clearfog-cx
+ board
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---
@@ -946,5 +947,5 @@ index 0000000..e99a12b
 +#include <../lx2160acex7/include/common_pbi.rcwi>
 +#include <../lx2160acex7/clearfog-cx/sd1_8_eq.rcwi>
 -- 
-2.35.3
+2.43.0
 

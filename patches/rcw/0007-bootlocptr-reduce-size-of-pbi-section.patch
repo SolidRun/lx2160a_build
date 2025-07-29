@@ -1,7 +1,7 @@
-From 86b80b4442027c2fa4f22bb3aa602abb0e15ff85 Mon Sep 17 00:00:00 2001
+From 366ea674426ea381c85e6fa6144866d75ba2defb Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Mon, 7 Oct 2024 14:37:13 +0200
-Subject: [PATCH] bootlocptr: reduce size of pbi section
+Subject: [PATCH 07/22] bootlocptr: reduce size of pbi section
 
 - Remove duplicate 'loadc' commands, the condition register value is not
   affected by 'jump' and 'jumpc'. Saves 6 words.

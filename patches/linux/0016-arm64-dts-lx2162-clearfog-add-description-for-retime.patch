@@ -1,0 +1,52 @@
+From 81acb6ab0d0019f9059ac55d2933c345344d92ff Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 16 Apr 2023 13:24:31 +0300
+Subject: [PATCH 16/21] arm64: dts: lx2162-clearfog: add description for
+ retimer
+
+LX2162 Clearfog has a retimer on 2x SFP+ connectors.
+Add a node for the retimer and link it to the appropriate mac nodes.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../boot/dts/freescale/fsl-lx2162a-clearfog.dts      | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+index eafef8718a0f..1758e91fdbcf 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+@@ -103,13 +103,15 @@ &dpmac4 {
+ &dpmac5 {
+ 	sfp = <&sfp_bt>;
+ 	managed = "in-band-status";
+-	phys = <&serdes_1 5>;
++	phys = <&serdes_1 5>, <&retimer 2>, <&retimer 3>;
++	phy-names = "serdes", "retimer", "retimer";
+ };
+ 
+ &dpmac6 {
+ 	sfp = <&sfp_bb>;
+ 	managed = "in-band-status";
+-	phys = <&serdes_1 4>;
++	phys = <&serdes_1 4>, <&retimer 0>, <&retimer 1>;
++	phy-names = "serdes", "retimer", "retimer";
+ };
+ 
+ &dpmac11 {
+@@ -241,7 +243,11 @@ &ethernet_phy0 {
+ &i2c2 {
+ 	status = "okay";
+ 
+-	/* retimer@18 */
++	retimer: retimer@18 {
++		compatible = "ti,ds250df410";
++		reg = <0x18>;
++		#phy-cells = <1>;
++	};
+ 
+ 	i2c-mux@70 {
+ 		compatible = "nxp,pca9546";
+-- 
+2.43.0
+

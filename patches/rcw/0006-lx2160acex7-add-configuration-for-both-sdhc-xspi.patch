@@ -1,7 +1,7 @@
-From ac13e12390764b8770227c0032f62994ece7e17b Mon Sep 17 00:00:00 2001
+From 8deb1eb275b202156c9f9f5f2218efe1ca02eb21 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 28 Sep 2024 17:40:04 +0200
-Subject: [PATCH 6/6] lx2160acex7: add configuration for both sdhc & xspi
+Subject: [PATCH 06/22] lx2160acex7: add configuration for both sdhc & xspi
 
 Add "auto" configuration supporting both sdhc and xspi boot sources.
 A special pbi section is added setting boot location pointer according
