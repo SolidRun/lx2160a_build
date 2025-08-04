@@ -1,7 +1,7 @@
 FROM python:slim-bullseye
 
 # enable backports
-RUN printf "deb http://deb.debian.org/debian bullseye-backports main\n" >> /etc/apt/sources.list
+RUN printf "deb https://archive.debian.org/debian/ bullseye-backports main\n" >> /etc/apt/sources.list
 
 # retry at least 3 times to succeed on sketchy connections
 RUN printf 'Acquire::http { Proxy "%s"; };\n' $APTPROXY | tee -a /etc/apt/apt.conf.d/proxy
