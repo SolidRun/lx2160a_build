@@ -1,0 +1,122 @@
+From 84cfc876d2a76275f906be9fd108673002039e8e Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 5 Aug 2025 13:47:14 +0200
+Subject: [PATCH 83/83] net: phy: marvell: 88e1111: define gigabit features
+
+When connecting RJ45 SFP modules to Linux an ethernet phy is expected -
+and probed on the i2c bus when possible. Once the PHY probed, phylink
+populates the supported link modes for the netdev based on bmsr
+register bits set at the time (see phy_device.c: phy_probe).
+
+Marvell phy driver probe function only allocates memory, leaving actual
+configuration for config_init callback.
+This means the supported link modes of the netdev depend entirely on the
+power-on status of the phy bmsr register.
+
+Certain Cisco SFP modules such as GLC-T and GLC-TE have invalid
+configuration at power-on: MII_M1111_HWCFG_MODE_COPPER_1000X_AN
+This means fiber with automatic negotiation to copper. As the module
+exhibits a physical RJ45 connector this configuration is wrong.
+As a consequence after power-on the bmsr does not set bits for 10/100
+modes.
+
+During config_init marvell phy driver identifies the correct intended
+MII_M1111_HWCFG_MODE_SGMII_NO_CLK which means sgmii with automatic
+negotiation to copper, and configures the phy accordingly.
+
+At this point the bmsr register correctly indicates support for 10/100
+link modes - however the netedev supported modes bitmask is never
+updated.
+
+Hence the netdev fails to negotiate or link-up at 10/100
+speeds, limiting to 1000 links only.
+
+Explicitly define features for 88e1111 phy to ensure that all supported
+modes are available at runtime even when phy power-on configuration was
+invalid.
+
+[1] known functional 1Gbps RJ45 SFP module with 88E1111 PHY
+[   75.117858] sfp c2-at-sfp: module LINKTEL          LX1801CNR        rev 1.0  sn 1172623934       dc 170628
+[   75.127723] drivers/net/phy/sfp-bus.c:284: sfp_parse_support: 1000baseT_Half
+[   75.134779] drivers/net/phy/sfp-bus.c:285: sfp_parse_support: 1000baseT_Full
+[   75.141831] phylink_sfp_module_insert: sfp_may_have_phy - delaying phylink_sfp_config
+[   75.204100] drivers/net/phy/phy_device.c:2942: phy_probe
+[   75.212828] drivers/net/phy/phy_device.c:2961: phy_probe: phydev->drv->probe
+[   75.228017] drivers/net/phy/phy_device.c:2983: phy_probe: genphy_read_abilities
+[   75.246019] drivers/net/phy/phy_device.c:2502: genphy_read_abilities: MII_MARVELL_PHY_PAGE: 0x00
+[   75.263045] drivers/net/phy/phy_device.c:2507: genphy_read_abilities: MII_BMSR: 0x7949
+[   75.279282] sfp_add_phy
+[   75.287150] phylink_sfp_connect_phy: calling phylink_sfp_config with phy settings
+[   75.302778] drivers/net/phy/sfp-bus.c:445: sfp_select_interface: PHY_INTERFACE_MODE_SGMII
+[   75.302778]
+[   75.320600] m88e1111_config_init
+[   75.334333] drivers/net/phy/marvell.c:905: m88e1111_config_init: MII_M1111_PHY_EXT_SR: 0x8084
+[   75.348694] m88e1111_config_init: sgmii
+[   75.364329] drivers/net/phy/marvell.c:787: m88e1111_config_init_hwcfg_mode: MII_M1111_PHY_EXT_SR: 0x8084
+[   75.450737] fsl_dpaa2_eth dpni.0 eth0: PHY [i2c:c2-at-sfp:16] driver [Marvell 88E1111] (irq=POLL)
+[   75.461329] sfp_sm_probe_for_phy: tried to probe clause 22 phy: 0
+[   75.461333] phy detected after 0 retries
+Settings for eth0:
+        Supported ports: [ TP MII FIBRE ]
+        Supported link modes:   10baseT/Full
+                                100baseT/Full
+                                1000baseT/Full
+        Supports auto-negotiation: Yes
+        Advertised link modes:  10baseT/Full
+                                100baseT/Full
+                                1000baseT/Full
+        Advertised pause frame use: Symmetric Receive-only
+        Advertised auto-negotiation: Yes
+[   77.445537] sfp c2-at-sfp: module removed
+
+[2] problematic 1Gbps RJ45 SFP module with 88E1111 PHY before this patch
+[   84.463372] sfp c2-at-sfp: module CISCO-AVAGO      ABCU-5710RZ-CS2  rev      sn AGM1131246C      dc 070803
+[   84.473218] drivers/net/phy/sfp-bus.c:284: sfp_parse_support: 1000baseT_Half
+[   84.480267] drivers/net/phy/sfp-bus.c:285: sfp_parse_support: 1000baseT_Full
+[   84.487314] sfp c2-at-sfp: Unknown/unsupported extended compliance code: 0x01
+[   84.487316] phylink_sfp_module_insert: sfp_may_have_phy - delaying phylink_sfp_config
+[   84.548557] drivers/net/phy/phy_device.c:2942: phy_probe
+[   84.557011] drivers/net/phy/phy_device.c:2961: phy_probe: phydev->drv->probe
+[   84.572223] drivers/net/phy/phy_device.c:2983: phy_probe: genphy_read_abilities
+[   84.589831] drivers/net/phy/phy_device.c:2502: genphy_read_abilities: MII_MARVELL_PHY_PAGE: 0x00
+[   84.606107] drivers/net/phy/phy_device.c:2507: genphy_read_abilities: MII_BMSR: 0x149
+[   84.622177] sfp_add_phy
+[   84.631256] phylink_sfp_connect_phy: calling phylink_sfp_config with phy settings
+[   84.631261] drivers/net/phy/sfp-bus.c:445: sfp_select_interface: PHY_INTERFACE_MODE_SGMII
+[   84.631261]
+[   84.650011] m88e1111_config_init
+[   84.667424] drivers/net/phy/marvell.c:905: m88e1111_config_init: MII_M1111_PHY_EXT_SR: 0x9088
+[   84.676137] m88e1111_config_init: sgmii
+[   84.697088] drivers/net/phy/marvell.c:787: m88e1111_config_init_hwcfg_mode: MII_M1111_PHY_EXT_SR: 0x9084
+[   84.794983] fsl_dpaa2_eth dpni.0 eth0: PHY [i2c:c2-at-sfp:16] driver [Marvell 88E1111] (irq=POLL)
+[   84.805537] sfp_sm_probe_for_phy: tried to probe clause 22 phy: 0
+[   84.819781] phy detected after 0 retries
+Settings for eth4:
+       Supported ports: [ TP MII ]
+       Supported link modes:   1000baseT/Full
+                               1000baseX/Full
+       Supports auto-negotiation: Yes
+       Advertised link modes:  1000baseT/Full
+                               1000baseX/Full
+[   86.149536] sfp c2-at-sfp: module removed
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/phy/marvell.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/net/phy/marvell.c b/drivers/net/phy/marvell.c
+index 7059cbd7fe33..7ff88b323744 100644
+--- a/drivers/net/phy/marvell.c
++++ b/drivers/net/phy/marvell.c
+@@ -2737,6 +2737,7 @@ static struct phy_driver marvell_drivers[] = {
+ 		.name = "Marvell 88E1111",
+ 		/* PHY_GBIT_FEATURES */
+ 		.probe = marvell_probe,
++		.features = PHY_GBIT_FIBRE_FEATURES,
+ 		.config_init = m88e1111_config_init,
+ 		.config_aneg = m88e1111_config_aneg,
+ 		.read_status = marvell_read_status,
+-- 
+2.43.0
+

@@ -1,0 +1,55 @@
+From db2e1ed433f445e94985bb5bf86645ac276de762 Mon Sep 17 00:00:00 2001
+From: Robert Hancock <robert.hancock@calian.com>
+Date: Tue, 16 Feb 2021 14:53:30 -0600
+Subject: [PATCH 82/83] net: phy: marvell: Ensure SGMII auto-negotiation is
+ enabled for 88E1111
+
+When 88E1111 is operating in SGMII mode, auto-negotiation should be enabled
+on the SGMII side so that the link will come up properly with PCSes which
+normally have auto-negotiation enabled. This is normally the case when the
+PHY defaults to SGMII mode at power-up, however if we switched it from some
+other mode like 1000Base-X, as may happen in some SFP module situations,
+it may not be, particularly for modules which have 1000Base-X
+auto-negotiation defaulting to disabled.
+
+Call genphy_check_and_restart_aneg on the fiber page to ensure that auto-
+negotiation is properly enabled on the SGMII interface.
+
+Signed-off-by: Robert Hancock <robert.hancock@calian.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/phy/marvell.c | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/net/phy/marvell.c b/drivers/net/phy/marvell.c
+index 3ad23397b1c9..7059cbd7fe33 100644
+--- a/drivers/net/phy/marvell.c
++++ b/drivers/net/phy/marvell.c
+@@ -657,16 +657,19 @@ static int m88e1111_config_aneg(struct phy_device *phydev)
+ 	if (err < 0)
+ 		goto error;
+ 
+-	/* Do not touch the fiber page if we're in copper->sgmii mode */
+-	if (phydev->interface == PHY_INTERFACE_MODE_SGMII)
+-		return 0;
+-
+ 	/* Then the fiber link */
+ 	err = marvell_set_page(phydev, MII_MARVELL_FIBER_PAGE);
+ 	if (err < 0)
+ 		goto error;
+ 
+-	err = marvell_config_aneg_fiber(phydev);
++	if (phydev->interface == PHY_INTERFACE_MODE_SGMII)
++		/* Do not touch the fiber advertisement if we're in copper->sgmii mode.
++		 * Just ensure that SGMII-side autonegotiation is enabled.
++		 * If we switched from some other mode to SGMII it may not be.
++		 */
++		err = genphy_check_and_restart_aneg(phydev, false);
++	else
++		err = marvell_config_aneg_fiber(phydev);
+ 	if (err < 0)
+ 		goto error;
+ 
+-- 
+2.43.0
+
