@@ -1,0 +1,132 @@
+From fdc505da33e235ce9d99cdf9958fa48283b5ae5d Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 6 Aug 2025 19:14:37 +0200
+Subject: [PATCH 23/24] lx2160asi: add procedure splitting sd1 lanes A-D 40GE.2
+ into 4x10g
+
+Implement custom procedure to reconfigure SD1 protocols 19/20 splitting
+the 40GE.2 port on lanes A-D into 4x XFI.
+
+The procedure is implemented in new rcw file e40g2_split.rcw, following
+the existing e100g1_split.rcw closely.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2160asi/e40g2_split.rcw | 68 +++++++++++++++++++++++++++++++++++++++
+ serdes_28g.rcw            | 18 +++++++++++
+ 2 files changed, 86 insertions(+)
+ create mode 100644 lx2160asi/e40g2_split.rcw
+
+diff --git a/lx2160asi/e40g2_split.rcw b/lx2160asi/e40g2_split.rcw
+new file mode 100644
+index 0000000..c6b13ad
+--- /dev/null
++++ b/lx2160asi/e40g2_split.rcw
+@@ -0,0 +1,68 @@
++/*
++ * Split the 40G MAC.2 into 4 x 10G MAC
++ *
++ * NOTICE: The DPC file must be updated as below in order for the MC firmware
++ * to pick up on the change.
++ *
++ * board_info {
++ *	serdes {
++ *		/* Do not rely on the RCW protocol number, but rather read
++ *		 * the protocol status registers (PSSR) for each SerDes
++ *		 * block. That information will be used to enable/disable
++ *		 * the appropriate MACs.
++ *		 */
++/*		follow_hw_pssr;
++ *	};
++ * };
++ */
++#define SRDS_BASE 0x1ea0000 /* SerDes 1 */
++#include <../serdes_28g.rcw>
++
++.pbi
++/* Issue a halt request on all the lanes (A-D) */
++write LNmTRSTCTL(0), T_HLT_REQ(1)
++write LNmRRSTCTL(0), R_HLT_REQ(1)
++
++write LNmTRSTCTL(1), T_HLT_REQ(1)
++write LNmRRSTCTL(1), R_HLT_REQ(1)
++
++write LNmTRSTCTL(2), T_HLT_REQ(1)
++write LNmRRSTCTL(2), R_HLT_REQ(1)
++
++write LNmTRSTCTL(3), T_HLT_REQ(1)
++write LNmRRSTCTL(3), R_HLT_REQ(1)
++
++wait 100
++
++/* Convert Lanes to be configured for 10G. Only the LNmGCR0 needs to be
++ * updated, all other per lane registers are the same between 10G and 40G.
++ */
++write LNmGCR0(0), PORT_RST_LEFT(0) | PORT_LN0_B(0) | PROTO_SEL(0xA) | IF_WIDTH(0x2)
++write LNmGCR0(1), PORT_RST_LEFT(0) | PORT_LN0_B(0) | PROTO_SEL(0xA) | IF_WIDTH(0x2)
++write LNmGCR0(2), PORT_RST_LEFT(0) | PORT_LN0_B(0) | PROTO_SEL(0xA) | IF_WIDTH(0x2)
++write LNmGCR0(3), PORT_RST_LEFT(0) | PORT_LN0_B(0) | PROTO_SEL(0xA) | IF_WIDTH(0x2)
++
++/* Configure the PCC registers */
++/* Only the 40G MAC.1 will remain enabled. PCCE: 0x11000000 -> 0x10000000 */
++write PCCE, E40GA_CFG(1)
++
++/* Enable the 10G protocol converters for  XFI. PCCE: 0x00000000 -> 0x00009999 */
++write PCCC, SXGMIIGE_CFG(1) | SXGMIIGF_CFG(1) | SXGMIIGG_CFG(1) | SXGMIIGH_CFG(1) | SXGMIIGE_XFI(1) | SXGMIIGF_XFI(1) | SXGMIIGG_XFI(1) | SXGMIIGH_XFI(1)
++
++/* Issue a reset request on all the lanes (E-H) */
++write LNmTRSTCTL(0), T_RST_REQ(1)
++write LNmRRSTCTL(0), R_RST_REQ(1)
++
++write LNmTRSTCTL(1), T_RST_REQ(1)
++write LNmRRSTCTL(1), R_RST_REQ(1)
++
++write LNmTRSTCTL(2), T_RST_REQ(1)
++write LNmRRSTCTL(2), R_RST_REQ(1)
++
++write LNmTRSTCTL(3), T_RST_REQ(1)
++write LNmRRSTCTL(3), R_RST_REQ(1)
++
++wait 100
++.end
++
++#undef SRDS_BASE
+diff --git a/serdes_28g.rcw b/serdes_28g.rcw
+index e57be41..89de7c3 100644
+--- a/serdes_28g.rcw
++++ b/serdes_28g.rcw
+@@ -59,6 +59,22 @@
+ 
+ /* PCCD contains the protocol configuration for SXGMII/XFI */
+ #define PCCC			(SRDS_BASE + 0x10B0)
++#define  SXGMIIGA_XFI(x)		(((x) << 31) & 0x80000000)
++#define  SXGMIIGB_XFI(x)		(((x) << 27) & 0x08000000)
++#define  SXGMIIGC_XFI(x)		(((x) << 23) & 0x00800000)
++#define  SXGMIIGD_XFI(x)		(((x) << 19) & 0x00080000)
++#define  SXGMIIGE_XFI(x)		(((x) << 15) & 0x00008000)
++#define  SXGMIIGF_XFI(x)		(((x) << 11) & 0x00000800)
++#define  SXGMIIGG_XFI(x)		(((x) << 7) & 0x00000080)
++#define  SXGMIIGH_XFI(x)		(((x) << 3) & 0x00000008)
++#define  SXGMIIGA_CFG(x)		(((x) << 28) & 0x70000000)
++#define  SXGMIIGB_CFG(x)		(((x) << 24) & 0x07000000)
++#define  SXGMIIGC_CFG(x)		(((x) << 20) & 0x00700000)
++#define  SXGMIIGD_CFG(x)		(((x) << 16) & 0x00070000)
++#define  SXGMIIGE_CFG(x)		(((x) << 12) & 0x00007000)
++#define  SXGMIIGF_CFG(x)		(((x) << 8) & 0x00000700)
++#define  SXGMIIGG_CFG(x)		(((x) << 4) & 0x00000070)
++#define  SXGMIIGH_CFG(x)		((x) & 0x00000007)
+ 
+ /* PCCD contains the protocol configuration for E25G */
+ #define PCCD			(SRDS_BASE + 0x10B4)
+@@ -75,6 +91,8 @@
+ #define PCCE			(SRDS_BASE + 0x10B8)
+ #define  E100GB_CFG(x)		(((x) << 8) & 0x00000700)
+ #define  E100GA_CFG(x)		(((x) << 12) & 0x000007000)
++#define  E40GB_CFG(x)		(((x) << 24) & 0x07000000)
++#define  E40GA_CFG(x)		(((x) << 28) & 0x070000000)
+ 
+ #define PEXaCR0(a)		(SRDS_BASE + (0x40 * (a)) + 0x1200)
+ 
+-- 
+2.43.0
+

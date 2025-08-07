@@ -1,0 +1,1122 @@
+From b409cc6b238f224bb5c8b7b5545a28a67660321e Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 7 Aug 2025 16:09:52 +0200
+Subject: [PATCH] lx2160acex7: clearfog-cx: add qsfp 40g + 4x 10g configuration
+
+Add new configuration for Clearfog-CX with customised SD1 protocol 20,
+featuring 1x 40G on QSFP and 4x 10G on SFP+ connectors.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../clearfog-cx-s1_20-s2_0-dpc.dts            | 105 ++
+ .../clearfog-cx-s1_20-s2_0-dpl.dts            | 986 ++++++++++++++++++
+ 2 files changed, 1091 insertions(+)
+ create mode 100644 config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_20-s2_0-dpc.dts
+ create mode 100644 config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_20-s2_0-dpl.dts
+
+diff --git a/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_20-s2_0-dpc.dts b/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_20-s2_0-dpc.dts
+new file mode 100644
+index 0000000..42394d9
+--- /dev/null
++++ b/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_20-s2_0-dpc.dts
+@@ -0,0 +1,105 @@
++/*
++ * Copyright 2018 NXP
++ * Copyright 2025 Josua Mayer <josua@solid-run.com>
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ *   * Redistributions of source code must retain the above copyright
++ *     notice, this list of conditions and the following disclaimer.
++ *   * Redistributions in binary form must reproduce the above copyright
++ *     notice, this list of conditions and the following disclaimer in the
++ *     documentation and/or other materials provided with the distribution.
++ *   * Neither the name of the above-listed copyright holders nor the
++ *     names of any contributors may be used to endorse or promote products
++ *     derived from this software without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
++ */
++
++/*
++ * This DPC configures SolidRun Clearfog-CX with 4x10Gbps + 1x40Gbps SerDes & 1Gbps RGMII ports.
++ * It relies on customised serdes protocol 20 in rcw.
++ */
++
++/dts-v1/;
++
++/ {
++	resources {
++		icid_pools {
++			icid_pool@1 {
++				num = <0x64>;
++				base_icid = <0x0>;
++			};
++		};
++	};
++
++	mc_general {
++		log {
++			mode = "LOG_MODE_ON";
++			level = "LOG_LEVEL_WARNING";
++		};
++
++		console {
++			mode = "CONSOLE_MODE_OFF";
++			uart_id = <0x4>;
++			level = "LOG_LEVEL_WARNING";
++		};
++	};
++
++	controllers {
++		qbman {
++			/* Transform this number of 8-WQ channels into four times
++			 * as many 2-WQ channels. This allows the creation of a
++			 * larger number of DPCONs.
++			 */
++			wq_ch_conversion = <32>;
++		};
++	};
++
++	board_info {
++		ports {
++			mac@1 {
++				link_type = "MAC_LINK_TYPE_FIXED";
++			};
++
++			mac@7 {
++				link_type = "MAC_LINK_TYPE_PHY";
++			};
++
++			mac@8 {
++				link_type = "MAC_LINK_TYPE_PHY";
++			};
++
++			mac@9 {
++				link_type = "MAC_LINK_TYPE_PHY";
++			};
++
++			mac@10 {
++				link_type = "MAC_LINK_TYPE_PHY";
++			};
++
++			mac@17 {
++				link_type = "MAC_LINK_TYPE_PHY";
++			};
++		};
++
++		serdes {
++			/* Do not rely on the RCW protocol number, but rather read
++			 * the protocol status registers (PSSR) for each SerDes
++			 * block. That information will be used to enable/disable
++			 * the appropriate MACs.
++			 */
++			follow_hw_pssr;
++		};
++	};
++};
+diff --git a/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_20-s2_0-dpl.dts b/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_20-s2_0-dpl.dts
+new file mode 100644
+index 0000000..7831412
+--- /dev/null
++++ b/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_20-s2_0-dpl.dts
+@@ -0,0 +1,986 @@
++/*
++ * Copyright 2018 NXP
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ *   * Redistributions of source code must retain the above copyright
++ *     notice, this list of conditions and the following disclaimer.
++ *   * Redistributions in binary form must reproduce the above copyright
++ *     notice, this list of conditions and the following disclaimer in the
++ *     documentation and/or other materials provided with the distribution.
++ *   * Neither the name of the above-listed copyright holders nor the
++ *     names of any contributors may be used to endorse or promote products
++ *     derived from this software without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
++ */
++
++/dts-v1/;
++/ {
++	dpl-version = <10>;
++	/*****************************************************************
++	 * Containers
++	 *****************************************************************/
++	containers {
++
++		dprc@1 {
++			compatible = "fsl,dprc";
++			parent = "none";
++			options = "DPRC_CFG_OPT_SPAWN_ALLOWED", "DPRC_CFG_OPT_ALLOC_ALLOWED", "DPRC_CFG_OPT_OBJ_CREATE_ALLOWED", "DPRC_CFG_OPT_TOPOLOGY_CHANGES_ALLOWED", "DPRC_CFG_OPT_IRQ_CFG_ALLOWED";
++
++			objects {
++
++				/* -------------- DPBPs --------------*/
++				obj_set@dpbp {
++					type = "dpbp";
++					ids = <0 1 2 3 4 5 >;
++				};
++
++				/* -------------- DPCONs --------------*/
++				obj_set@dpcon {
++					type = "dpcon";
++					ids = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 >;
++				};
++
++				/* -------------- DPIOs --------------*/
++				obj_set@dpio {
++					type = "dpio";
++					ids = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 >;
++				};
++
++				/* -------------- DPMACs --------------*/
++				obj_set@dpmac {
++					type = "dpmac";
++					ids = <1 7 8 9 10 17 >;
++				};
++
++				/* -------------- DPMCPs --------------*/
++				obj_set@dpmcp {
++					type = "dpmcp";
++					ids = <1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 >;
++				};
++
++				/* -------------- DPNIs --------------*/
++				obj_set@dpni {
++					type = "dpni";
++					ids = <0 >;
++				};
++
++				/* -------------- DPRTCs --------------*/
++				obj_set@dprtc {
++					type = "dprtc";
++					ids = <0 >;
++				};
++
++				/* -------------- DPSECIs --------------*/
++				obj_set@dpseci {
++					type = "dpseci";
++					ids = <0 >;
++				};
++			};
++		};
++	};
++
++	/*****************************************************************
++	 * Objects
++	 *****************************************************************/
++	objects {
++
++		dpbp@0 {
++			compatible = "fsl,dpbp";
++		};
++
++		dpbp@1 {
++			compatible = "fsl,dpbp";
++		};
++
++		dpbp@2 {
++			compatible = "fsl,dpbp";
++		};
++
++		dpbp@3 {
++			compatible = "fsl,dpbp";
++		};
++
++		dpbp@4 {
++			compatible = "fsl,dpbp";
++		};
++
++		dpbp@5 {
++			compatible = "fsl,dpbp";
++		};
++
++		dpcon@0 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@1 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@2 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@3 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@4 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@5 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@6 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@7 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@8 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@9 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@10 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@11 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@12 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@13 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@14 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@15 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@16 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@17 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@18 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@19 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@20 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@21 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@22 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@23 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@24 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@25 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@26 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@27 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@28 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@29 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@30 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@31 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@32 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@33 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@34 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@35 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@36 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@37 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@38 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@39 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@40 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@41 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@42 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@43 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@44 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@45 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@46 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@47 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@48 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@49 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@50 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@51 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@52 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@53 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@54 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@55 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@56 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@57 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@58 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@59 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@60 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@61 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@62 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@63 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@64 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@65 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@66 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@67 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@68 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@69 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@70 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@71 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@72 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@73 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@74 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@75 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@76 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@77 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@78 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@79 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@80 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@81 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@82 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@83 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@84 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@85 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@86 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@87 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@88 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@89 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@90 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@91 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@92 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@93 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@94 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpcon@95 {
++			compatible = "fsl,dpcon";
++			num_priorities = <0x2>;
++		};
++
++		dpio@0 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@1 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@2 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@3 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@4 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@5 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@6 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@7 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@8 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@9 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@10 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@11 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@12 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@13 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@14 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpio@15 {
++			compatible = "fsl,dpio";
++			channel_mode = "DPIO_LOCAL_CHANNEL";
++			num_priorities = <0x8>;
++		};
++
++		dpmac@1 {
++			compatible = "fsl,dpmac";
++		};
++
++		dpmac@7 {
++			compatible = "fsl,dpmac";
++		};
++
++		dpmac@8 {
++			compatible = "fsl,dpmac";
++		};
++
++		dpmac@9 {
++			compatible = "fsl,dpmac";
++		};
++
++		dpmac@10 {
++			compatible = "fsl,dpmac";
++		};
++
++		dpmac@17 {
++			compatible = "fsl,dpmac";
++		};
++
++		dpmcp@1 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@2 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@3 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@4 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@5 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@6 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@7 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@8 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@9 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@10 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@11 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@12 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@13 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@14 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@15 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@16 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@17 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@18 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@19 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@20 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@21 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@22 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@23 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@24 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@25 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@26 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@27 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@28 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@29 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@30 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@31 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@32 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@33 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@34 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@35 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@36 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@37 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@38 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@39 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@40 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@41 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@42 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@43 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@44 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@45 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@46 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@47 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@48 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@49 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@50 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@51 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@52 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@53 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@54 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@55 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@56 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpmcp@57 {
++			compatible = "fsl,dpmcp";
++		};
++
++		dpni@0 {
++			compatible = "fsl,dpni";
++			type = "DPNI_TYPE_NIC";
++			num_queues = <16>;
++			num_tcs = <1>;
++			num_cgs = <1>;
++			mac_filter_entries = <16>;
++			vlan_filter_entries = <0>;
++			fs_entries = <64>;
++			qos_entries = <0>;
++			dist_key_size = <56>;
++			num_channels= <1>;
++			num_opr = <0>;
++		};
++
++		dprtc@0 {
++			compatible = "fsl,dprtc";
++		};
++
++		dpseci@0 {
++			compatible = "fsl,dpseci";
++			priorities = <1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1>;
++		};
++	};
++
++	/*****************************************************************
++	 * Connections
++	 *****************************************************************/
++	connections {
++
++		connection@1{
++			endpoint1 = "dpni@0";
++			endpoint2 = "dpmac@17";
++		};
++	};
++};
+-- 
+2.43.0
+

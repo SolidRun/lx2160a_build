@@ -98,6 +98,14 @@ case "${TARGET}" in
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
 	;;
+	LX2160A_CEX7_CLEARFOG-CX_20_5_*)
+		ATF_PLATFORM=lx2160acex7
+		DPC=clearfog-cx-s1_20-s2_0-dpc.dtb
+		DPL=clearfog-cx-s1_20-s2_0-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
+		OPTEE_PLATFORM=ls-lx2160ardb
+		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+	;;
 	LX2160A_CEX7_HONEYCOMB_4_5_*|LX2160A_CEX7_HONEYCOMB_8_5_*|LX2160A_CEX7_HONEYCOMB_8S_5_*|LX2160A_CEX7_HONEYCOMB_18_5_*)
 		ATF_PLATFORM=lx2160acex7
 		DPC=clearfog-cx-s1_8-s2_0-dpc.dtb
