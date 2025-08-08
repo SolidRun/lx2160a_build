@@ -1,7 +1,7 @@
 From 7ad4f0abc2d1e94a889a564cb96ac4009c06484b Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Mon, 28 Jul 2025 20:09:14 +0000
-Subject: [PATCH 15/16] upgrade ls-5.15 -> ls-6.6
+Subject: [PATCH 15/25] upgrade ls-5.15 -> ls-6.6
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---

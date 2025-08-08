@@ -1,7 +1,7 @@
 From 0c6b7ceac3a6957d01c180f6f1e70291ffd28c8b Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 26 Oct 2024 13:50:39 +0200
-Subject: [PATCH 06/16] configs: lx2160-cex7: enable additional drivers
+Subject: [PATCH 06/25] configs: lx2160-cex7: enable additional drivers
 
 ---
  configs/lx2160acex7_tfa_SECURE_BOOT_defconfig | 11 +++++++++++

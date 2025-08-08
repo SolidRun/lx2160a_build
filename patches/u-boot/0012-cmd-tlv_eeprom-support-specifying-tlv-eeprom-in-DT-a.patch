@@ -1,7 +1,7 @@
 From 69a4bf46e2985466c0cae5fe5f609e06be7aa610 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Mon, 4 Nov 2024 15:08:01 +0100
-Subject: [PATCH 12/16] cmd: tlv_eeprom: support specifying tlv eeprom in DT
+Subject: [PATCH 12/25] cmd: tlv_eeprom: support specifying tlv eeprom in DT
  alias tlv[0-255]
 
 Systems might have many eeproms of which only some might be used for TLV

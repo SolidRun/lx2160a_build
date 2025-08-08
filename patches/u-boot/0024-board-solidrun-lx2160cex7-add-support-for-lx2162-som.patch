@@ -1,0 +1,164 @@
+From d216b7ce085b2cb39149fd1ab206fa88ebd6f1b8 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 8 Aug 2025 14:17:13 +0200
+Subject: [PATCH 24/25] board: solidrun: lx2160cex7: add support for lx2162 som
+
+Compile with CONFIG_DEFAULT_DEVICE_TREE=fsl-lx2162a-sr-som
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm/dts/fsl-lx2162a-sr-som-u-boot.dtsi | 19 +++++
+ arch/arm/dts/fsl-lx2162a-sr-som.dts         | 25 +++++++
+ arch/arm/dts/fsl-lx2162a-sr-som.dtsi        | 82 +++++++++++++++++++++
+ 3 files changed, 126 insertions(+)
+ create mode 100644 arch/arm/dts/fsl-lx2162a-sr-som-u-boot.dtsi
+ create mode 100644 arch/arm/dts/fsl-lx2162a-sr-som.dts
+ create mode 100644 arch/arm/dts/fsl-lx2162a-sr-som.dtsi
+
+diff --git a/arch/arm/dts/fsl-lx2162a-sr-som-u-boot.dtsi b/arch/arm/dts/fsl-lx2162a-sr-som-u-boot.dtsi
+new file mode 100644
+index 00000000000..9e29851bb47
+--- /dev/null
++++ b/arch/arm/dts/fsl-lx2162a-sr-som-u-boot.dtsi
+@@ -0,0 +1,19 @@
++// SPDX-License-Identifier: GPL-2.0+
++
++#include <dt-bindings/gpio/gpio.h>
++
++/ {
++	aliases {
++		tlv0 = &config_eeprom;
++		serial0 = &uart0;
++	};
++};
++
++&uart0 {
++	status = "okay";
++};
++
++&usb1 {
++	/* u-boot lx2160a.dtsi enabled this by default, but LX2162 has single USB only */
++	status = "disabled";
++};
+diff --git a/arch/arm/dts/fsl-lx2162a-sr-som.dts b/arch/arm/dts/fsl-lx2162a-sr-som.dts
+new file mode 100644
+index 00000000000..21844e9418c
+--- /dev/null
++++ b/arch/arm/dts/fsl-lx2162a-sr-som.dts
+@@ -0,0 +1,25 @@
++// SPDX-License-Identifier: (GPL-2.0 OR MIT)
++/*
++ * Device Tree file for LX2162A-SoM Standalone (Generic Carrier Board)
++ *
++ * Copyright 2025 Josua Mayer <josua@solid-run.com>
++ */
++
++/dts-v1/;
++
++#include "fsl-lx2160a.dtsi"
++#include "fsl-lx2162a-sr-som.dtsi"
++
++/ {
++	model = "SolidRun LX2162A System on Module";
++	compatible = "solidrun,lx2162a-som", "fsl,lx2160a";
++};
++
++/* for SD-Card Boot */
++&esdhc0 {
++	sd-uhs-sdr104;
++	sd-uhs-sdr50;
++	sd-uhs-sdr25;
++	sd-uhs-sdr12;
++	status = "okay";
++};
+diff --git a/arch/arm/dts/fsl-lx2162a-sr-som.dtsi b/arch/arm/dts/fsl-lx2162a-sr-som.dtsi
+new file mode 100644
+index 00000000000..e914291e63a
+--- /dev/null
++++ b/arch/arm/dts/fsl-lx2162a-sr-som.dtsi
+@@ -0,0 +1,82 @@
++// SPDX-License-Identifier: (GPL-2.0 OR MIT)
++//
++// Device Tree file for LX2162A-SOM
++//
++// Copyright 2021 Rabeeh Khoury <rabeeh@solid-run.com>
++// Copyright 2023 Josua Mayer <josua@solid-run.com>
++
++&crypto {
++	status = "okay";
++};
++
++&dpmac17 {
++	phy-handle = <&ethernet_phy0>;
++	phy-connection-type = "rgmii-id";
++};
++
++&emdio1 {
++	status = "okay";
++
++	ethernet_phy0: ethernet-phy@1 {
++		reg = <1>;
++	};
++};
++
++&esdhc1 {
++	bus-width = <8>;
++	mmc-hs200-1_8v;
++	mmc-hs400-1_8v;
++	status = "okay";
++};
++
++&fspi {
++	status = "okay";
++
++	flash@0 {
++		compatible = "jedec,spi-nor";
++		reg = <0>;
++		m25p,fast-read;
++		spi-max-frequency = <50000000>;
++		/* The following setting enables 1-1-8 (CMD-ADDR-DATA) mode */
++		spi-rx-bus-width = <8>;
++		spi-tx-bus-width = <1>;
++	};
++};
++
++&i2c0 {
++	status = "okay";
++
++	fan-controller@18 {
++		compatible = "ti,amc6821";
++		reg = <0x18>;
++	};
++
++	ddr_spd: eeprom@51 {
++		compatible = "st,24c02", "atmel,24c02";
++		reg = <0x51>;
++		read-only;
++	};
++
++	config_eeprom: eeprom@57 {
++		compatible = "st,24c02", "atmel,24c02";
++		reg = <0x57>;
++	};
++};
++
++&i2c4 {
++	status = "okay";
++
++	variable_eeprom: eeprom@54 {
++		compatible = "st,24c2048", "atmel,24c2048";
++		reg = <0x54>;
++	};
++};
++
++&i2c5 {
++	status = "okay";
++
++	rtc@6f {
++		compatible = "microchip,mcp7940x";
++		reg = <0x6f>;
++	};
++};
+-- 
+2.43.0
+

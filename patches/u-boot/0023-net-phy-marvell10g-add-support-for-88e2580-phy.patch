@@ -1,0 +1,43 @@
+From ad8eeb922bf67b7e2ea552342425d96fcde228bc Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 8 Aug 2025 16:49:33 +0200
+Subject: [PATCH 23/25] net: phy: marvell10g: add support for 88e2580 phy
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/phy/marvell10g.c | 9 +++++++++
+ include/marvell_phy.h        | 1 +
+ 2 files changed, 10 insertions(+)
+
+diff --git a/drivers/net/phy/marvell10g.c b/drivers/net/phy/marvell10g.c
+index 9e64672f5ca..f5d8d18d10f 100644
+--- a/drivers/net/phy/marvell10g.c
++++ b/drivers/net/phy/marvell10g.c
+@@ -603,3 +603,12 @@ U_BOOT_PHY_DRIVER(mv88e2110_mv88e2111) = {
+ 	.data		= (ulong)&mv2110_mv2111_type,
+ 	.config		= mv3310_config,
+ };
++
++U_BOOT_PHY_DRIVER(mv88e2580) = {
++	.name		= "mv88e2580",
++	.uid		= MARVELL_PHY_ID_88E2580,
++	.mask		= MARVELL_PHY_ID_MASK,
++	.features	= PHY_10G_FEATURES,
++	.data		= (ulong)&mv3310_mv3340_type,
++	.config		= mv3310_config,
++};
+diff --git a/include/marvell_phy.h b/include/marvell_phy.h
+index 0f06c2287b5..8fab10be087 100644
+--- a/include/marvell_phy.h
++++ b/include/marvell_phy.h
+@@ -25,6 +25,7 @@
+ #define MARVELL_PHY_ID_88X3310		0x002b09a0
+ #define MARVELL_PHY_ID_88E2110		0x002b09b0
+ #define MARVELL_PHY_ID_88X2222		0x01410f10
++#define MARVELL_PHY_ID_88E2580		0x002b0bc3
+ 
+ /* Marvel 88E1111 in Finisar SFP module with modified PHY ID */
+ #define MARVELL_PHY_ID_88E1111_FINISAR	0x01ff0cc0
+-- 
+2.43.0
+

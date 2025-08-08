@@ -1,7 +1,7 @@
 From 991ad2df8e1e0e7f6a6ab9251427e4fa8d1e166a Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Mon, 4 Nov 2024 15:12:04 +0100
-Subject: [PATCH 13/16] board: solidrun: lx2160acex7: use dt alias for tlv
+Subject: [PATCH 13/25] board: solidrun: lx2160acex7: use dt alias for tlv
  eeprom
 
 LX2160A CEX-7 (and LX2162A SoM) have various eeproms competing for

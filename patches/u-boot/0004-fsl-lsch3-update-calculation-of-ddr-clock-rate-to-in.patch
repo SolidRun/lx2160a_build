@@ -1,7 +1,7 @@
 From 41537060c9327e7ccc57512387269a2f293a3557 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Tue, 8 Oct 2024 13:29:36 +0200
-Subject: [PATCH 04/16] fsl-lsch3: update calculation of ddr clock rate to
+Subject: [PATCH 04/25] fsl-lsch3: update calculation of ddr clock rate to
  include divider
 
 DDR clock is passes through a divider and a multiplier - and is then

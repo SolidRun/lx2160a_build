@@ -82,7 +82,7 @@ case "${TARGET}" in
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
 	;;
 	LX2160A_CEX7_CLEARFOG-CX_0_0_*)
-		# no networking, can be used as base for new configurations
+		# no serdes ports, can be used as base for new configurations
 		ATF_PLATFORM=lx2160acex7
 		DPC=lx2160a/LX2160A-CEX7/null-s1_0-s2_0-dpc.dtb
 		DPL=lx2160a/LX2160A-CEX7/null-s1_0-s2_0-dpl.dtb
@@ -115,6 +115,16 @@ case "${TARGET}" in
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
 		RCW_BOARD=CLEARFOG-CX
 	;;
+	LX2162A_SOM_CLEARFOG_0_0_0)
+		# no serdes ports, can be used as base for new configurations
+		ATF_PLATFORM=lx2162asom
+		DPC=lx2160a/LX2160A-CEX7/null-s1_0-s2_0-dpc.dtb
+		DPL=lx2160a/LX2160A-CEX7/null-s1_0-s2_0-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2162a-clearfog.dtb"
+		OPTEE_PLATFORM=ls-lx2160ardb
+		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+		UBOOT_FDT=fsl-lx2162a-sr-som
+	;;
 	LX2162A_SOM_CLEARFOG_3_9_0|LX2162A_SOM_CLEARFOG_18_9_0)
 		ATF_PLATFORM=lx2162asom
 		DPC=clearfog-s1_3-s2_9-dpc.dtb
@@ -122,6 +132,8 @@ case "${TARGET}" in
 		DEFAULT_FDT_FILE="freescale/fsl-lx2162a-clearfog.dtb"
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+		UBOOT_FDT=fsl-lx2162a-clearfog
+		UBOOT_ETHPRIME="DPMAC18@sgmii" # right-most bottom rj45 port
 	;;
 	LX2162A_SOM_CLEARFOG_3_7_0|LX2162A_SOM_CLEARFOG_3_11_0|LX2162A_SOM_CLEARFOG_18_7_0|LX2162A_SOM_CLEARFOG_18_11_0)
 		ATF_PLATFORM=lx2162asom
@@ -130,6 +142,8 @@ case "${TARGET}" in
 		DEFAULT_FDT_FILE="freescale/fsl-lx2162a-clearfog.dtb"
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+		UBOOT_FDT=fsl-lx2162a-clearfog
+		UBOOT_ETHPRIME="DPMAC18@sgmii" # right-most bottom rj45 port
 	;;
 	*)
 		echo "Please specify a supported TARGET configuration"
@@ -225,6 +239,8 @@ do_build_uboot() {
 	cd $ROOTDIR/build/u-boot
 	./scripts/kconfig/merge_config.sh configs/${UBOOT_DEFCONFIG} $ROOTDIR/configs/u-boot/lx2k_additions.config
 	test -n "${DEFAULT_FDT_FILE}" && printf "CONFIG_DEFAULT_FDT_FILE=\"%s\"\n" "${DEFAULT_FDT_FILE}" >> .config || true
+	test -n "${UBOOT_FDT}" && printf "CONFIG_DEFAULT_DEVICE_TREE=\"%s\"\n" "${UBOOT_FDT}" >> .config || true
+	test -n "${UBOOT_ETHPRIME}" && printf "CONFIG_ETHPRIME=\"%s\"\n" "${UBOOT_ETHPRIME}" >> .config || true
 	make olddefconfig
 	make -j${PARALLEL}
 	make savedefconfig
@@ -472,7 +488,7 @@ if [[ $DISTRO == ubuntu ]]; then
 		;;
 		noble)
 			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.2-base-arm64.tar.gz
-			EXTRA_PKGS="unminimize"
+			EXTRA_PKGS="unminimize util-linux-extra"
 		;;
 		*)
 			echo "Error: Unsupported Ubuntu Version \"\${UBUNTU_VERSION}\"! To proceed please add support to runme.sh."

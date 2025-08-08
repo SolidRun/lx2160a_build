@@ -1,0 +1,259 @@
+From b3808515eccb5d990a5b0c3db73b319e78a9b500 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 8 Aug 2025 16:48:32 +0200
+Subject: [PATCH 17/25] arch: arm: dts: fsl-lx2160a.dtsi: add pcs phys
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm/dts/fsl-lx2160a.dtsi | 235 ++++++++++++++++++++++++++++++++++
+ 1 file changed, 235 insertions(+)
+
+diff --git a/arch/arm/dts/fsl-lx2160a.dtsi b/arch/arm/dts/fsl-lx2160a.dtsi
+index 680c69c7b73..7d720e515d9 100644
+--- a/arch/arm/dts/fsl-lx2160a.dtsi
++++ b/arch/arm/dts/fsl-lx2160a.dtsi
+@@ -613,6 +613,241 @@
+ 		#size-cells = <0>;
+ 		status = "disabled";
+ 	};
++
++	pcs_mdio1: mdio@8c07000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c07000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs1: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio2: mdio@8c0b000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c0b000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs2: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio3: mdio@8c0f000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c0f000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs3: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio4: mdio@8c13000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c13000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs4: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio5: mdio@8c17000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c17000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs5: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio6: mdio@8c1b000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c1b000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs6: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio7: mdio@8c1f000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c1f000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs7: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio8: mdio@8c23000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c23000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs8: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio9: mdio@8c27000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c27000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs9: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio10: mdio@8c2b000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c2b000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs10: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio11: mdio@8c2f000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c2f000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs11: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio12: mdio@8c33000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c33000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs12: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio13: mdio@8c37000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c37000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs13: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio14: mdio@8c3b000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c3b000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs14: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio15: mdio@8c3f000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c3f000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs15: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio16: mdio@8c43000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c43000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs16: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio17: mdio@8c47000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c47000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs17: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
++	pcs_mdio18: mdio@8c4b000 {
++		compatible = "fsl,fman-memac-mdio";
++		reg = <0x0 0x8c4b000 0x0 0x1000>;
++		little-endian;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		status = "disabled";
++
++		pcs18: ethernet-phy@0 {
++			reg = <0>;
++		};
++	};
++
+ 	firmware {
+ 		optee {
+ 			compatible = "linaro,optee-tz";
+-- 
+2.43.0
+

@@ -1,7 +1,7 @@
 From 3b3cff1e3f56f9ecd532f1fdc9b01963640bd2bd Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Tue, 29 Jul 2025 11:09:55 +0200
-Subject: [PATCH 16/16] gpio: mpc8xxx: fix build on layerscape arch
+Subject: [PATCH 16/25] gpio: mpc8xxx: fix build on layerscape arch
 
 asm/gpio.h include does not pull in the arch-specific gpio header for
 layerscape - include it explicitly for now (likely breaking powerpc

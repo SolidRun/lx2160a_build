@@ -1,7 +1,7 @@
 From 5f441b4f2f4287c28c68d3025894aa38c555cab3 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Thu, 13 Jun 2024 17:26:47 +0200
-Subject: [PATCH 01/16] add solidrun lx2160-cex7 board support
+Subject: [PATCH 01/25] add solidrun lx2160-cex7 board support
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---

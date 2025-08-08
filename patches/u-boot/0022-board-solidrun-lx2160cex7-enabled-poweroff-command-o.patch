@@ -1,0 +1,26 @@
+From 756f091ed347b54ca28868c910c686fc5f159340 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 8 Aug 2025 14:00:24 +0200
+Subject: [PATCH 22/25] board: solidrun: lx2160cex7: enabled poweroff command
+ on cli
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ configs/lx2160acex7_tfa_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/lx2160acex7_tfa_defconfig b/configs/lx2160acex7_tfa_defconfig
+index 50f926b0ad4..d1e0a46db30 100644
+--- a/configs/lx2160acex7_tfa_defconfig
++++ b/configs/lx2160acex7_tfa_defconfig
+@@ -44,6 +44,7 @@ CONFIG_CMD_I2C=y
+ CONFIG_CMD_MMC=y
+ CONFIG_CMD_OPTEE_RPMB=y
+ CONFIG_CMD_PCI=y
++CONFIG_CMD_POWEROFF=y
+ CONFIG_CMD_USB=y
+ CONFIG_CMD_WDT=y
+ CONFIG_CMD_CACHE=y
+-- 
+2.43.0
+
