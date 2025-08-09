@@ -1,7 +1,7 @@
-From cd8b45e5e6fddc7268a3c74e5bad7df80556dea0 Mon Sep 17 00:00:00 2001
+From 5f8f78883f22663b5b8088303f15f2b604812a80 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Fri, 18 Oct 2024 21:17:12 +0200
-Subject: [PATCH 08/23] lx2160a: support flexible value for CONFIG_DDR_NODIMM
+Subject: [PATCH 05/15] lx2160a: support flexible value for CONFIG_DDR_NODIMM
 
 Add support for values other than 0 and 1 for CONFIG_DDR_NODIMM.
 This macro can be used for both enabling, and selecting a specific

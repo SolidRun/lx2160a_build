@@ -1,7 +1,7 @@
-From 5e57bd7dfa710c4a94dccda9e72d7b74cdf5b614 Mon Sep 17 00:00:00 2001
+From af19692dce0516d3713353c4de5e9c87ef81d28a Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sun, 27 Oct 2024 18:00:11 +0100
-Subject: [PATCH 15/23] add separate platform for solidrun lx2162a som
+Subject: [PATCH 14/15] add separate platform for solidrun lx2162a som
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---

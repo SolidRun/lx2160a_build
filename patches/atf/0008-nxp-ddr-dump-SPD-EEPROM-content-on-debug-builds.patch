@@ -1,7 +1,7 @@
-From a7de4be811a9538bee334f431dc2b559ee946954 Mon Sep 17 00:00:00 2001
+From b275d59644e4423427b8cae2890096061d04264c Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Wed, 12 Feb 2025 17:33:41 +0100
-Subject: [PATCH 19/23] nxp: ddr: dump SPD EEPROM content on debug builds
+Subject: [PATCH 08/15] nxp: ddr: dump SPD EEPROM content on debug builds
 
 When building with DDR_DEBUG=yes dump the raw SPD EEPROM byte for byte
 on each DIMM.
@@ -12,7 +12,7 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
  1 file changed, 13 insertions(+)
 
 diff --git a/drivers/nxp/ddr/nxp-ddr/ddr.c b/drivers/nxp/ddr/nxp-ddr/ddr.c
-index f77c1c7e9..9a6457330 100644
+index 17c2bbb2a..9b788c6c4 100644
 --- a/drivers/nxp/ddr/nxp-ddr/ddr.c
 +++ b/drivers/nxp/ddr/nxp-ddr/ddr.c
 @@ -550,6 +550,19 @@ static int parse_spd(struct ddr_info *priv)

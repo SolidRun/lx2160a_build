@@ -1,7 +1,7 @@
-From 9cde3256b401d581c1ab75530c7e314eed1c0d35 Mon Sep 17 00:00:00 2001
+From d762fa8d3509be534d0c4b8f07b52e87a1d0a663 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Wed, 12 Feb 2025 17:35:04 +0100
-Subject: [PATCH 20/23] nxp: ddr: disarm error when using non-identical DIMMs
+Subject: [PATCH 09/15] nxp: ddr: disarm error when using non-identical DIMMs
 
 Some DDR4 SO-DIMM report different timings when they are installed in
 different slots. This triggers an error as LX2160A intends to only
@@ -16,7 +16,7 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/nxp/ddr/nxp-ddr/ddr.c b/drivers/nxp/ddr/nxp-ddr/ddr.c
-index 9a6457330..b8b28c55a 100644
+index 9b788c6c4..0a9cd7f87 100644
 --- a/drivers/nxp/ddr/nxp-ddr/ddr.c
 +++ b/drivers/nxp/ddr/nxp-ddr/ddr.c
 @@ -584,8 +584,8 @@ static int parse_spd(struct ddr_info *priv)

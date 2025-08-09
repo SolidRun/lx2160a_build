@@ -1,7 +1,7 @@
-From 14370e4de287134c04cba98d6cc982b1f849e4fd Mon Sep 17 00:00:00 2001
+From 54ec59537e12bb9f653b5375803c5f4f03d17060 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Thu, 26 Sep 2024 16:35:40 +0200
-Subject: [PATCH 17/23] nxp: ddr: add debug output for dimm parameters parsed
+Subject: [PATCH 10/15] nxp: ddr: add debug output for dimm parameters parsed
  from spd or static
 
 Add debug prints for all members of struct dimm_params, after either
@@ -16,10 +16,10 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
  1 file changed, 52 insertions(+)
 
 diff --git a/drivers/nxp/ddr/nxp-ddr/ddr.c b/drivers/nxp/ddr/nxp-ddr/ddr.c
-index 17c2bbb2a..f77c1c7e9 100644
+index 0a9cd7f87..b8b28c55a 100644
 --- a/drivers/nxp/ddr/nxp-ddr/ddr.c
 +++ b/drivers/nxp/ddr/nxp-ddr/ddr.c
-@@ -616,6 +616,58 @@ static int parse_spd(struct ddr_info *priv)
+@@ -629,6 +629,58 @@ static int parse_spd(struct ddr_info *priv)
  	/* now we have valid and identical DIMMs on controllers */
  #endif	/* CONFIG_DDR_NODIMM */
  

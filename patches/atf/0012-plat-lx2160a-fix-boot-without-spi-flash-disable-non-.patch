@@ -1,7 +1,7 @@
-From 8b05ddf6603a35b20cec581212d99ca100d4dc1e Mon Sep 17 00:00:00 2001
+From 1b4b3d575f085bdaa078b68a70fc8800a2be4f81 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Tue, 30 Jul 2024 17:45:38 +0300
-Subject: [PATCH 14/23] plat: lx2160a: fix boot without spi flash / disable
+Subject: [PATCH 12/15] plat: lx2160a: fix boot without spi flash / disable
  non-volatile storage
 
 Watchdog restart function does not require book-keeping on non-volatile

@@ -1,7 +1,7 @@
-From 47a633809e52aa2a68cd05f8469f724048d098dd Mon Sep 17 00:00:00 2001
+From 938dddf91666d98de8f1bbea9d9f5f5d653a3b7c Mon Sep 17 00:00:00 2001
 From: Jon Nettleton <jon@solid-run.com>
 Date: Tue, 8 Oct 2024 04:56:45 +0200
-Subject: [PATCH 03/23] dcfg: Take into account MEM_PLL_CFG_SHIFT for ddr
+Subject: [PATCH 03/15] dcfg: Take into account MEM_PLL_CFG_SHIFT for ddr
  frequency
 
 The base ddr clock frequency is 1/4 the speed of the final

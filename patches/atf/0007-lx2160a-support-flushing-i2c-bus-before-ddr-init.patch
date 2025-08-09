@@ -1,7 +1,7 @@
-From 4895a1bb4e6a7688c1c921b814248f56c34bc47c Mon Sep 17 00:00:00 2001
+From 12fe019cb30ef1c5e61267b490c5cd7a07e9248b Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Fri, 25 Oct 2024 15:36:57 +0200
-Subject: [PATCH 10/23] lx2160a: support flushing i2c bus before ddr init
+Subject: [PATCH 07/15] lx2160a: support flushing i2c bus before ddr init
 
 The i2c bus can get locked by a slave device holding sda low, when the
 cpu is reset during a transaction.
@@ -19,14 +19,18 @@ initializer expressions with i2c bus number, mux address on the bus and
 a bitmask for channels to flush,
 e.g. IIC1 mux @ 77, channels 1&2 = "{1, 0x77, 0x03}".
 
+This includes a workaround for pinmux corruption separating between
+read-only and write-only memory for the pinmux values.
+
 Signed-off-by: Josua Mayer <josua@solid-run.com>
+Signed-off-by: Ahmad Shtewe <ahmad.shtewe@solid-run.com>
 ---
  plat/nxp/common/setup/common.mk             |   1 +
  plat/nxp/common/setup/include/plat_common.h |   2 +
  plat/nxp/common/setup/ls_bl2_el3_setup.c    |   1 +
- plat/nxp/common/setup/ls_i2c_init.c         | 274 ++++++++++++++++++++
+ plat/nxp/common/setup/ls_i2c_init.c         | 289 ++++++++++++++++++++
  plat/nxp/soc-lx2160a/soc.mk                 |   6 +
- 5 files changed, 284 insertions(+)
+ 5 files changed, 299 insertions(+)
  create mode 100644 plat/nxp/common/setup/ls_i2c_init.c
 
 diff --git a/plat/nxp/common/setup/common.mk b/plat/nxp/common/setup/common.mk
@@ -68,10 +72,10 @@ index a4cbaef45..63e3460d7 100644
  
 diff --git a/plat/nxp/common/setup/ls_i2c_init.c b/plat/nxp/common/setup/ls_i2c_init.c
 new file mode 100644
-index 000000000..5392b160d
+index 000000000..bbb59c476
 --- /dev/null
 +++ b/plat/nxp/common/setup/ls_i2c_init.c
-@@ -0,0 +1,274 @@
+@@ -0,0 +1,289 @@
 +#include <stdint.h>
 +#include <stdio.h>
 +#include <stdlib.h>
@@ -91,7 +95,8 @@ index 000000000..5392b160d
 +#define NXP_IIC7_ADDR	0x02060000
 +#define NXP_IIC8_ADDR	0x02070000
 +
-+#define RCWSR12				0x01e0012c
++#define RCWSR12R			0x01e0012c
++#define RCWSR12W			0x70010012c
 +#define RCWSR12_IIC2_PMUX_MASK		0x00000007 /* [0..2] */
 +#define RCWSR12_IIC2_PMUX_IIC2		0x00000000
 +#define RCWSR12_IIC2_PMUX_GPIO		0x00000001
@@ -107,11 +112,13 @@ index 000000000..5392b160d
 +#define RCWSR12_IIC6_PMUX_MASK		0x00007000 /* [12..14] */
 +#define RCWSR12_IIC6_PMUX_IIC6		0x00000000
 +#define RCWSR12_IIC6_PMUX_GPIO		0x00001000
-+#define RCWSR13				0x01e00130
++#define RCWSR13R			0x01e00130
++#define RCWSR13W			0x700100130
 +#define RCWSR12_SDHC2_DAT74_PMUX_MASK	0x00000003
 +#define RCWSR12_SDHC2_DAT74_PMUX_SDHC2	0x00000000
 +#define RCWSR12_SDHC2_DAT74_PMUX_IIC78	0x00000001
-+#define RCWSR14				0x01e00134
++#define RCWSR14R			0x01e00134
++#define RCWSR14W			0x700100134
 +#define RCWSR14_IIC1_PMUX_MASK		0x00000400 /* [10] */
 +#define RCWSR14_IIC1_PMUX_IIC1		0x00000000
 +#define RCWSR14_IIC1_PMUX_GPIO		0x00000400
@@ -202,7 +209,8 @@ index 000000000..5392b160d
 +}
 +
 +static struct i2c_bus_info {
-+	uintptr_t pinmux_addr;
++	uintptr_t pinmux_addr_r;
++	uintptr_t pinmux_addr_w;
 +	uint32_t pinmux_mask;
 +	uint32_t pinmux_sel;
 +	uintptr_t gpio_addr;
@@ -210,7 +218,8 @@ index 000000000..5392b160d
 +	uint8_t gpio_sda;
 +} ls_i2c_bus_info[] = {
 +	{
-+		.pinmux_addr = RCWSR14,
++		.pinmux_addr_r = RCWSR14R,
++		.pinmux_addr_w = RCWSR14W,
 +		.pinmux_mask = RCWSR14_IIC1_PMUX_MASK,
 +		.pinmux_sel = RCWSR14_IIC1_PMUX_GPIO,
 +		.gpio_addr = NXP_GPIO1_ADDR,
@@ -218,7 +227,8 @@ index 000000000..5392b160d
 +		.gpio_sda = 2, /* GPIO1_DAT02 */
 +	},
 +	{
-+		.pinmux_addr = RCWSR12,
++		.pinmux_addr_r = RCWSR12R,
++		.pinmux_addr_w = RCWSR12W,
 +		.pinmux_mask = RCWSR12_IIC2_PMUX_MASK,
 +		.pinmux_sel = RCWSR12_IIC2_PMUX_GPIO,
 +		.gpio_addr = NXP_GPIO1_ADDR,
@@ -226,7 +236,8 @@ index 000000000..5392b160d
 +		.gpio_sda = 30, /* GPIO1_DAT30 */
 +	},
 +	{
-+		.pinmux_addr = RCWSR12,
++		.pinmux_addr_r = RCWSR12R,
++		.pinmux_addr_w = RCWSR12W,
 +		.pinmux_mask = RCWSR12_IIC3_PMUX_MASK,
 +		.pinmux_sel = RCWSR12_IIC3_PMUX_GPIO,
 +		.gpio_addr = NXP_GPIO1_ADDR,
@@ -234,7 +245,8 @@ index 000000000..5392b160d
 +		.gpio_sda = 28, /* GPIO1_DAT28 */
 +	},
 +	{
-+		.pinmux_addr = RCWSR12,
++		.pinmux_addr_r = RCWSR12R,
++		.pinmux_addr_w = RCWSR12W,
 +		.pinmux_mask = RCWSR12_IIC4_PMUX_MASK,
 +		.pinmux_sel = RCWSR12_IIC4_PMUX_GPIO,
 +		.gpio_addr = NXP_GPIO1_ADDR,
@@ -242,7 +254,8 @@ index 000000000..5392b160d
 +		.gpio_sda = 26, /* GPIO1_DAT26 */
 +	},
 +	{
-+		.pinmux_addr = RCWSR12,
++		.pinmux_addr_r = RCWSR12R,
++		.pinmux_addr_w = RCWSR12W,
 +		.pinmux_mask = RCWSR12_IIC5_PMUX_MASK,
 +		.pinmux_sel = RCWSR12_IIC5_PMUX_GPIO,
 +		.gpio_addr = NXP_GPIO1_ADDR,
@@ -250,7 +263,8 @@ index 000000000..5392b160d
 +		.gpio_sda = 24, /* GPIO1_DAT24 */
 +	},
 +	{
-+		.pinmux_addr = RCWSR12,
++		.pinmux_addr_r = RCWSR12R,
++		.pinmux_addr_w = RCWSR12W,
 +		.pinmux_mask = RCWSR12_IIC6_PMUX_MASK,
 +		.pinmux_sel = RCWSR12_IIC6_PMUX_GPIO,
 +		.gpio_addr = NXP_GPIO1_ADDR,
@@ -258,7 +272,8 @@ index 000000000..5392b160d
 +		.gpio_sda = 22, /* GPIO1_DAT22 */
 +	},
 +	{
-+		.pinmux_addr = RCWSR13,
++		.pinmux_addr_r = RCWSR13R,
++		.pinmux_addr_w = RCWSR13W,
 +		.pinmux_mask = RCWSR12_SDHC2_DAT74_PMUX_MASK,
 +		.pinmux_sel = RCWSR12_SDHC2_DAT74_PMUX_IIC78,
 +		.gpio_addr = NXP_GPIO2_ADDR,
@@ -266,7 +281,8 @@ index 000000000..5392b160d
 +		.gpio_sda = 15, /* GPIO2_DAT15 */
 +	},
 +	{
-+		.pinmux_addr = RCWSR13,
++		.pinmux_addr_r = RCWSR13R,
++		.pinmux_addr_w = RCWSR13W,
 +		.pinmux_mask = RCWSR12_SDHC2_DAT74_PMUX_MASK,
 +		.pinmux_sel = RCWSR12_SDHC2_DAT74_PMUX_IIC78,
 +		.gpio_addr = NXP_GPIO2_ADDR,
@@ -305,22 +321,25 @@ index 000000000..5392b160d
 +	sda_mask = 0x80000000 >> info->gpio_sda;
 +
 +	/* backup configuration registers */
-+	pinmux = backup.pinmux = mmio_read_32(info->pinmux_addr);
++	pinmux = backup.pinmux = mmio_read_32(info->pinmux_addr_r);
 +	gpdir = backup.gpdir = mmio_read_32(gpdir_addr);
 +	gpodr = backup.gpodr = mmio_read_32(gpodr_addr);
 +	gpdat = backup.gpdat = mmio_read_32(gpdat_addr);
 +
 +	/* configure SCL+SDA as GPIOs */
 +	pinmux = (pinmux & ~info->pinmux_mask) | info->pinmux_sel;
-+	mmio_write_32(info->pinmux_addr, pinmux);
++	mmio_write_32(info->pinmux_addr_w, pinmux);
 +
 +	/* configure SCL+SDA as output open drain */
 +	gpdir |= scl_mask | sda_mask;
 +	gpodr |= scl_mask | sda_mask;
 +	gpdat |= scl_mask | sda_mask;
-+	mmio_write_32(gpdir_addr, gpdir);
-+	mmio_write_32(gpodr_addr, gpodr);
 +	mmio_write_32(gpdat_addr, gpdat);
++	mmio_write_32(gpodr_addr, gpodr);
++	mmio_write_32(gpdir_addr, gpdir);
++
++	/* allow short delay for changes to propagate */
++	udelay(10);
 +
 +	/*
 +	 * reliable detection of blocked bus is hard
@@ -339,10 +358,10 @@ index 000000000..5392b160d
 +	}
 +
 +	/* restore configuration registers */
-+	mmio_write_32(gpdat_addr, backup.gpdat);
-+	mmio_write_32(gpodr_addr, backup.gpodr);
 +	mmio_write_32(gpdir_addr, backup.gpdir);
-+	mmio_write_32(info->pinmux_addr, backup.pinmux);
++	mmio_write_32(gpodr_addr, backup.gpodr);
++	mmio_write_32(gpdat_addr, backup.gpdat);
++	mmio_write_32(info->pinmux_addr_w, backup.pinmux);
 +
 +	return;
 +}

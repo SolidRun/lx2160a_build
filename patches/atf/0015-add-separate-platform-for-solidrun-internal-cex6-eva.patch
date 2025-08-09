@@ -1,30 +1,31 @@
-From 0e7d0c9779a1127a25b55c4b134073bf208c0a16 Mon Sep 17 00:00:00 2001
+From c01d1adda6250f35616816913d38b62fc888d9de Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
-Date: Fri, 18 Oct 2024 15:11:53 +0200
-Subject: [PATCH 07/23] add separate platform for solidrun cex7 module
+Date: Fri, 18 Oct 2024 15:05:13 +0200
+Subject: [PATCH 15/15] add separate platform for solidrun internal cex6
+ evaluation board
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---
- plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c   | 116 ++++++++++++++++++
- plat/nxp/soc-lx2160a/lx2160acex7/plat_def.h   | 105 ++++++++++++++++
- plat/nxp/soc-lx2160a/lx2160acex7/platform.c   |  29 +++++
- plat/nxp/soc-lx2160a/lx2160acex7/platform.mk  |  56 +++++++++
- .../soc-lx2160a/lx2160acex7/platform_def.h    |  14 +++
- plat/nxp/soc-lx2160a/lx2160acex7/policy.h     |  38 ++++++
- 6 files changed, 358 insertions(+)
- create mode 100644 plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
- create mode 100644 plat/nxp/soc-lx2160a/lx2160acex7/plat_def.h
- create mode 100644 plat/nxp/soc-lx2160a/lx2160acex7/platform.c
- create mode 100644 plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
- create mode 100644 plat/nxp/soc-lx2160a/lx2160acex7/platform_def.h
- create mode 100644 plat/nxp/soc-lx2160a/lx2160acex7/policy.h
+ plat/nxp/soc-lx2160a/lx2160acex6/ddr_init.c   | 248 ++++++++++++++++++
+ plat/nxp/soc-lx2160a/lx2160acex6/plat_def.h   | 105 ++++++++
+ plat/nxp/soc-lx2160a/lx2160acex6/platform.c   |  29 ++
+ plat/nxp/soc-lx2160a/lx2160acex6/platform.mk  |  67 +++++
+ .../soc-lx2160a/lx2160acex6/platform_def.h    |  14 +
+ plat/nxp/soc-lx2160a/lx2160acex6/policy.h     |  38 +++
+ 6 files changed, 501 insertions(+)
+ create mode 100644 plat/nxp/soc-lx2160a/lx2160acex6/ddr_init.c
+ create mode 100644 plat/nxp/soc-lx2160a/lx2160acex6/plat_def.h
+ create mode 100644 plat/nxp/soc-lx2160a/lx2160acex6/platform.c
+ create mode 100644 plat/nxp/soc-lx2160a/lx2160acex6/platform.mk
+ create mode 100644 plat/nxp/soc-lx2160a/lx2160acex6/platform_def.h
+ create mode 100644 plat/nxp/soc-lx2160a/lx2160acex6/policy.h
 
-diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c b/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex6/ddr_init.c b/plat/nxp/soc-lx2160a/lx2160acex6/ddr_init.c
 new file mode 100644
-index 000000000..340a20455
+index 000000000..6e2d3fc6c
 --- /dev/null
-+++ b/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
-@@ -0,0 +1,116 @@
++++ b/plat/nxp/soc-lx2160a/lx2160acex6/ddr_init.c
+@@ -0,0 +1,248 @@
 +/*
 + * Copyright 2021 NXP
 + *
@@ -48,9 +49,131 @@ index 000000000..340a20455
 +#include "plat_common.h"
 +#include <platform_def.h>
 +
-+#if defined(CONFIG_STATIC_DDR) || defined(CONFIG_DDR_NODIMM)
++#ifdef CONFIG_STATIC_DDR
 +#error not implemented
-+#endif /* defined(CONFIG_STATIC_DDR) || defined(CONFIG_DDR_NODIMM) */
++#elif defined(CONFIG_DDR_NODIMM)
++#if CONFIG_DDR_NODIMM == 1
++/*
++ * PCB Revision 1.0: 9 x K4A8G085WC-BCWE TODO
++ */
++#error Not implemented.
++#endif /* CONFIG_DDR_NODIMM == 1 */
++
++#if CONFIG_DDR_NODIMM == 2 || CONFIG_DDR_NODIMM == 3
++/*
++ * PCB Revision 1.1/1.2: 2 x 5 x MT40A1G16TB-062E IT:F
++ */
++#define CONFIG_DDR_NODIMM_CH2
++
++#if CONFIG_DDR_NODIMM == 3
++/* PCB Revision 1.2 supports ECC */
++#define CONFIG_DDR_NODIMM_ECC
++#endif /* CONFIG_DDR_NODIMM == 3 */
++
++static const struct dimm_params static_dimm = {
++	.mpart = "Fixed DDR Config " __XSTRING(CONFIG_DDR_NODIMM),
++	.n_ranks = 1,
++	.die_density = 0x6, // encoded per spd byte 4, 0b110 = 16Gbit
++	.rank_density = 0x200000000, // 16Gbit
++	.capacity = 0x200000000, // 16Gbit
++	.primary_sdram_width = 64,
++#ifdef CONFIG_DDR_NODIMM_ECC
++	.ec_sdram_width = 8, // 8 bit ecc extension
++#else
++	.ec_sdram_width = 0, // no ecc extension
++#endif
++	.rdimm = 0,
++	.package_3ds = 0,
++	.device_width = 16, // 16 bit per sdram
++	.rc = 0,
++
++	.n_row_addr = 17,
++	.n_col_addr = 10,
++#ifdef CONFIG_DDR_NODIMM_ECC
++	.edc_config = 2, // enable ecc
++#else
++	.edc_config = 0, // disable ecc
++#endif
++	.bank_addr_bits = 0, // 4 banks
++	.bank_group_bits = 1, // 2 bank groups
++	.burst_lengths_bitmask = 0xc, // enable 4 & 8-bit burst (DDR4 spec)
++
++	.mirrored_dimm = 0,
++
++	// timings based on MT40A4G4 / MT40A2G8 / MT40A1G16 datasheet (DDR4-3200 22-22-22)
++	.mtb_ps = 125, // MTB per SPD spec
++	.ftb_10th_ps = 10, // default value, unused by nxp ddr driver
++	.taa_ps = 13750, // min. 13.75ns
++	.tfaw_ps = 30000, // min: max(30ns or 28CK) (this 8Gbit sdram has 2KB pages)
++
++	.tckmin_x_ps = 625, // 2400 (CK=1600)
++	.tckmax_ps = 1250, // 1600 (CK=800)
++
++	.caslat_x = 0b00000001011111111111110000000000, // CL = [10-22,24] (1 << CL)
++
++	.trcd_ps = 13750, // 13.75ns
++	.trp_ps = 13750, // 13.75ns
++	.tras_ps = 32000, // 32ns
++
++	.trfc1_ps = 350000, // 350ns,
++	.trfc2_ps = 260000, // 260ns
++	.trfc4_ps = 160000, // 160ns
++	.trrds_ps = 5300, // min: max(4CK or 5.3ns)
++	.trrdl_ps = 6400, // min: max(4CK or 6.4ns)
++	.tccdl_ps = 5000, // min: max(4CK or 5ns)
++	.trfc_slr_ps = 0,
++
++	.trc_ps = 45750, // tras + trp 45.75ns
++	.twr_ps = 15000, // 15ns
++
++	.refresh_rate_ps = 7800000, // 1x mode 7.8us for standard temperature range (TODO: pick correct range based on temperature?!)
++	// .extended_op_srt = 0,
++
++	// .rcw = {}, // only for registered dimm
++	.dq_mapping = {
++		0x00,
++		0x20,
++		0x00,
++		0x20,
++		0x00,
++		0x20,
++		0x00,
++		0x20,
++		0x00,
++		0x20,
++		0x00,
++		0x20,
++		0x00,
++		0x20,
++		0x00,
++		0x20,
++		0x00,
++		0x20,
++	},
++	.dq_mapping_ors = 1,
++};
++#endif /* CONFIG_DDR_NODIMM == 2 || CONFIG_DDR_NODIMM == 3 */
++
++int ddr_get_ddr_params(struct dimm_params *pdimm,
++		       struct ddr_conf *conf)
++{
++	// channel 1
++	conf->dimm_in_use[0] = 1;
++	memcpy(&pdimm[0], &static_dimm, sizeof(struct dimm_params));
++
++#if defined(CONFIG_DDR_NODIMM_CH2)
++	// channel 2
++	conf->dimm_in_use[1] = 1; // enable (module on) channel 2
++	memcpy(&pdimm[1], &static_dimm, sizeof(struct dimm_params));
++
++	/* 2 modules */
++	return 0x3;
++#else
++	/* 1 module */
++	return 0x1;
++#endif /* defined(CONFIG_DDR_NODIMM_CH2) */
++}
++#endif /* defined(CONFIG_DDR_NODIMM) */
 +
 +int ddr_board_options(struct ddr_info *priv)
 +{
@@ -62,9 +185,19 @@ index 000000000..340a20455
 +	popts->rtt_park = U(240);
 +	popts->otf_burst_chop_en = 0;
 +	popts->burst_length = U(DDR_BL8);
-+	popts->trwt_override = 1U;
++	popts->trwt_override = 0U;
 +	popts->bstopre = 0U;			/* auto precharge */
 +	popts->addr_hash = 1;
++	popts->caslat_override = 0; // TODO: why is this set by default?!
++	popts->caslat_override_value = 0; // TODO: why is this set by default?!
++	popts->auto_self_refresh_en = 1;
++	popts->output_driver_impedance = 0; // 34 Ohm
++	popts->twot_en = 0;
++	popts->threet_en = 0;
++	popts->addt_lat_override = 0; // TODO: why is this set by default?!
++	popts->addt_lat_override_value = 0; // TODO: why is this set by default?!
++	popts->phy_atx_impedance = 30;
++	popts->skip2d = 0;
 +
 +	/* Set ODT impedance on PHY side */
 +	switch (conf->cs_on_dimm[1]) {
@@ -95,7 +228,7 @@ index 000000000..340a20455
 +
 +long long init_ddr(void)
 +{
-+	int spd_addr[] = { 0x51, 0x52, 0x53, 0x54 };
++	int spd_addr[] = { 0x51, 0x00, 0x53, 0x00 };
 +	struct ddr_info info;
 +	struct sysinfo sys;
 +	long long dram_size;
@@ -141,11 +274,11 @@ index 000000000..340a20455
 +
 +	return dram_size;
 +}
-diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/plat_def.h b/plat/nxp/soc-lx2160a/lx2160acex7/plat_def.h
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex6/plat_def.h b/plat/nxp/soc-lx2160a/lx2160acex6/plat_def.h
 new file mode 100644
 index 000000000..02f51e74d
 --- /dev/null
-+++ b/plat/nxp/soc-lx2160a/lx2160acex7/plat_def.h
++++ b/plat/nxp/soc-lx2160a/lx2160acex6/plat_def.h
 @@ -0,0 +1,105 @@
 +/*
 + * Copyright 2021 NXP
@@ -252,11 +385,11 @@ index 000000000..02f51e74d
 +	INTR_PROP_DESC(NXP_IRQ_SEC_SGI_7, GIC_HIGHEST_SEC_PRIORITY, grp, \
 +			GIC_INTR_CFG_LEVEL)
 +#endif
-diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/platform.c b/plat/nxp/soc-lx2160a/lx2160acex7/platform.c
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex6/platform.c b/plat/nxp/soc-lx2160a/lx2160acex6/platform.c
 new file mode 100644
 index 000000000..b00adb51d
 --- /dev/null
-+++ b/plat/nxp/soc-lx2160a/lx2160acex7/platform.c
++++ b/plat/nxp/soc-lx2160a/lx2160acex6/platform.c
 @@ -0,0 +1,29 @@
 +/*
 + * Copyright 2021 NXP
@@ -287,12 +420,12 @@ index 000000000..b00adb51d
 +	return false;
 +#endif
 +}
-diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk b/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk b/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk
 new file mode 100644
-index 000000000..37598c2d7
+index 000000000..d01a41ea6
 --- /dev/null
-+++ b/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
-@@ -0,0 +1,56 @@
++++ b/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk
+@@ -0,0 +1,67 @@
 +#
 +# Copyright 2021 NXP
 +#
@@ -302,7 +435,7 @@ index 000000000..37598c2d7
 +# board-specific build parameters
 +
 +BOOT_MODE	?= 	flexspi_nor
-+BOARD		?=	lx2160acex7
++BOARD		?=	lx2160acex6
 +POVDD_ENABLE	:=	no
 +NXP_COINED_BB	:=	no
 +
@@ -315,9 +448,20 @@ index 000000000..37598c2d7
 +DDR_ADDR_DEC	:=	yes
 +APPLY_MAX_CDD	:=	yes
 +
++# Mock SPD:
++# - 0: disable mock spd
++# - 2: 2 x 5 x MT40A1G16TB-062E IT:F PCB v1.1
++# - 3: 2 x 5 x MT40A1G16TB-062E IT:F PCB v1.2 (with ECC)
++CONFIG_DDR_NODIMM	:=	0
++
 +# S5 GPIO
 +LX2160A_S5_GPIO_ADDR := NXP_GPIO3_ADDR
-+LX2160A_S5_GPIO := 7
++LX2160A_S5_GPIO := 0
++
++# I2C Bus Flushing: IIC1
++LX2160_FLUSH_IIC := 1,
++# I2C Mux Flushing: IIC1: PCA9547@77: Channel 0 (SPD EEPROM)
++LX2160_FLUSH_IIC_MUX := { 1, 0x77, 0x01 },
 +
 +# DDR Errata
 +ERRATA_DDR_A011396	:= 1
@@ -349,11 +493,11 @@ index 000000000..37598c2d7
 +
 + # Adding SoC build info
 +include plat/nxp/soc-lx2160a/soc.mk
-diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/platform_def.h b/plat/nxp/soc-lx2160a/lx2160acex7/platform_def.h
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex6/platform_def.h b/plat/nxp/soc-lx2160a/lx2160acex6/platform_def.h
 new file mode 100644
 index 000000000..666099800
 --- /dev/null
-+++ b/plat/nxp/soc-lx2160a/lx2160acex7/platform_def.h
++++ b/plat/nxp/soc-lx2160a/lx2160acex6/platform_def.h
 @@ -0,0 +1,14 @@
 +/*
 + * Copyright 2021 NXP
@@ -369,11 +513,11 @@ index 000000000..666099800
 +#include "plat_default_def.h"
 +
 +#endif
-diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/policy.h b/plat/nxp/soc-lx2160a/lx2160acex7/policy.h
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex6/policy.h b/plat/nxp/soc-lx2160a/lx2160acex6/policy.h
 new file mode 100644
 index 000000000..19ad6dbec
 --- /dev/null
-+++ b/plat/nxp/soc-lx2160a/lx2160acex7/policy.h
++++ b/plat/nxp/soc-lx2160a/lx2160acex6/policy.h
 @@ -0,0 +1,38 @@
 +/*
 + * Copyright 2021 NXP

@@ -1,7 +1,7 @@
-From dc5934d118bfaa5de5827fa5d12f326f8fa009b9 Mon Sep 17 00:00:00 2001
-From: Josua Mayer <josua@solid-run.com>
-Date: Fri, 18 Oct 2024 21:09:04 +0200
-Subject: [PATCH 06/23] lx2160a: assert optional S5 gpio from Makefile constant
+From 36bf5eae8356d2c89047e8b5f751d6f2c2d922a1 Mon Sep 17 00:00:00 2001
+From: Rabeeh Khoury <rabeeh@solid-run.com>
+Date: Sun, 28 Nov 2021 13:33:10 +0200
+Subject: [PATCH 04/15] lx2160a: assert optional S5 gpio from Makefile constant
 
 GPIO address and number for S5 are specific per board and should not be
 set globally across lx2160.
@@ -17,31 +17,29 @@ address in platform.mk file, before including soc.mk.
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---
- plat/nxp/soc-lx2160a/aarch64/lx2160a.S | 9 ++++++---
+ plat/nxp/soc-lx2160a/aarch64/lx2160a.S | 8 ++++++++
  plat/nxp/soc-lx2160a/soc.mk            | 8 ++++++++
- 2 files changed, 14 insertions(+), 3 deletions(-)
+ 2 files changed, 16 insertions(+)
 
 diff --git a/plat/nxp/soc-lx2160a/aarch64/lx2160a.S b/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
-index 8035b145e..67ade7b66 100644
+index cc679f2ba..67ade7b66 100644
 --- a/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
 +++ b/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
-@@ -563,10 +563,13 @@ endfunc _soc_sys_reset
+@@ -563,6 +563,14 @@ endfunc _soc_sys_reset
   */
  func _soc_sys_off
  
--	/* assert GPIO3[7] (IRQ07 - CEX-7 SUS_S5), GPIO3[0] (IRQ00 - CEX-6 EVB IRQ0) */
--	mov x3, #NXP_GPIO3_ADDR
--	mov w1, #0x81000000
 +#if defined(CONFIG_LX2160A_S5_GPIO_ADDR) && defined(CONFIG_LX2160A_S5_GPIO)
 +	/* assert s5 gpio */
 +	mov x3, # CONFIG_LX2160A_S5_GPIO_ADDR
 +	ldr w1, [x3]
 +	orr w1, w1, # 1 << (31 - CONFIG_LX2160A_S5_GPIO)
- 	str w1, [x3]
++	str w1, [x3]
 +#endif
- 
++
  	/* disable sec, QBman, spi and qspi */
  	ldr  x2, =NXP_DCFG_ADDR
+ 	ldr  x0, =DCFG_DEVDISR1_OFFSET
 diff --git a/plat/nxp/soc-lx2160a/soc.mk b/plat/nxp/soc-lx2160a/soc.mk
 index a72b4113d..20e64753c 100644
 --- a/plat/nxp/soc-lx2160a/soc.mk

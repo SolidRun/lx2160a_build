@@ -1,7 +1,7 @@
-From 53aaed06664b6d84e92168eab7ee0ab0193a01e1 Mon Sep 17 00:00:00 2001
+From d88ed58278a43ef670d125fce416c04c40bdbc70 Mon Sep 17 00:00:00 2001
 From: Rabeeh Khoury <rabeeh@solid-run.com>
 Date: Sun, 28 Nov 2021 14:00:07 +0200
-Subject: [PATCH 02/23] plat/nxp: lx2160a auto boot
+Subject: [PATCH 02/15] plat/nxp: lx2160a auto boot
 
 This patch adds support to patch RCW that already has SD/eMMC/SPI boot
 support embedded with conditional load and jump.
@@ -15,10 +15,9 @@ eMMC and SPI.
 Signed-off-by: Rabeeh Khoury <rabeeh@solid-run.com>
 ---
  .../plat_make_helper/plat_common_def.mk       |  5 ++
- plat/nxp/soc-lx2160a/lx2160ardb/platform.mk   |  3 +-
  plat/nxp/soc-lx2160a/soc.mk                   |  5 ++
  tools/nxp/create_pbl/create_pbl.c             | 74 ++++++++++++++++---
- 4 files changed, 76 insertions(+), 11 deletions(-)
+ 3 files changed, 74 insertions(+), 10 deletions(-)
 
 diff --git a/plat/nxp/common/plat_make_helper/plat_common_def.mk b/plat/nxp/common/plat_make_helper/plat_common_def.mk
 index 86dacf83d..a1038a073 100644
@@ -36,20 +35,6 @@ index 86dacf83d..a1038a073 100644
      else
          $$(error $(PLAT) Cannot Support Boot Mode: $(BOOT_MODE))
      endif
-diff --git a/plat/nxp/soc-lx2160a/lx2160ardb/platform.mk b/plat/nxp/soc-lx2160a/lx2160ardb/platform.mk
-index ffb5fadee..09c552c72 100644
---- a/plat/nxp/soc-lx2160a/lx2160ardb/platform.mk
-+++ b/plat/nxp/soc-lx2160a/lx2160ardb/platform.mk
-@@ -42,7 +42,8 @@ BL2_SOURCES	+=	${BOARD_PATH}/ddr_init.c\
- 
- SUPPORTED_BOOT_MODE	:=	flexspi_nor	\
- 				sd		\
--				emmc
-+				emmc		\
-+				auto
- 
- # Adding platform board build info
- include plat/nxp/common/plat_make_helper/plat_common_def.mk
 diff --git a/plat/nxp/soc-lx2160a/soc.mk b/plat/nxp/soc-lx2160a/soc.mk
 index 239442c20..a72b4113d 100644
 --- a/plat/nxp/soc-lx2160a/soc.mk

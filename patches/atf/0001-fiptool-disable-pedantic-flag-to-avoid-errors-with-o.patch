@@ -1,7 +1,7 @@
 From 16002464625b0841b4adc537e53a5fb357ff907c Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Mon, 28 Jul 2025 12:37:46 +0200
-Subject: [PATCH 01/23] fiptool: disable pedantic flag to avoid errors with
+Subject: [PATCH 01/15] fiptool: disable pedantic flag to avoid errors with
  older libc
 
 This change disarms soime pedantic errors encountered when using a new
