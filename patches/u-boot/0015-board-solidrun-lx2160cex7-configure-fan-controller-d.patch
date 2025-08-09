@@ -1,0 +1,138 @@
+From 5a25d2b4237e08345c61c8e9affa34031c2363ac Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 9 Aug 2025 15:25:05 +0200
+Subject: [PATCH] board: solidrun: lx2160cex7: configure fan-controller
+ defaults
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Configure default values for fan-controller register according to
+maximum ratings of LX2160/LX2162 SoC tuned for quiet operation.
+
+Fan starts to speed up at 64°C, reaching maximum at 101°C - 4° short of
+SoC absolute maximum. LX2160 is designed to support continuous operation
+at 105°C junction.
+
+Linux driver keeps bootloader defaults till the user applies changes
+through sysfs interface.
+
+After communication with fan-controller succeeded, release the gpio
+forcing full-speed to allow quiet operation.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi | 22 ---------
+ board/solidrun/lx2160acex7/lx2160a.c      | 55 ++++++++++++++++++++++-
+ 2 files changed, 54 insertions(+), 23 deletions(-)
+
+diff --git a/arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi b/arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi
+index 9394c36d70e..0e547229d74 100644
+--- a/arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi
++++ b/arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi
+@@ -9,28 +9,6 @@
+ 	};
+ };
+ 
+-&gpio2 {
+-	/*
+-	 * AMC6821 THERM signal uses open-drain logic and can be driven
+-	 * by either the host (force full-speed) or the chip
+-	 * (thermal warning). Firmware drives it low during reset.
+-	 *
+-	 * Force fan full-speed while bootloader is active.
+-	 * TODO: Add fan-controller driver.
+-	 */
+-	fan-full-speed-hog {
+-		gpio-hog;
+-		gpios = <2 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+-		output-high;
+-		line-name = "fan-full-speed";
+-	};
+-};
+-
+-&{/i2c@2000000/i2c-mux@77/i2c@1/fan-temperature-ctrlr@18} {
+-	/*u-boot does not currently have a driver for this fan-controller */
+-	status = "disabled";
+-};
+-
+ &uart0 {
+ 	status = "okay";
+ };
+diff --git a/board/solidrun/lx2160acex7/lx2160a.c b/board/solidrun/lx2160acex7/lx2160a.c
+index 632fbff52dc..f6b3856b8dc 100644
+--- a/board/solidrun/lx2160acex7/lx2160a.c
++++ b/board/solidrun/lx2160acex7/lx2160a.c
+@@ -18,6 +18,7 @@
+ #include <fsl_ddr.h>
+ #include <init.h>
+ #include <malloc.h>
++#include <i2c.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -151,8 +152,60 @@ int board_init(void)
+ }
+ 
+ #ifdef CONFIG_BOARD_LATE_INIT
++static int setup_fan_ctrl(void) {
++	int ret = -ENODEV;
++	struct udevice *bus, *dev;
++
++	struct {
++		const char *const machine;
++		const char *const bus;
++		uint8_t addr;
++		u32 __iomem *const gpio_reg;
++		uint32_t gpio_mask;
++	} fanctrl[] = {
++		{
++			.machine = "solidrun,lx2160a-cex7",
++			.bus = "i2c@2000000->i2c-mux@77->i2c@1",
++			.addr = 0x18,
++			.gpio_reg = (void *)0x02320000,
++			.gpio_mask = (1 << 29),
++		}, {
++			.machine = "solidrun,lx2162a-som",
++			.bus = "i2c@2000000",
++			.addr = 0x18,
++		},
++	};
++
++	for (int i = 0; i < ARRAY_SIZE(fanctrl); i++) {
++		if (!of_machine_is_compatible(fanctrl[i].machine))
++			continue;
++
++		ret = uclass_get_device_by_name(UCLASS_I2C, fanctrl[i].bus, &bus);
++		if (ret)
++			continue;
++
++		ret = i2c_get_chip(bus, fanctrl[i].addr, 1, &dev);
++		if (ret)
++			continue;
++
++		/* set low temperatur threshold 64C, slope 1.57%/C, full-speed at 101C (safe for LX2160/LX2162 SoC) */
++		ret = dm_i2c_reg_write(dev, 0x25, 0x83);
++		if (ret)
++			continue;
++
++		/* change gpio direction from output to input for low->high transition with external PU */
++		if (fanctrl[i].gpio_reg)
++			*fanctrl[i].gpio_reg &= ~fanctrl[i].gpio_mask;
++
++		printf("Fan:   Low 64°C, High 101°C, Slope 1.57%\n");
++	}
++
++	return ret;
++}
++
+ int fsl_board_late_init(void) {
+-	/* TODO: configure fan-controller here and release gpio-hog */
++	setup_fan_ctrl();
++
+ 	return 0;
+ }
+ #endif
+-- 
+2.43.0
+
