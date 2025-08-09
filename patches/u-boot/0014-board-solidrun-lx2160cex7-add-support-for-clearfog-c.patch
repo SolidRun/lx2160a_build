@@ -1,0 +1,238 @@
+From c932c5e0139c026c82bb0bdf7e27117d8a13590c Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 8 Aug 2025 18:05:24 +0200
+Subject: [PATCH 14/14] board: solidrun: lx2160cex7: add support for
+ clearfog-cx & honeycomb
+
+Compile with CONFIG_DEFAULT_DEVICE_TREE=fsl-lx2160a-clearfog-cx
+or CONFIG_DEFAULT_DEVICE_TREE=fsl-lx2160a-honeycomb
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../dts/fsl-lx2160a-clearfog-cx-u-boot.dtsi   |   3 +
+ arch/arm/dts/fsl-lx2160a-clearfog-cx.dts      |  15 ++
+ .../dts/fsl-lx2160a-clearfog-itx-u-boot.dtsi  |   3 +
+ arch/arm/dts/fsl-lx2160a-clearfog-itx.dtsi    | 135 ++++++++++++++++++
+ .../arm/dts/fsl-lx2160a-honeycomb-u-boot.dtsi |   3 +
+ arch/arm/dts/fsl-lx2160a-honeycomb.dts        |  15 ++
+ 6 files changed, 174 insertions(+)
+ create mode 100644 arch/arm/dts/fsl-lx2160a-clearfog-cx-u-boot.dtsi
+ create mode 100644 arch/arm/dts/fsl-lx2160a-clearfog-cx.dts
+ create mode 100644 arch/arm/dts/fsl-lx2160a-clearfog-itx-u-boot.dtsi
+ create mode 100644 arch/arm/dts/fsl-lx2160a-clearfog-itx.dtsi
+ create mode 100644 arch/arm/dts/fsl-lx2160a-honeycomb-u-boot.dtsi
+ create mode 100644 arch/arm/dts/fsl-lx2160a-honeycomb.dts
+
+diff --git a/arch/arm/dts/fsl-lx2160a-clearfog-cx-u-boot.dtsi b/arch/arm/dts/fsl-lx2160a-clearfog-cx-u-boot.dtsi
+new file mode 100644
+index 00000000000..fc1b1692755
+--- /dev/null
++++ b/arch/arm/dts/fsl-lx2160a-clearfog-cx-u-boot.dtsi
+@@ -0,0 +1,3 @@
++// SPDX-License-Identifier: GPL-2.0+
++
++#include "fsl-lx2160a-clearfog-itx-u-boot.dtsi"
+diff --git a/arch/arm/dts/fsl-lx2160a-clearfog-cx.dts b/arch/arm/dts/fsl-lx2160a-clearfog-cx.dts
+new file mode 100644
+index 00000000000..86a9b771428
+--- /dev/null
++++ b/arch/arm/dts/fsl-lx2160a-clearfog-cx.dts
+@@ -0,0 +1,15 @@
++// SPDX-License-Identifier: (GPL-2.0 OR MIT)
++//
++// Device Tree file for LX2160A Clearfog CX board
++//
++// Copyright 2019 SolidRun Ltd.
++
++/dts-v1/;
++
++#include "fsl-lx2160a-clearfog-itx.dtsi"
++
++/ {
++	model = "SolidRun LX2160A Clearfog CX";
++	compatible = "solidrun,clearfog-cx",
++		"solidrun,lx2160a-cex7", "fsl,lx2160a";
++};
+diff --git a/arch/arm/dts/fsl-lx2160a-clearfog-itx-u-boot.dtsi b/arch/arm/dts/fsl-lx2160a-clearfog-itx-u-boot.dtsi
+new file mode 100644
+index 00000000000..2ab1b63addf
+--- /dev/null
++++ b/arch/arm/dts/fsl-lx2160a-clearfog-itx-u-boot.dtsi
+@@ -0,0 +1,3 @@
++// SPDX-License-Identifier: GPL-2.0+
++
++#include "fsl-lx2160a-cex7-u-boot.dtsi"
+diff --git a/arch/arm/dts/fsl-lx2160a-clearfog-itx.dtsi b/arch/arm/dts/fsl-lx2160a-clearfog-itx.dtsi
+new file mode 100644
+index 00000000000..91a2fd0c260
+--- /dev/null
++++ b/arch/arm/dts/fsl-lx2160a-clearfog-itx.dtsi
+@@ -0,0 +1,135 @@
++// SPDX-License-Identifier: (GPL-2.0 OR MIT)
++//
++// Device Tree file for LX2160A Clearfog ITX board; this contains the
++// common parts shared between the Clearfog CX and Honeycomb builds.
++//
++// Copyright 2019 SolidRun Ltd.
++
++/dts-v1/;
++
++#include <dt-bindings/gpio/gpio.h>
++
++#include "fsl-lx2160a-cex7.dtsi"
++#include <dt-bindings/input/linux-event-codes.h>
++
++/ {
++	aliases {
++		serial0 = &uart0;
++		serial1 = &uart1;
++	};
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++
++	gpio-keys {
++		compatible = "gpio-keys";
++
++		key {
++			label = "power";
++			linux,can-disable;
++			linux,code = <KEY_POWER>;
++			gpios = <&gpio2 6 GPIO_ACTIVE_LOW>;
++		};
++	};
++
++	sfp0: sfp-0 {
++		compatible = "sff,sfp";
++		i2c-bus = <&sfp0_i2c>;
++		mod-def0-gpios = <&gpio2 0 GPIO_ACTIVE_LOW>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp1: sfp-1 {
++		compatible = "sff,sfp";
++		i2c-bus = <&sfp1_i2c>;
++		mod-def0-gpios = <&gpio2 9 GPIO_ACTIVE_LOW>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp2: sfp-2 {
++		compatible = "sff,sfp";
++		i2c-bus = <&sfp2_i2c>;
++		mod-def0-gpios = <&gpio2 10 GPIO_ACTIVE_LOW>;
++		maximum-power-milliwatt = <2000>;
++	};
++
++	sfp3: sfp-3 {
++		compatible = "sff,sfp";
++		i2c-bus = <&sfp3_i2c>;
++		mod-def0-gpios = <&gpio2 11 GPIO_ACTIVE_LOW>;
++		maximum-power-milliwatt = <2000>;
++	};
++};
++
++&dpmac7 {
++	sfp = <&sfp0>;
++	managed = "in-band-status";
++};
++
++&dpmac8 {
++	sfp = <&sfp1>;
++	managed = "in-band-status";
++};
++
++&dpmac9 {
++	sfp = <&sfp2>;
++	managed = "in-band-status";
++};
++
++&dpmac10 {
++	sfp = <&sfp3>;
++	managed = "in-band-status";
++};
++
++&emdio2 {
++	status = "okay";
++};
++
++&esdhc0 {
++	sd-uhs-sdr104;
++	sd-uhs-sdr50;
++	sd-uhs-sdr25;
++	sd-uhs-sdr12;
++	status = "okay";
++};
++
++&pcs_mdio7 {
++	status = "okay";
++};
++
++&pcs_mdio8 {
++	status = "okay";
++};
++
++&pcs_mdio9 {
++	status = "okay";
++};
++
++&pcs_mdio10 {
++	status = "okay";
++};
++
++&sata0 {
++	status = "okay";
++};
++
++&sata1 {
++	status = "okay";
++};
++
++&sata2 {
++	status = "okay";
++};
++
++&sata3 {
++	status = "okay";
++};
++
++&uart0 {
++	status = "okay";
++};
++
++&uart1 {
++	status = "okay";
++};
+diff --git a/arch/arm/dts/fsl-lx2160a-honeycomb-u-boot.dtsi b/arch/arm/dts/fsl-lx2160a-honeycomb-u-boot.dtsi
+new file mode 100644
+index 00000000000..fc1b1692755
+--- /dev/null
++++ b/arch/arm/dts/fsl-lx2160a-honeycomb-u-boot.dtsi
+@@ -0,0 +1,3 @@
++// SPDX-License-Identifier: GPL-2.0+
++
++#include "fsl-lx2160a-clearfog-itx-u-boot.dtsi"
+diff --git a/arch/arm/dts/fsl-lx2160a-honeycomb.dts b/arch/arm/dts/fsl-lx2160a-honeycomb.dts
+new file mode 100644
+index 00000000000..fe19f3009ea
+--- /dev/null
++++ b/arch/arm/dts/fsl-lx2160a-honeycomb.dts
+@@ -0,0 +1,15 @@
++// SPDX-License-Identifier: (GPL-2.0 OR MIT)
++//
++// Device Tree file for LX2160A Honeycomb board
++//
++// Copyright 2019 SolidRun Ltd.
++
++/dts-v1/;
++
++#include "fsl-lx2160a-clearfog-itx.dtsi"
++
++/ {
++	model = "SolidRun LX2160A Honeycomb";
++	compatible = "solidrun,honeycomb",
++		"solidrun,lx2160a-cex7", "fsl,lx2160a";
++};
+-- 
+2.43.0
+

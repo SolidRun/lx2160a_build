@@ -1,7 +1,7 @@
-From d216b7ce085b2cb39149fd1ab206fa88ebd6f1b8 Mon Sep 17 00:00:00 2001
+From 3c3574b43142bba7a47da360b8bbc599f17a2f71 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Fri, 8 Aug 2025 14:17:13 +0200
-Subject: [PATCH 24/25] board: solidrun: lx2160cex7: add support for lx2162 som
+Subject: [PATCH 12/14] board: solidrun: lx2160cex7: add support for lx2162 som
 
 Compile with CONFIG_DEFAULT_DEVICE_TREE=fsl-lx2162a-sr-som
 

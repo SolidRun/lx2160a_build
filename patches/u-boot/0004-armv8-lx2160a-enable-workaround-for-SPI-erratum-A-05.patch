@@ -1,7 +1,7 @@
-From be3e3770d6b5e3253d6cae23c53f9c12de8eef5f Mon Sep 17 00:00:00 2001
+From 078a1018543d76c7e875abbd0fc9d041c8441529 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Thu, 24 Oct 2024 16:17:49 +0200
-Subject: [PATCH 05/25] armv8: lx2160a: enable workaround for SPI erratum
+Subject: [PATCH 04/14] armv8: lx2160a: enable workaround for SPI erratum
  A-050752
 
 When RCW is loaded from SDHC1, chip-selects signals for SPI3 are always

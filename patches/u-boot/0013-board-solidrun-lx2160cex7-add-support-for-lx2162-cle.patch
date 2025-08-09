@@ -1,7 +1,7 @@
-From 1c46d7cdb61ac2be1e239572bac06dcfb13656da Mon Sep 17 00:00:00 2001
+From 9365f95c4a356741ed4706697e33e2244afa5bc6 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Fri, 8 Aug 2025 15:05:58 +0200
-Subject: [PATCH 25/25] board: solidrun: lx2160cex7: add support for lx2162
+Subject: [PATCH 13/14] board: solidrun: lx2160cex7: add support for lx2162
  clearfog
 
 Compile with CONFIG_DEFAULT_DEVICE_TREE=fsl-lx2162a-clearfog
@@ -10,14 +10,14 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---
  arch/arm/dts/fsl-lx2162a-clearfog-u-boot.dtsi |  43 +++
  arch/arm/dts/fsl-lx2162a-clearfog.dts         | 355 ++++++++++++++++++
- configs/lx2160acex7_tfa_defconfig             |   2 +
- 3 files changed, 400 insertions(+)
+ configs/lx2160acex7_tfa_defconfig             |   1 +
+ 3 files changed, 399 insertions(+)
  create mode 100644 arch/arm/dts/fsl-lx2162a-clearfog-u-boot.dtsi
  create mode 100644 arch/arm/dts/fsl-lx2162a-clearfog.dts
 
 diff --git a/arch/arm/dts/fsl-lx2162a-clearfog-u-boot.dtsi b/arch/arm/dts/fsl-lx2162a-clearfog-u-boot.dtsi
 new file mode 100644
-index 00000000000..def14c88c52
+index 00000000000..b253888e620
 --- /dev/null
 +++ b/arch/arm/dts/fsl-lx2162a-clearfog-u-boot.dtsi
 @@ -0,0 +1,43 @@
@@ -26,42 +26,42 @@ index 00000000000..def14c88c52
 +#include "fsl-lx2162a-sr-som-u-boot.dtsi"
 +
 +&dpmac11 {
-+	/* link pcs phy as second phy for mac link-type phy */
++	/* link pcs phy as second phy for sgmii mac link-type phy */
 +	phy-handle = <&ethernet_phy3>, <&pcs11>;
 +};
 +
 +&dpmac12 {
-+	/* link pcs phy as second phy for mac link-type phy */
++	/* link pcs phy as second phy for sgmii mac link-type phy */
 +	phy-handle = <&ethernet_phy1>, <&pcs12>;
 +};
 +
 +&dpmac13 {
-+	/* link pcs phy as second phy for mac link-type phy */
++	/* link pcs phy as second phy for sgmii mac link-type phy */
 +	phy-handle = <&ethernet_phy6>, <&pcs13>;
 +};
 +
 +&dpmac14 {
-+	/* link pcs phy as second phy for mac link-type phy */
++	/* link pcs phy as second phy for sgmii mac link-type phy */
 +	phy-handle = <&ethernet_phy8>, <&pcs14>;
 +};
 +
 +&dpmac15 {
-+	/* link pcs phy as second phy for mac link-type phy */
++	/* link pcs phy as second phy for sgmii mac link-type phy */
 +	phy-handle = <&ethernet_phy4>, <&pcs15>;
 +};
 +
 +&dpmac16 {
-+	/* link pcs phy as second phy for mac link-type phy */
++	/* link pcs phy as second phy for sgmii mac link-type phy */
 +	phy-handle = <&ethernet_phy2>, <&pcs16>;
 +};
 +
 +&dpmac17 {
-+	/* link pcs phy as second phy for mac link-type phy */
++	/* link pcs phy as second phy for sgmii mac link-type phy */
 +	phy-handle = <&ethernet_phy0>, <&pcs17>;
 +};
 +
 +&dpmac18 {
-+	/* link pcs phy as second phy for mac link-type phy */
++	/* link pcs phy as second phy for sgmii mac link-type phy */
 +	phy-handle = <&ethernet_phy7>, <&pcs18>;
 +};
 diff --git a/arch/arm/dts/fsl-lx2162a-clearfog.dts b/arch/arm/dts/fsl-lx2162a-clearfog.dts
@@ -426,20 +426,17 @@ index 00000000000..be26890a11c
 +	status = "okay";
 +};
 diff --git a/configs/lx2160acex7_tfa_defconfig b/configs/lx2160acex7_tfa_defconfig
-index d1e0a46db30..9b8a99f868b 100644
+index 016daa899c8..9b8a99f868b 100644
 --- a/configs/lx2160acex7_tfa_defconfig
 +++ b/configs/lx2160acex7_tfa_defconfig
-@@ -82,8 +82,10 @@ CONFIG_SPI_FLASH_WINBOND=y
+@@ -82,6 +82,7 @@ CONFIG_SPI_FLASH_WINBOND=y
  CONFIG_PHYLIB=y
  CONFIG_PHY_AQUANTIA=y
  CONFIG_PHY_ATHEROS=y
 +CONFIG_PHY_MARVELL_10G=y
  CONFIG_FSL_MEMAC=y
  CONFIG_SYS_MEMAC_LITTLE_ENDIAN=y
-+CONFIG_DM_ETH_PHY=y
- CONFIG_E1000=y
- CONFIG_MII=y
- CONFIG_NVME_PCI=y
+ CONFIG_DM_ETH_PHY=y
 -- 
 2.43.0
 

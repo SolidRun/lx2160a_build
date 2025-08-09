@@ -1,24 +1,25 @@
-From 5f441b4f2f4287c28c68d3025894aa38c555cab3 Mon Sep 17 00:00:00 2001
+From 11c1b62e4f9c7ca0f4b3574353c1537c3b3d9cb6 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Thu, 13 Jun 2024 17:26:47 +0200
-Subject: [PATCH 01/25] add solidrun lx2160-cex7 board support
+Subject: [PATCH 11/14] add solidrun lx2160-cex7 board support
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---
  arch/arm/Kconfig                              |  14 +
  arch/arm/dts/Makefile                         |   1 +
- arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi     |  22 ++
- arch/arm/dts/fsl-lx2160a-cex7.dts             |  20 ++
- arch/arm/dts/fsl-lx2160a-cex7.dtsi            | 187 ++++++++++
+ arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi     |  36 ++
+ arch/arm/dts/fsl-lx2160a-cex7.dts             |  17 +
+ arch/arm/dts/fsl-lx2160a-cex7.dtsi            | 184 +++++++
  board/solidrun/lx2160acex7/Kconfig            |  15 +
- board/solidrun/lx2160acex7/Makefile           |  10 +
- board/solidrun/lx2160acex7/ddr.c              |  22 ++
- board/solidrun/lx2160acex7/eth_lx2160acex7.c  |  88 +++++
- board/solidrun/lx2160acex7/lx2160a.c          | 308 +++++++++++++++++
- configs/lx2160acex7_tfa_SECURE_BOOT_defconfig |  86 +++++
- configs/lx2160acex7_tfa_defconfig             |  96 ++++++
- include/configs/lx2160acex7.h                 | 324 ++++++++++++++++++
- 13 files changed, 1193 insertions(+)
+ board/solidrun/lx2160acex7/Makefile           |  11 +
+ board/solidrun/lx2160acex7/ddr.c              |  22 +
+ board/solidrun/lx2160acex7/eth_lx2160acex7.c  |  45 ++
+ board/solidrun/lx2160acex7/lx2160a.c          | 269 +++++++++
+ board/solidrun/lx2160acex7/serdes.c           | 512 ++++++++++++++++++
+ configs/lx2160acex7_tfa_SECURE_BOOT_defconfig |  97 ++++
+ configs/lx2160acex7_tfa_defconfig             | 109 ++++
+ include/configs/lx2160acex7.h                 | 282 ++++++++++
+ 14 files changed, 1614 insertions(+)
  create mode 100644 arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi
  create mode 100644 arch/arm/dts/fsl-lx2160a-cex7.dts
  create mode 100644 arch/arm/dts/fsl-lx2160a-cex7.dtsi
@@ -27,6 +28,7 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
  create mode 100644 board/solidrun/lx2160acex7/ddr.c
  create mode 100644 board/solidrun/lx2160acex7/eth_lx2160acex7.c
  create mode 100644 board/solidrun/lx2160acex7/lx2160a.c
+ create mode 100644 board/solidrun/lx2160acex7/serdes.c
  create mode 100644 configs/lx2160acex7_tfa_SECURE_BOOT_defconfig
  create mode 100644 configs/lx2160acex7_tfa_defconfig
  create mode 100644 include/configs/lx2160acex7.h
@@ -77,38 +79,52 @@ index 737e959a6b5..e12136af4ab 100644
  	fsl-lx2160a-qds-3-x-x.dtb \
 diff --git a/arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi b/arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi
 new file mode 100644
-index 00000000000..9855fcb31cc
+index 00000000000..9394c36d70e
 --- /dev/null
 +++ b/arch/arm/dts/fsl-lx2160a-cex7-u-boot.dtsi
-@@ -0,0 +1,22 @@
+@@ -0,0 +1,36 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +
++#include <dt-bindings/gpio/gpio.h>
++
 +/ {
-+	fanctrl-override {
-+		compatible = "solidrun,lx2160acex7-fanctrl-override";
-+		override-gpios = <&gpio2 2 0>;
++	aliases {
++		tlv0 = &{/i2c@2000000/i2c-mux@77/i2c@0/eeprom@57};
++		serial0 = &uart0;
 +	};
 +};
 +
-+&i2c0 {
-+	u-boot,dm-pre-reloc;
-+
-+	i2c-mux@77 {
-+		u-boot,dm-pre-reloc;
-+
-+		i2c@0 {
-+			eeprom@57 {
-+				u-boot,dm-pre-reloc;
-+			};
-+		};
++&gpio2 {
++	/*
++	 * AMC6821 THERM signal uses open-drain logic and can be driven
++	 * by either the host (force full-speed) or the chip
++	 * (thermal warning). Firmware drives it low during reset.
++	 *
++	 * Force fan full-speed while bootloader is active.
++	 * TODO: Add fan-controller driver.
++	 */
++	fan-full-speed-hog {
++		gpio-hog;
++		gpios = <2 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
++		output-high;
++		line-name = "fan-full-speed";
 +	};
++};
++
++&{/i2c@2000000/i2c-mux@77/i2c@1/fan-temperature-ctrlr@18} {
++	/*u-boot does not currently have a driver for this fan-controller */
++	status = "disabled";
++};
++
++&uart0 {
++	status = "okay";
 +};
 diff --git a/arch/arm/dts/fsl-lx2160a-cex7.dts b/arch/arm/dts/fsl-lx2160a-cex7.dts
 new file mode 100644
-index 00000000000..60f99f143ce
+index 00000000000..3816034e279
 --- /dev/null
 +++ b/arch/arm/dts/fsl-lx2160a-cex7.dts
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,17 @@
 +// SPDX-License-Identifier: (GPL-2.0 OR MIT)
 +/*
 + * Device Tree file for LX2160A-CEx7 Standalone (Generic Carrier Board)
@@ -118,10 +134,7 @@ index 00000000000..60f99f143ce
 +
 +#include "fsl-lx2160a-cex7.dtsi"
 +
-+&dpmac17 {
-+	status = "okay";
-+};
-+
++/* for SD-Card Boot */
 +&esdhc0 {
 +	sd-uhs-sdr104;
 +	sd-uhs-sdr50;
@@ -131,10 +144,10 @@ index 00000000000..60f99f143ce
 +};
 diff --git a/arch/arm/dts/fsl-lx2160a-cex7.dtsi b/arch/arm/dts/fsl-lx2160a-cex7.dtsi
 new file mode 100644
-index 00000000000..d32a52ab00a
+index 00000000000..e4b72707081
 --- /dev/null
 +++ b/arch/arm/dts/fsl-lx2160a-cex7.dtsi
-@@ -0,0 +1,187 @@
+@@ -0,0 +1,184 @@
 +// SPDX-License-Identifier: (GPL-2.0 OR MIT)
 +//
 +// Device Tree file for LX2160A-CEx7
@@ -231,9 +244,6 @@ index 00000000000..d32a52ab00a
 +			fan-temperature-ctrlr@18 {
 +				compatible = "ti,amc6821";
 +				reg = <0x18>;
-+				cooling-min-state = <0>;
-+				cooling-max-state = <9>;
-+				#cooling-cells = <2>;
 +			};
 +		};
 +
@@ -345,10 +355,10 @@ index 00000000000..85673846a4a
 +endif
 diff --git a/board/solidrun/lx2160acex7/Makefile b/board/solidrun/lx2160acex7/Makefile
 new file mode 100644
-index 00000000000..4a3b039a5cf
+index 00000000000..a4bcd539cf8
 --- /dev/null
 +++ b/board/solidrun/lx2160acex7/Makefile
-@@ -0,0 +1,10 @@
+@@ -0,0 +1,11 @@
 +#
 +# Copyright 2018 Freescale Semiconductor
 +# Copyright 2024 Josua Mayer <josua@solid-run.com>
@@ -359,6 +369,7 @@ index 00000000000..4a3b039a5cf
 +obj-y += lx2160a.o
 +obj-y += ddr.o
 +obj-$(CONFIG_TARGET_LX2160ACEX7) += eth_lx2160acex7.o
++obj-y += serdes.o
 diff --git a/board/solidrun/lx2160acex7/ddr.c b/board/solidrun/lx2160acex7/ddr.c
 new file mode 100644
 index 00000000000..d872e575306
@@ -389,10 +400,10 @@ index 00000000000..d872e575306
 +}
 diff --git a/board/solidrun/lx2160acex7/eth_lx2160acex7.c b/board/solidrun/lx2160acex7/eth_lx2160acex7.c
 new file mode 100644
-index 00000000000..d2c68d34243
+index 00000000000..bc7ae231c58
 --- /dev/null
 +++ b/board/solidrun/lx2160acex7/eth_lx2160acex7.c
-@@ -0,0 +1,88 @@
+@@ -0,0 +1,45 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Copyright 2018-2021 NXP
@@ -407,58 +418,13 @@ index 00000000000..d2c68d34243
 +#include <fsl-mc/fsl_mc.h>
 +#include <fsl-mc/ldpaa_wriop.h>
 +#include <netdev.h>
++#include <asm/arch/clock.h>
++#include <fdt_support.h>
 +
 +DECLARE_GLOBAL_DATA_PTR;
 +
 +int board_eth_init(struct bd_info *bis)
 +{
-+#if defined(CONFIG_FSL_MC_ENET)
-+	struct memac_mdio_info mdio_info;
-+	struct memac_mdio_controller *reg;
-+	int i, interface;
-+	struct mii_dev *dev;
-+	struct ccsr_gur *gur = (void *)(CONFIG_SYS_FSL_GUTS_ADDR);
-+	u32 srds_s1;
-+
-+	srds_s1 = in_le32(&gur->rcwsr[28]) &
-+				FSL_CHASSIS3_RCWSR28_SRDS1_PRTCL_MASK;
-+	srds_s1 >>= FSL_CHASSIS3_RCWSR28_SRDS1_PRTCL_SHIFT;
-+
-+	reg = (struct memac_mdio_controller *)CONFIG_SYS_FSL_WRIOP1_MDIO1;
-+	mdio_info.regs = reg;
-+	mdio_info.name = DEFAULT_WRIOP_MDIO1_NAME;
-+
-+	/* Register the EMI 1 */
-+	fm_memac_mdio_init(bis, &mdio_info);
-+
-+	switch (srds_s1) {
-+	case 8:
-+		wriop_set_phy_address(WRIOP1_DPMAC17, 0, RGMII_PHY_ADDR1);
-+		break;
-+
-+	default:
-+		printf("SerDes1 protocol 0x%x is not supported on LX2160ACEX7\n",
-+		       srds_s1);
-+		goto next;
-+	}
-+
-+	for (i = WRIOP1_DPMAC17; i <= WRIOP1_DPMAC17; i++) {
-+		interface = wriop_get_enet_if(i);
-+		switch (interface) {
-+		case PHY_INTERFACE_MODE_RGMII:
-+		case PHY_INTERFACE_MODE_RGMII_ID:
-+			dev = miiphy_get_dev_by_name(DEFAULT_WRIOP_MDIO1_NAME);
-+			wriop_set_mdio(i, dev);
-+			break;
-+		default:
-+			break;
-+		}
-+	}
-+
-+next:
-+	cpu_eth_init(bis);
-+#endif /* CONFIG_FSL_MC_ENET */
-+
 +	return pci_eth_init(bis);
 +}
 +
@@ -471,10 +437,12 @@ index 00000000000..d2c68d34243
 +}
 +#endif /* CONFIG_RESET_PHY_R */
 +
++#ifndef CONFIG_CMD_TLV_EEPROM
 +int mac_read_from_eeprom(void)
 +{
 +	return 0;
 +}
++#endif
 +
 +int do_mac(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 +{
@@ -483,10 +451,10 @@ index 00000000000..d2c68d34243
 +}
 diff --git a/board/solidrun/lx2160acex7/lx2160a.c b/board/solidrun/lx2160acex7/lx2160a.c
 new file mode 100644
-index 00000000000..08fa6070672
+index 00000000000..632fbff52dc
 --- /dev/null
 +++ b/board/solidrun/lx2160acex7/lx2160a.c
-@@ -0,0 +1,308 @@
+@@ -0,0 +1,269 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Copyright 2018-2021 NXP
@@ -499,6 +467,7 @@ index 00000000000..08fa6070672
 +#include <asm/arch/soc.h>
 +#include <asm/gpio.h>
 +#include <clock_legacy.h>
++#include <display_options.h>
 +#include <dm.h>
 +#include <dm/platform_data/serial_pl01x.h>
 +#include <fdt_support.h>
@@ -509,53 +478,17 @@ index 00000000000..08fa6070672
 +
 +DECLARE_GLOBAL_DATA_PTR;
 +
-+static struct pl01x_serial_plat serial0 = {
-+#if CONFIG_CONS_INDEX == 0
-+	.base = CONFIG_SYS_SERIAL0,
-+#elif CONFIG_CONS_INDEX == 1
-+	.base = CONFIG_SYS_SERIAL1,
-+#else
-+#error "Unsupported console index value."
-+#endif
-+	.type = TYPE_PL011,
-+};
-+
-+U_BOOT_DRVINFO(nxp_serial0) = {
-+	.name = "serial_pl01x",
-+	.plat = &serial0,
-+};
-+
-+static struct pl01x_serial_plat serial1 = {
-+	.base = CONFIG_SYS_SERIAL1,
-+	.type = TYPE_PL011,
-+};
-+
-+U_BOOT_DRVINFO(nxp_serial1) = {
-+	.name = "serial_pl01x",
-+	.plat = &serial1,
-+};
-+
-+static void uart_get_clock(void)
-+{
-+	serial0.clock = get_serial_clock();
-+	serial1.clock = get_serial_clock();
-+}
-+
 +int board_early_init_f(void)
 +{
-+#ifdef CONFIG_SYS_I2C_EARLY_INIT
-+	i2c_early_init_f();
-+#endif
-+	/* get required clock for UART IP */
-+	uart_get_clock();
-+
 +	fsl_lsch3_early_init_f();
 +	return 0;
 +}
 +
 +#ifdef CONFIG_OF_BOARD_FIXUP
-+int board_fix_fdt(void *fdt)
-+{
++void board_fix_fdt_eth(void *fdt, u32 srds_s1, u32 srds_s2, u32 is_lx2162);
++void board_fix_fdt_serdes_ports(void *fdt);
++
++static void board_fix_fdt_pci_silicon(void *fdt) {
 +	char *reg_names, *reg_name;
 +	int names_len, old_name_len, new_name_len, remaining_names_len;
 +	struct str_map {
@@ -567,9 +500,11 @@ index 00000000000..08fa6070672
 +	};
 +	int off = -1, i = 0;
 +
++	/* skip pci fixup on silicon version 1 */
 +	if (IS_SVR_REV(get_svr(), 1, 0))
-+		return 0;
++		return;
 +
++	/* fixup pci controller for silicon version 2 */
 +	off = fdt_node_offset_by_compatible(fdt, -1, "fsl,lx2160a-pcie");
 +	while (off != -FDT_ERR_NOTFOUND) {
 +		fdt_setprop(fdt, off, "compatible", "fsl,ls-pcie",
@@ -616,19 +551,21 @@ index 00000000000..08fa6070672
 +		off = fdt_node_offset_by_compatible(fdt, off,
 +						    "fsl,lx2160a-pcie");
 +	}
++}
++
++/* fdt fixup for u-boot itself */
++int board_fix_fdt(void *fdt)
++{
++	/* allocate space in case properties must be added */
++	fdt_increase_size(fdt, 512);
++
++	/* fix fdt */
++	board_fix_fdt_serdes_ports(fdt);
++	board_fix_fdt_pci_silicon(fdt);
 +
 +	return 0;
 +}
 +#endif
-+
-+int esdhc_status_fixup(void *blob, const char *compat)
-+{
-+	/* Enable both esdhc DT nodes for LX2160ARDB */
-+	do_fixup_by_compat(blob, compat, "status", "okay",
-+			   sizeof("okay"), 1);
-+
-+	return 0;
-+}
 +
 +int checkboard(void)
 +{
@@ -636,21 +573,18 @@ index 00000000000..08fa6070672
 +	char buf[64];
 +
 +	cpu_name(buf);
-+	printf("Board: LX2160A-CEX7, %s, boot from ", buf);
 +
++	puts("Boot Source: ");
 +	if (src == BOOT_SOURCE_SD_MMC) {
 +		puts("SD\n");
 +	} else if (src == BOOT_SOURCE_SD_MMC2) {
 +		puts("eMMC\n");
 +	} else if (src == BOOT_SOURCE_XSPI_NOR) {
 +		puts("FlexSPI\n");
++	} else {
++		puts("Unknown\n");
 +	}
 +
-+	return 0;
-+}
-+
-+int config_board_mux(void)
-+{
 +	return 0;
 +}
 +
@@ -666,33 +600,16 @@ index 00000000000..08fa6070672
 +
 +int board_init(void)
 +{
-+#ifdef CONFIG_ENV_IS_NOWHERE
-+	gd->env_addr = (ulong)&default_environment[0];
-+#endif
-+
-+#if !defined(CONFIG_SYS_EARLY_PCI_INIT) && defined(CONFIG_DM_ETH)
++#if !defined(CONFIG_SYS_EARLY_PCI_INIT)
 +	pci_init();
 +#endif
++
 +	return 0;
 +}
 +
-+void detail_board_ddr_info(void)
-+{
-+	int i;
-+	u64 ddr_size = 0;
-+
-+	puts("\nDDR    ");
-+	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++)
-+		ddr_size += gd->bd->bi_dram[i].size;
-+	print_size(ddr_size, "");
-+	print_ddr_info(0);
-+}
-+
-+#ifdef CONFIG_MISC_INIT_R
-+int misc_init_r(void)
-+{
-+	config_board_mux();
-+
++#ifdef CONFIG_BOARD_LATE_INIT
++int fsl_board_late_init(void) {
++	/* TODO: configure fan-controller here and release gpio-hog */
 +	return 0;
 +}
 +#endif
@@ -702,9 +619,11 @@ index 00000000000..08fa6070672
 +{
 +	int offset;
 +
++	/* mainline linux has fsl-mc below soc node */
 +	offset = fdt_path_offset(fdt, "/soc/fsl-mc");
 +
 +	if (offset < 0)
++		/* older versions had fsl-mc at root level */
 +		offset = fdt_path_offset(fdt, "/fsl-mc");
 +
 +	if (offset < 0) {
@@ -717,6 +636,7 @@ index 00000000000..08fa6070672
 +	    (is_lazy_dpl_addr_valid() || get_dpl_apply_status() == 0)) {
 +		fdt_status_okay(fdt, offset);
 +	} else {
++		/* mc startup failed, disable in dtb */
 +		fdt_status_fail(fdt, offset);
 +	}
 +}
@@ -738,6 +658,14 @@ index 00000000000..08fa6070672
 +	u64 mc_memory_base = 0;
 +	u64 mc_memory_size = 0;
 +	u16 total_memory_banks;
++	int err;
++
++	err = fdt_increase_size(blob, 512);
++	if (err) {
++		printf("%s fdt_increase_size: err=%s\n", __func__,
++		       fdt_strerror(err));
++		return err;
++	}
 +
 +	ft_cpu_setup(blob, bd);
 +
@@ -782,25 +710,544 @@ index 00000000000..08fa6070672
 +
 +	fdt_fixup_memory_banks(blob, base, size, total_memory_banks);
 +
-+#ifdef CONFIG_USB
++#ifdef CONFIG_USB_HOST
 +	fsl_fdt_fixup_dr_usb(blob, bd);
 +#endif
 +
 +#ifdef CONFIG_FSL_MC_ENET
 +	fdt_fsl_mc_fixup_iommu_map_entry(blob);
 +	fdt_fixup_board_enet(blob);
++	fdt_reserve_mc_mem(blob, 0x4000);
 +#endif
 +	fdt_fixup_icid(blob);
 +
 +	return 0;
 +}
 +#endif
+diff --git a/board/solidrun/lx2160acex7/serdes.c b/board/solidrun/lx2160acex7/serdes.c
+new file mode 100644
+index 00000000000..c6b6d9bbfdc
+--- /dev/null
++++ b/board/solidrun/lx2160acex7/serdes.c
+@@ -0,0 +1,512 @@
++// SPDX-License-Identifier: GPL-2.0+
++/*
++ * Copyright 2025 Josua Mayer <josua@solid-run.com>
++ *
++ */
++
++#include <fdt_support.h>
++
++/* SerDes base address */
++#define LYNX_28G_SDn_BASE(block)		((void *)0x01EA0000 + (block) * 0x10000)
++
++/* Protocol Configuration Register 0 */
++#define LYNX_28G_PCC0				0x1080
++#define LYNX_28G_PCC0_PEXA_CFG			GENMASK(30, 28)
++#define LYNX_28G_PCC0_PEXB_CFG			GENMASK(26, 24)
++
++/* Protocol Configuration Register 2 */
++#define LYNX_28G_PCC2				0x1088
++#define LYNX_28G_PCC2_SATAA_CFG			GENMASK(30, 28)
++#define LYNX_28G_PCC2_SATAB_CFG			GENMASK(26, 24)
++#define LYNX_28G_PCC2_SATAC_CFG			GENMASK(22, 20)
++#define LYNX_28G_PCC2_SATAD_CFG			GENMASK(18, 16)
++
++/* Protocol Configuration Register 8 */
++#define LYNX_28G_PCC8				0x10A0
++#define LYNX_28G_PCC8_SGMIIA_CFG		GENMASK(30, 28)
++#define LYNX_28G_PCC8_SGMIIB_CFG		GENMASK(26, 24)
++#define LYNX_28G_PCC8_SGMIIC_CFG		GENMASK(22, 20)
++#define LYNX_28G_PCC8_SGMIID_CFG		GENMASK(18, 16)
++#define LYNX_28G_PCC8_SGMIIE_CFG		GENMASK(14, 12)
++#define LYNX_28G_PCC8_SGMIIF_CFG		GENMASK(10, 8)
++#define LYNX_28G_PCC8_SGMIIG_CFG		GENMASK(6, 4)
++#define LYNX_28G_PCC8_SGMIIH_CFG		GENMASK(2, 0)
++
++/* Protocol Configuration Register C */
++#define LYNX_28G_PCCC				0x10B0
++#define LYNX_28G_PCCC_SXGMIIA_CFG		GENMASK(30, 28)
++#define LYNX_28G_PCCC_SXGMIIB_CFG		GENMASK(26, 24)
++#define LYNX_28G_PCCC_SXGMIIC_CFG		GENMASK(22, 20)
++#define LYNX_28G_PCCC_SXGMIID_CFG		GENMASK(18, 16)
++#define LYNX_28G_PCCC_SXGMIIE_CFG		GENMASK(14, 12)
++#define LYNX_28G_PCCC_SXGMIIF_CFG		GENMASK(10, 8)
++#define LYNX_28G_PCCC_SXGMIIG_CFG		GENMASK(6, 4)
++#define LYNX_28G_PCCC_SXGMIIH_CFG		GENMASK(2, 0)
++
++/* Protocol Configuration Register D */
++#define LYNX_28G_PCCD				0x10B4
++#define LYNX_28G_PCCD_E25GA_CFG			GENMASK(30, 28)
++#define LYNX_28G_PCCD_E25GB_CFG			GENMASK(26, 24)
++#define LYNX_28G_PCCD_E25GC_CFG			GENMASK(22, 20)
++#define LYNX_28G_PCCD_E25GD_CFG			GENMASK(18, 16)
++#define LYNX_28G_PCCD_E25GE_CFG			GENMASK(14, 12)
++#define LYNX_28G_PCCD_E25GF_CFG			GENMASK(10, 8)
++#define LYNX_28G_PCCD_E25GG_CFG			GENMASK(6, 4)
++#define LYNX_28G_PCCD_E25GH_CFG			GENMASK(2, 0)
++
++/* Protocol Configuration Register E */
++#define LYNX_28G_PCCE				0x10B8
++#define LYNX_28G_PCCE_E40GA_CFG			GENMASK(30, 28)
++#define LYNX_28G_PCCE_E40GB_CFG			GENMASK(26, 24)
++#define LYNX_28G_PCCE_E50GA_CFG			GENMASK(22, 20)
++#define LYNX_28G_PCCE_E50GB_CFG			GENMASK(18, 16)
++#define LYNX_28G_PCCE_E100GA_CFG		GENMASK(14, 12)
++#define LYNX_28G_PCCE_E100GB_CFG		GENMASK(10, 8)
++
++/* Lane a General Control Register */
++#define LYNX_28G_LNaGCR0(lane)			(0x800 + (lane) * 0x100 + 0x0)
++#define LYNX_28G_LNaGCR0_PORT_RST_LEFT		BIT(17)
++#define LYNX_28G_LNaGCR0_PORT_LN0_B		BIT(16)
++#define LYNX_28G_LNaGCR0_PROTO_SEL_MSK		GENMASK(7, 3)
++#define LYNX_28G_LNaGCR0_PROTO_SEL_PCI		0x0
++#define LYNX_28G_LNaGCR0_PROTO_SEL_SGMII	0x8
++#define LYNX_28G_LNaGCR0_PROTO_SEL_SATA		0x10
++#define LYNX_28G_LNaGCR0_PROTO_SEL_XFI		0x50
++#define LYNX_28G_LNaGCR0_PROTO_SEL_25G		0xD0
++
++/* Lane a Tx Reset Control Register */
++#define LYNX_28G_LNaTRSTCTL(lane)		(0x800 + (lane) * 0x100 + 0x20)
++#define LYNX_28G_LNaTRSTCTL_DIS			BIT(24)
++
++/* Lane a Rx Reset Control Register */
++#define LYNX_28G_LNaRRSTCTL(lane)		(0x800 + (lane) * 0x100 + 0x40)
++#define LYNX_28G_LNaRRSTCTL_DIS			BIT(24)
++
++/* Reset Control Word 27 (RO) */
++#define RCWSR27_R				((void *)0x01e00168)
++#define RCWSR27_EC1_PMUX_MASK			0x00000003
++#define RCWSR27_EC1_PMUX_WRIOP_MAC_17_RGMII	0x00000000
++#define RCWSR27_EC2_PMUX_MASK			0x0000000C
++#define RCWSR27_EC2_PMUX_WRIOP_MAC_18_RGMII	0x00000000
++
++enum {
++	DPMAC1 = 0,
++	DPMAC2,
++	DPMAC3,
++	DPMAC4,
++	DPMAC5,
++	DPMAC6,
++	DPMAC7,
++	DPMAC8,
++	DPMAC9,
++	DPMAC10,
++	DPMAC11,
++	DPMAC12,
++	DPMAC13,
++	DPMAC14,
++	DPMAC15,
++	DPMAC16,
++	DPMAC17,
++	DPMAC18,
++	DPMAC_MAX
++};
++
++#ifdef CONFIG_OF_BOARD_FIXUP
++
++/* fix mac nodes based on serdes protocol */
++static void board_fix_fdt_macs(void *fdt) {
++	struct mac_node {
++		const char *const path;
++		const char *status;
++		const char *mode;
++	} macs[DPMAC_MAX] = {
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@1", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@2", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@3", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@4", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@5", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@6", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@7", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@8", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@9", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@a", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@b", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@c", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@d", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@e", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@f", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@10", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@11", "disabled" },
++		{ "/fsl-mc@80c000000/dpmacs/dpmac@12", "disabled" },
++	};
++
++	struct {
++		const u32 __iomem *pcr;
++		const u32 pcr_ena_mask;
++		const char *const mode;
++		const unsigned int mac;
++	} ports[] = {
++		{
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIA_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC3,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIB_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC4,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIC_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC5,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIID_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC6,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIE_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC7,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIF_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC8,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIG_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC9,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIH_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC10,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIA_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC3,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIB_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC4,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIC_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC5,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIID_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC6,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIE_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC7,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIF_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC8,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIG_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC9,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIH_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC10,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GA_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC3,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GB_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC4,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GC_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC5,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GD_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC6,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GE_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC7,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GF_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC8,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GG_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC9,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GH_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC10,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCE,
++			.pcr_ena_mask = LYNX_28G_PCCE_E40GA_CFG,
++			.mode = "xlaui4",
++			.mac = DPMAC1,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCE,
++			.pcr_ena_mask = LYNX_28G_PCCE_E40GB_CFG,
++			.mode = "xlaui4",
++			.mac = DPMAC2,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCE,
++			.pcr_ena_mask = LYNX_28G_PCCE_E50GA_CFG,
++			.mode = "caui2",
++			.mac = DPMAC1,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCE,
++			.pcr_ena_mask = LYNX_28G_PCCE_E50GB_CFG,
++			.mode = "caui2",
++			.mac = DPMAC2,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCE,
++			.pcr_ena_mask = LYNX_28G_PCCE_E100GA_CFG,
++			.mode = "caui4",
++			.mac = DPMAC1,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCE,
++			.pcr_ena_mask = LYNX_28G_PCCE_E100GB_CFG,
++			.mode = "caui4",
++			.mac = DPMAC2,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIA_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC18,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIB_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC17,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIC_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC16,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIID_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC15,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIE_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC14,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIF_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC13,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIG_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC12,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIH_CFG,
++			.mode = "sgmii",
++			.mac = DPMAC11,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIA_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC18,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIB_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC17,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIC_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC16,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIID_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC15,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIE_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC14,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIF_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC13,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIG_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC12,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIH_CFG,
++			.mode = "xgmii",
++			.mac = DPMAC11,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GA_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC18,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GB_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC17,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GC_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC16,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GD_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC15,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GE_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC14,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GF_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC13,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GG_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC12,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GH_CFG,
++			.mode = "25g-aui",
++			.mac = DPMAC11,
++		}
++	};
++
++	for (int i = 0; i < ARRAY_SIZE(ports); i++) {
++		if (*ports[i].pcr & ports[i].pcr_ena_mask) {
++			macs[ports[i].mac].status = "okay";
++			macs[ports[i].mac].mode = ports[i].mode;
++		}
++	}
++
++	/* workaround for dpmac17.18 rgmii ports */
++	{
++		const u32 __iomem *const rcwsr27 = RCWSR27_R;
++		if ((*rcwsr27 & RCWSR27_EC1_PMUX_MASK) == RCWSR27_EC1_PMUX_WRIOP_MAC_17_RGMII) {
++			macs[DPMAC17].status = "okay";
++			macs[DPMAC17].mode = "rgmii-id";
++		}
++		if ((*rcwsr27 & RCWSR27_EC2_PMUX_MASK) == RCWSR27_EC2_PMUX_WRIOP_MAC_18_RGMII) {
++			macs[DPMAC18].status = "okay";
++			macs[DPMAC18].mode = "rgmii-id";
++		}
++	}
++
++	for (int i = 0; i < ARRAY_SIZE(macs); i++) {
++		fdt_delprop(fdt, fdt_path_offset(fdt, macs[i].path), "phy-mode");
++		do_fixup_by_path_string(fdt, macs[i].path, "status", macs[i].status);
++		do_fixup_by_path_string(fdt, macs[i].path, "phy-connection-type", macs[i].mode);
++	}
++}
++
++static void board_fix_fdt_pci_sata(void *fdt) {
++	struct {
++		const u32 __iomem *pcr;
++		const u32 pcr_ena_mask;
++		const char *const path;
++	} ports[] = {
++		{
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC0,
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXA_CFG,
++			.path = "/pcie@3400000",
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC0,
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG,
++			.path = "/pcie@3500000",
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC0,
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXA_CFG,
++			.path = "/pcie@3600000",
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC0,
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG,
++			.path = "/pcie@3700000",
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(2) + LYNX_28G_PCC0,
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXA_CFG,
++			.path = "/pcie@3800000",
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(2) + LYNX_28G_PCC0,
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG,
++			.path = "/pcie@3900000",
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC2,
++			.pcr_ena_mask = LYNX_28G_PCC2_SATAA_CFG,
++			.path = "/sata@3200000",
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC2,
++			.pcr_ena_mask = LYNX_28G_PCC2_SATAB_CFG,
++			.path = "/sata@3210000",
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC2,
++			.pcr_ena_mask = LYNX_28G_PCC2_SATAC_CFG,
++			.path = "/sata@3220000",
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC2,
++			.pcr_ena_mask = LYNX_28G_PCC2_SATAD_CFG,
++			.path = "/sata@3230000",
++		},
++	};
++
++	for (int i = 0; i < ARRAY_SIZE(ports); i++) {
++		const char *status = "disabled";
++		if (*ports[i].pcr & ports[i].pcr_ena_mask)
++			status = "okay";
++
++		do_fixup_by_path_string(fdt, ports[i].path, "status", status);
++	}
++}
++
++void board_fix_fdt_serdes_ports(void *fdt) {
++	board_fix_fdt_pci_sata(fdt);
++	board_fix_fdt_macs(fdt);
++}
++
++#endif /* CONFIG_OF_BOARD_FIXUP */
 diff --git a/configs/lx2160acex7_tfa_SECURE_BOOT_defconfig b/configs/lx2160acex7_tfa_SECURE_BOOT_defconfig
 new file mode 100644
-index 00000000000..12f236aad06
+index 00000000000..d55bdb24a4b
 --- /dev/null
 +++ b/configs/lx2160acex7_tfa_SECURE_BOOT_defconfig
-@@ -0,0 +1,86 @@
+@@ -0,0 +1,97 @@
 +CONFIG_ARM=y
 +CONFIG_SKIP_LOWLEVEL_INIT=y
 +CONFIG_GIC_V3_ITS=y
@@ -838,100 +1285,6 @@ index 00000000000..12f236aad06
 +CONFIG_CMD_GPT=y
 +CONFIG_CMD_I2C=y
 +CONFIG_CMD_MMC=y
-+CONFIG_CMD_PCI=y
-+CONFIG_CMD_USB=y
-+CONFIG_CMD_CACHE=y
-+CONFIG_OF_CONTROL=y
-+CONFIG_ENV_OVERWRITE=y
-+CONFIG_NET_RANDOM_ETHADDR=y
-+CONFIG_DM=y
-+CONFIG_SATA=y
-+CONFIG_SATA_CEVA=y
-+CONFIG_DYNAMIC_DDR_CLK_FREQ=y
-+CONFIG_DDR_ECC=y
-+CONFIG_ECC_INIT_VIA_DDRCONTROLLER=y
-+CONFIG_MPC8XXX_GPIO=y
-+CONFIG_DM_I2C=y
-+CONFIG_I2C_SET_DEFAULT_BUS_NUM=y
-+CONFIG_SYS_I2C_EEPROM_ADDR=0x57
-+CONFIG_MMC_HS400_SUPPORT=y
-+CONFIG_FSL_ESDHC=y
-+CONFIG_MTD=y
-+CONFIG_DM_SPI_FLASH=y
-+CONFIG_SPI_FLASH_STMICRO=y
-+CONFIG_SPI_FLASH_MT35XU=y
-+# CONFIG_SPI_FLASH_USE_4K_SECTORS is not set
-+CONFIG_PHYLIB=y
-+CONFIG_PHY_ATHEROS=y
-+CONFIG_DM_ETH=y
-+CONFIG_DM_MDIO=y
-+CONFIG_E1000=y
-+CONFIG_MII=y
-+CONFIG_FSL_LS_MDIO=y
-+CONFIG_NVME_PCI=y
-+CONFIG_PCI=y
-+CONFIG_PCIE_LAYERSCAPE_RC=y
-+CONFIG_PCIE_LAYERSCAPE_GEN4=y
-+CONFIG_DM_RTC=y
-+CONFIG_RTC_PCF2127=y
-+CONFIG_DM_SCSI=y
-+CONFIG_DM_SERIAL=y
-+CONFIG_PL01X_SERIAL=y
-+CONFIG_SPI=y
-+CONFIG_DM_SPI=y
-+CONFIG_NXP_FSPI=y
-+CONFIG_USB=y
-+CONFIG_USB_XHCI_HCD=y
-+CONFIG_USB_XHCI_DWC3=y
-+CONFIG_RSA=y
-+CONFIG_SPL_RSA=y
-+CONFIG_RSA_SOFTWARE_EXP=y
-+CONFIG_EFI_LOADER_BOUNCE_BUFFER=y
-diff --git a/configs/lx2160acex7_tfa_defconfig b/configs/lx2160acex7_tfa_defconfig
-new file mode 100644
-index 00000000000..9f24e12a85d
---- /dev/null
-+++ b/configs/lx2160acex7_tfa_defconfig
-@@ -0,0 +1,96 @@
-+CONFIG_ARM=y
-+CONFIG_SKIP_LOWLEVEL_INIT=y
-+CONFIG_GIC_V3_ITS=y
-+CONFIG_TARGET_LX2160ACEX7=y
-+CONFIG_TFABOOT=y
-+CONFIG_SYS_TEXT_BASE=0x82000000
-+CONFIG_SYS_MALLOC_LEN=0x202000
-+CONFIG_SYS_MALLOC_F_LEN=0x6000
-+CONFIG_NR_DRAM_BANKS=3
-+CONFIG_ENV_SIZE=0x2000
-+CONFIG_ENV_OFFSET=0x500000
-+CONFIG_ENV_SECT_SIZE=0x20000
-+CONFIG_DM_GPIO=y
-+CONFIG_DEFAULT_DEVICE_TREE="fsl-lx2160a-cex7"
-+CONFIG_FSPI_AHB_EN_4BYTE=y
-+CONFIG_ARMV8_SEC_FIRMWARE_SUPPORT=y
-+CONFIG_SEC_FIRMWARE_ARMV8_PSCI=y
-+CONFIG_AHCI=y
-+CONFIG_OF_BOARD_FIXUP=y
-+CONFIG_REMAKE_ELF=y
-+CONFIG_MP=y
-+CONFIG_FIT_VERBOSE=y
-+CONFIG_OF_BOARD_SETUP=y
-+CONFIG_OF_STDOUT_VIA_ALIAS=y
-+CONFIG_DYNAMIC_SYS_CLK_FREQ=y
-+CONFIG_BOOTDELAY=10
-+CONFIG_USE_BOOTARGS=y
-+CONFIG_BOOTARGS="console=ttyAMA0,115200 root=/dev/ram0 earlycon=pl011,mmio32,0x21c0000 ramdisk_size=0x2000000 default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf"
-+CONFIG_DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
-+CONFIG_MISC_INIT_R=y
-+CONFIG_CMD_GREPENV=y
-+CONFIG_CMD_EEPROM=y
-+CONFIG_SYS_EEPROM_PAGE_WRITE_BITS=3
-+CONFIG_SYS_EEPROM_PAGE_WRITE_DELAY_MS=5
-+CONFIG_CMD_DM=y
-+CONFIG_CMD_GPIO=y
-+CONFIG_CMD_GPT=y
-+CONFIG_CMD_I2C=y
-+CONFIG_CMD_MMC=y
 +CONFIG_CMD_OPTEE_RPMB=y
 +CONFIG_CMD_PCI=y
 +CONFIG_CMD_USB=y
@@ -939,9 +1292,6 @@ index 00000000000..9f24e12a85d
 +CONFIG_CMD_CACHE=y
 +CONFIG_OF_CONTROL=y
 +CONFIG_ENV_OVERWRITE=y
-+CONFIG_ENV_IS_IN_MMC=y
-+CONFIG_ENV_IS_IN_SPI_FLASH=y
-+CONFIG_ENV_ADDR=0x20500000
 +CONFIG_NET_RANDOM_ETHADDR=y
 +CONFIG_DM=y
 +CONFIG_SATA=y
@@ -955,12 +1305,14 @@ index 00000000000..9f24e12a85d
 +CONFIG_I2C_SET_DEFAULT_BUS_NUM=y
 +CONFIG_SYS_I2C_EEPROM_ADDR=0x57
 +CONFIG_SUPPORT_EMMC_RPMB=y
++CONFIG_SUPPORT_EMMC_BOOT=y
 +CONFIG_MMC_HS400_SUPPORT=y
 +CONFIG_FSL_ESDHC=y
 +CONFIG_MTD=y
 +CONFIG_DM_SPI_FLASH=y
 +CONFIG_SPI_FLASH_STMICRO=y
 +CONFIG_SPI_FLASH_MT35XU=y
++CONFIG_SPI_FLASH_WINBOND=y
 +# CONFIG_SPI_FLASH_USE_4K_SECTORS is not set
 +CONFIG_PHYLIB=y
 +CONFIG_PHY_ATHEROS=y
@@ -980,25 +1332,144 @@ index 00000000000..9f24e12a85d
 +CONFIG_PL01X_SERIAL=y
 +CONFIG_SPI=y
 +CONFIG_DM_SPI=y
++CONFIG_FSL_DSPI=y
 +CONFIG_NXP_FSPI=y
 +CONFIG_TEE=y
 +CONFIG_OPTEE=y
 +CONFIG_USB=y
 +CONFIG_USB_XHCI_HCD=y
 +CONFIG_USB_XHCI_DWC3=y
++CONFIG_RSA=y
++CONFIG_SPL_RSA=y
++CONFIG_RSA_SOFTWARE_EXP=y
++CONFIG_WDT=y
++CONFIG_WDT_SBSA=y
++CONFIG_EFI_LOADER_BOUNCE_BUFFER=y
+diff --git a/configs/lx2160acex7_tfa_defconfig b/configs/lx2160acex7_tfa_defconfig
+new file mode 100644
+index 00000000000..016daa899c8
+--- /dev/null
++++ b/configs/lx2160acex7_tfa_defconfig
+@@ -0,0 +1,109 @@
++CONFIG_ARM=y
++CONFIG_SKIP_LOWLEVEL_INIT=y
++CONFIG_GIC_V3_ITS=y
++CONFIG_TARGET_LX2160ACEX7=y
++CONFIG_TFABOOT=y
++CONFIG_TEXT_BASE=0x82000000
++CONFIG_SYS_MALLOC_LEN=0x202000
++CONFIG_SYS_MALLOC_F_LEN=0x6000
++CONFIG_NR_DRAM_BANKS=3
++CONFIG_ENV_SIZE=0x2000
++CONFIG_ENV_OFFSET=0x500000
++CONFIG_ENV_SECT_SIZE=0x20000
++CONFIG_DM_GPIO=y
++CONFIG_DEFAULT_DEVICE_TREE="fsl-lx2160a-cex7"
++CONFIG_FSPI_AHB_EN_4BYTE=y
++CONFIG_SYS_MONITOR_LEN=958464
++CONFIG_ARMV8_SEC_FIRMWARE_SUPPORT=y
++CONFIG_SEC_FIRMWARE_ARMV8_PSCI=y
++CONFIG_ENV_ADDR=0x20500000
++CONFIG_PCI=y
++CONFIG_AHCI=y
++CONFIG_OF_BOARD_FIXUP=y
++CONFIG_SYS_FSL_NUM_CC_PLLS=4
++CONFIG_REMAKE_ELF=y
++CONFIG_MP=y
++CONFIG_DYNAMIC_SYS_CLK_FREQ=y
++CONFIG_FIT_VERBOSE=y
++CONFIG_BOOTDELAY=10
++CONFIG_OF_BOARD_SETUP=y
++CONFIG_OF_STDOUT_VIA_ALIAS=y
++CONFIG_USE_BOOTARGS=y
++CONFIG_BOOTARGS="console=ttyAMA0,115200 root=/dev/ram0 earlycon=pl011,mmio32,0x21c0000 ramdisk_size=0x2000000 default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf"
++CONFIG_DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
++CONFIG_SYS_PBSIZE=532
++CONFIG_CMD_TLV_EEPROM=y
++CONFIG_CMD_GREPENV=y
++CONFIG_CMD_EEPROM=y
++CONFIG_SYS_EEPROM_PAGE_WRITE_BITS=3
++CONFIG_SYS_EEPROM_PAGE_WRITE_DELAY_MS=5
++CONFIG_CMD_DM=y
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_GPT=y
++CONFIG_CMD_I2C=y
++CONFIG_CMD_MMC=y
++CONFIG_CMD_OPTEE_RPMB=y
++CONFIG_CMD_PCI=y
++CONFIG_CMD_POWEROFF=y
++CONFIG_CMD_USB=y
++CONFIG_CMD_WDT=y
++CONFIG_CMD_CACHE=y
++CONFIG_OF_CONTROL=y
++CONFIG_ENV_OVERWRITE=y
++CONFIG_ENV_IS_IN_MMC=y
++CONFIG_ENV_IS_IN_SPI_FLASH=y
++CONFIG_USE_ETHPRIME=y
++CONFIG_ETHPRIME="DPMAC17@rgmii-id"
++CONFIG_NET_RANDOM_ETHADDR=y
++CONFIG_SATA=y
++CONFIG_SATA_CEVA=y
++CONFIG_FSL_CAAM=y
++CONFIG_DYNAMIC_DDR_CLK_FREQ=y
++CONFIG_DDR_ECC=y
++CONFIG_ECC_INIT_VIA_DDRCONTROLLER=y
++CONFIG_SYS_FSL_DDR_INTLV_256B=y
++CONFIG_MPC8XXX_GPIO=y
++CONFIG_DM_I2C=y
++CONFIG_I2C_SET_DEFAULT_BUS_NUM=y
++CONFIG_I2C_MUX=y
++CONFIG_I2C_MUX_PCA954x=y
++CONFIG_I2C_EEPROM=y
++CONFIG_SYS_I2C_EEPROM_ADDR=0x57
++CONFIG_SUPPORT_EMMC_RPMB=y
++CONFIG_SUPPORT_EMMC_BOOT=y
++CONFIG_MMC_HS400_SUPPORT=y
++CONFIG_FSL_ESDHC=y
++CONFIG_MTD=y
++CONFIG_DM_SPI_FLASH=y
++CONFIG_SPI_FLASH_STMICRO=y
++CONFIG_SPI_FLASH_MT35XU=y
++CONFIG_SPI_FLASH_WINBOND=y
++# CONFIG_SPI_FLASH_USE_4K_SECTORS is not set
++CONFIG_PHYLIB=y
++CONFIG_PHY_AQUANTIA=y
++CONFIG_PHY_ATHEROS=y
++CONFIG_FSL_MEMAC=y
++CONFIG_SYS_MEMAC_LITTLE_ENDIAN=y
++CONFIG_DM_ETH_PHY=y
++CONFIG_E1000=y
++CONFIG_MII=y
++CONFIG_NVME_PCI=y
++CONFIG_PCIE_LAYERSCAPE_RC=y
++CONFIG_PCIE_LAYERSCAPE_GEN4=y
++CONFIG_DM_RTC=y
++CONFIG_RTC_PCF2127=y
++CONFIG_DM_SERIAL=y
++CONFIG_PL01X_SERIAL=y
++CONFIG_SPI=y
++CONFIG_DM_SPI=y
++CONFIG_FSL_DSPI=y
++CONFIG_NXP_FSPI=y
++CONFIG_TEE=y
++CONFIG_OPTEE=y
++CONFIG_USB=y
++CONFIG_USB_XHCI_HCD=y
++CONFIG_USB_XHCI_DWC3=y
++CONFIG_USB_MAX_CONTROLLER_COUNT=2
 +CONFIG_WDT=y
 +CONFIG_WDT_SBSA=y
 +CONFIG_EFI_LOADER_BOUNCE_BUFFER=y
 diff --git a/include/configs/lx2160acex7.h b/include/configs/lx2160acex7.h
 new file mode 100644
-index 00000000000..83f64e65a8b
+index 00000000000..652cce98b66
 --- /dev/null
 +++ b/include/configs/lx2160acex7.h
-@@ -0,0 +1,324 @@
+@@ -0,0 +1,282 @@
 +/* SPDX-License-Identifier: GPL-2.0+ */
 +/*
 + * Copyright 2018-2022 NXP
-+ * Copyright 2024 Josua Mayer <josua@solid-run.com>
++ * Copyright 2024-2025 Josua Mayer <josua@solid-run.com>
 + */
 +
 +#ifndef __CONFIG_LX2160ACEX7_H
@@ -1008,21 +1479,14 @@ index 00000000000..83f64e65a8b
 +#include <asm/arch/config.h>
 +#include <asm/arch/soc.h>
 +
-+#define CONFIG_FSL_MEMAC
-+
-+#define CONFIG_SYS_INIT_SP_ADDR		CONFIG_SYS_TEXT_BASE
-+#define CONFIG_SYS_FLASH_BASE		0x20000000
++#define CFG_SYS_FLASH_BASE		0x20000000
 +
 +/* DDR */
-+#define CONFIG_SYS_FSL_DDR_INTLV_256B	/* force 256 byte interleaving */
-+#define CONFIG_VERY_BIG_RAM
-+#define CONFIG_SYS_DDR_SDRAM_BASE		0x80000000UL
-+#define CONFIG_SYS_FSL_DDR_SDRAM_BASE_PHY	0
-+#define CONFIG_SYS_DDR_BLOCK2_BASE		0x2080000000ULL
-+#define CONFIG_SYS_FSL_DDR_MAIN_NUM_CTRLS	2
-+#define CONFIG_SYS_SDRAM_SIZE			0x200000000UL
-+#define CONFIG_SYS_SDRAM_BASE		CONFIG_SYS_DDR_SDRAM_BASE
-+#define CONFIG_MEM_INIT_VALUE		0xdeadbeef
++#define CFG_SYS_DDR_SDRAM_BASE		0x80000000UL
++#define CFG_SYS_FSL_DDR_SDRAM_BASE_PHY	0
++#define CFG_SYS_DDR_BLOCK2_BASE		0x2080000000ULL
++#define CFG_SYS_SDRAM_SIZE			0x200000000UL
++#define CFG_SYS_SDRAM_BASE		CFG_SYS_DDR_SDRAM_BASE
 +#define SPD_EEPROM_ADDRESS1		0x51
 +#define SPD_EEPROM_ADDRESS2		0x52
 +#define SPD_EEPROM_ADDRESS3		0x53
@@ -1030,10 +1494,6 @@ index 00000000000..83f64e65a8b
 +#define SPD_EEPROM_ADDRESS5		0x55
 +#define SPD_EEPROM_ADDRESS6		0x56
 +#define SPD_EEPROM_ADDRESS		SPD_EEPROM_ADDRESS1
-+#define CONFIG_SYS_SPD_BUS_NUM		0	/* SPD on I2C bus 0 */
-+#define CONFIG_DIMM_SLOTS_PER_CTLR	1
-+#define CONFIG_CHIP_SELECTS_PER_CTRL	4
-+#define CONFIG_SYS_MONITOR_LEN		(936 * 1024)
 +
 +/* SMP Definitinos  */
 +#define CPU_RELEASE_ADDR		secondary_boot_addr
@@ -1044,26 +1504,25 @@ index 00000000000..83f64e65a8b
 + * will be udpated later when get_bus_freq(0) is available.
 + */
 +
-+#define COUNTER_FREQUENCY		25000000	/* 25MHz */
 +
 +/* Serial Port */
-+#define CONFIG_PL011_CLOCK		(get_bus_freq(0) / 4)
-+#define CONFIG_SYS_SERIAL0		0x21c0000
-+#define CONFIG_SYS_SERIAL1		0x21d0000
-+#define CONFIG_SYS_SERIAL2		0x21e0000
-+#define CONFIG_SYS_SERIAL3		0x21f0000
++#define CFG_PL011_CLOCK		(get_bus_freq(0) / 4)
++#define CFG_SYS_SERIAL0		0x21c0000
++#define CFG_SYS_SERIAL1		0x21d0000
++#define CFG_SYS_SERIAL2		0x21e0000
++#define CFG_SYS_SERIAL3		0x21f0000
 +/*below might needs to be removed*/
-+#define CONFIG_PL01x_PORTS		{(void *)CONFIG_SYS_SERIAL0, \
-+					(void *)CONFIG_SYS_SERIAL1, \
-+					(void *)CONFIG_SYS_SERIAL2, \
-+					(void *)CONFIG_SYS_SERIAL3 }
++#define CFG_PL01x_PORTS		{(void *)CFG_SYS_SERIAL0, \
++					(void *)CFG_SYS_SERIAL1, \
++					(void *)CFG_SYS_SERIAL2, \
++					(void *)CFG_SYS_SERIAL3 }
 +
 +/* MC firmware */
-+#define CONFIG_SYS_LS_MC_DPC_MAX_LENGTH		0x20000
-+#define CONFIG_SYS_LS_MC_DRAM_DPC_OFFSET	0x00F00000
-+#define CONFIG_SYS_LS_MC_DPL_MAX_LENGTH		0x20000
-+#define CONFIG_SYS_LS_MC_DRAM_DPL_OFFSET	0x00F20000
-+#define CONFIG_SYS_LS_MC_BOOT_TIMEOUT_MS	5000
++#define CFG_SYS_LS_MC_DPC_MAX_LENGTH		0x20000
++#define CFG_SYS_LS_MC_DRAM_DPC_OFFSET		0x00F00000
++#define CFG_SYS_LS_MC_DPL_MAX_LENGTH		0x20000
++#define CFG_SYS_LS_MC_DRAM_DPL_OFFSET		0x00F20000
++#define CFG_SYS_LS_MC_BOOT_TIMEOUT_MS		5000
 +
 +/* Define phy_reset function to boot the MC based on mcinitcmd.
 + * This happens late enough to properly fixup u-boot env MAC addresses.
@@ -1077,46 +1536,14 @@ index 00000000000..83f64e65a8b
 + * 512MB aligned, so the min size to hide is 512MB.
 + */
 +#ifdef CONFIG_FSL_MC_ENET
-+#define CONFIG_SYS_LS_MC_DRAM_BLOCK_MIN_SIZE	(256UL * 1024 * 1024)
-+#endif
-+
-+/* GPIO */
-+#define CONFIG_GPIO_EXTRA_HEADER
-+
-+/* SATA */
-+#ifdef CONFIG_SCSI
-+#define CONFIG_SYS_SATA1		AHCI_BASE_ADDR1
-+#define CONFIG_SYS_SATA2		AHCI_BASE_ADDR2
-+#define CONFIG_SYS_SATA3		AHCI_BASE_ADDR3
-+#define CONFIG_SYS_SATA4		AHCI_BASE_ADDR4
-+#define CONFIG_SYS_SCSI_MAX_SCSI_ID	4
-+#define CONFIG_SYS_SCSI_MAX_LUN		1
++#define CFG_SYS_LS_MC_DRAM_BLOCK_MIN_SIZE	(256UL * 1024 * 1024)
 +#endif
 +
 +/* USB */
-+#ifdef CONFIG_USB
-+#define CONFIG_USB_MAX_CONTROLLER_COUNT	2
-+#endif
-+
-+/* MAC/PHY configuration */
-+#if defined(CONFIG_FSL_MC_ENET)
-+#define CONFIG_ETHPRIME		"DPMAC17@rgmii-id"
-+#define RGMII_PHY_ADDR1		0x01
-+#endif
 +
 +#define COUNTER_FREQUENCY_REAL		(get_board_sys_clk() / 4)
 +
-+#define CONFIG_HWCONFIG
 +#define HWCONFIG_BUFFER_SIZE		128
-+
-+/* Monitor Command Prompt */
-+#define CONFIG_SYS_CBSIZE		512	/* Console I/O Buffer Size */
-+#define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \
-+					sizeof(CONFIG_SYS_PROMPT) + 16)
-+#define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE /* Boot args buffer */
-+#define CONFIG_SYS_MAXARGS		64	/* max command args */
-+
-+#define CONFIG_SYS_BOOTM_LEN   (64 << 20)      /* Increase max gunzip size */
 +
 +/*
 + * Memory Layout Ovverview:
@@ -1213,6 +1640,7 @@ index 00000000000..83f64e65a8b
 +	"kernel_addr_r=" KERNEL_ADDR_R "\0"		\
 +	"kernelheader_size=0x40000\0"		\
 +	"fdt_addr_r=" FDT_ADDR_R "\0"		\
++	"fdt_addr=" FDT_ADDR_R "\0"		\
 +	"pxefile_addr_r=" PXEFILE_ADDR_R "\0"	\
 +	"kernel_comp_addr_r=" KERNEL_COMP_ADDR_R "\0" \
 +	"kernel_comp_size=" KERNEL_COMP_SIZE "\0" \
@@ -1246,15 +1674,15 @@ index 00000000000..83f64e65a8b
 +		"source ${scriptaddr}\0"
 +
 +#define XSPI_NOR_BOOTCOMMAND						\
-+			"sf probe 0:0; "				\
-+			"sf read 0x806c0000 0x6c0000 0x40000; "		\
-+			"env exists mcinitcmd && env exists secureboot"	\
-+			" && esbc_validate 0x806c0000; "		\
-+			"sf read 0x80d00000 0xd00000 0x100000; "	\
-+			"env exists mcinitcmd && "			\
-+			"fsl_mc lazyapply dpl 0x80d00000; "		\
-+			"run distro_bootcmd;run xspi_bootcmd; "		\
-+			"env exists secureboot && esbc_halt;"
++		"sf probe 0:0; "				\
++		"sf read 0x806c0000 0x6c0000 0x40000; "		\
++		"env exists mcinitcmd && env exists secureboot"	\
++		" && esbc_validate 0x806c0000; "		\
++		"sf read 0x80d00000 0xd00000 0x100000; "	\
++		"env exists mcinitcmd && "			\
++		"fsl_mc lazyapply dpl 0x80d00000; "		\
++		"run distro_bootcmd;run xspi_bootcmd; "		\
++		"env exists secureboot && esbc_halt;"
 +
 +#define SD_BOOTCOMMAND						\
 +		"env exists mcinitcmd && mmcinfo; "		\
@@ -1281,6 +1709,7 @@ index 00000000000..83f64e65a8b
 +	func(USB, usb, 0) \
 +	func(MMC, mmc, 0) \
 +	func(MMC, mmc, 1) \
++	func(NVME, nvme, 0) \
 +	func(SCSI, scsi, 0) \
 +	func(SCSI, scsi, 1) \
 +	func(SCSI, scsi, 2) \
@@ -1289,7 +1718,7 @@ index 00000000000..83f64e65a8b
 +	func(DHCP, dhcp, na)
 +#include <config_distro_bootcmd.h>
 +
-+#define CONFIG_EXTRA_ENV_SETTINGS		\
++#define CFG_EXTRA_ENV_SETTINGS		\
 +	EXTRA_ENV_SETTINGS			\
 +	"fdtfile=" CONFIG_DEFAULT_FDT_FILE "\0" \
 +	"boot_scripts=lx2160acex7_boot.scr\0"	\

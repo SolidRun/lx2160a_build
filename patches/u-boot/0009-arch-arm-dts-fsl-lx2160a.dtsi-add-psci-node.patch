@@ -1,7 +1,7 @@
-From 946236453344976a9502184741045e97fe00386a Mon Sep 17 00:00:00 2001
+From c45ae8075ca32d9dd815f769e8ab0dc6b293360b Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Fri, 8 Aug 2025 13:59:05 +0200
-Subject: [PATCH 18/25] arch: arm: dts: fsl-lx2160a.dtsi: add psci node
+Subject: [PATCH 09/14] arch: arm: dts: fsl-lx2160a.dtsi: add psci node
 
 LX2160A uses arm-trusted-firmware as first stage loader implementing
 psci. Add description for the psci functionality.
@@ -12,10 +12,10 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
  1 file changed, 5 insertions(+)
 
 diff --git a/arch/arm/dts/fsl-lx2160a.dtsi b/arch/arm/dts/fsl-lx2160a.dtsi
-index 7d720e515d9..fb4ec7c287e 100644
+index 4320a8d08bf..70f5287ad58 100644
 --- a/arch/arm/dts/fsl-lx2160a.dtsi
 +++ b/arch/arm/dts/fsl-lx2160a.dtsi
-@@ -854,4 +854,9 @@
+@@ -872,4 +872,9 @@
  			method = "smc";
  		};
  	};

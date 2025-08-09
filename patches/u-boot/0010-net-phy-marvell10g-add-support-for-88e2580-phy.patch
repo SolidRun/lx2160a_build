@@ -1,7 +1,7 @@
-From ad8eeb922bf67b7e2ea552342425d96fcde228bc Mon Sep 17 00:00:00 2001
+From a88cc54f83c53735d908daf77166214fd03a25c6 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Fri, 8 Aug 2025 16:49:33 +0200
-Subject: [PATCH 23/25] net: phy: marvell10g: add support for 88e2580 phy
+Subject: [PATCH 10/14] net: phy: marvell10g: add support for 88e2580 phy
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---

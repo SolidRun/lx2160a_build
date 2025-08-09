@@ -1,7 +1,7 @@
-From 27ee50c1cf6e37b4bbb37fe99a827b05a7d3844d Mon Sep 17 00:00:00 2001
+From affb5ce1d897868b5b0df464dce8aa31dc741c84 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Wed, 3 Apr 2024 17:58:37 +0200
-Subject: [PATCH 02/25] pci: ls_pcie_g4: Wait 100ms for Link Up in
+Subject: [PATCH 01/14] pci: ls_pcie_g4: Wait 100ms for Link Up in
  ls_pcie_g4_probe
 
 PCI Link-up can be delayed especially with pci bridges or fpga starting

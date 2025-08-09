@@ -97,6 +97,7 @@ case "${TARGET}" in
 		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+		UBOOT_FDT=fsl-lx2160a-clearfog-cx
 	;;
 	LX2160A_CEX7_CLEARFOG-CX_20_5_*)
 		ATF_PLATFORM=lx2160acex7
@@ -105,6 +106,7 @@ case "${TARGET}" in
 		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-clearfog-cx.dtb"
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+		UBOOT_FDT=fsl-lx2160a-clearfog-cx
 	;;
 	LX2160A_CEX7_HONEYCOMB_4_5_*|LX2160A_CEX7_HONEYCOMB_8_5_*|LX2160A_CEX7_HONEYCOMB_8S_5_*|LX2160A_CEX7_HONEYCOMB_18_5_*)
 		ATF_PLATFORM=lx2160acex7
@@ -113,6 +115,7 @@ case "${TARGET}" in
 		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-honeycomb.dtb"
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+		UBOOT_FDT=fsl-lx2160a-honeycomb
 		RCW_BOARD=CLEARFOG-CX
 	;;
 	LX2162A_SOM_CLEARFOG_0_0_0)
