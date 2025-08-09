@@ -1,0 +1,268 @@
+From 4b2c7cc1570c930da9e38186698b1efbbd97bfd6 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 9 Aug 2025 16:53:43 +0200
+Subject: [PATCH] add configuration solidrun internal lx2160acex7 twins board
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ GenerateSRConfigs.sh                          |  5 ++++
+ lx2160acex7/include/SD2_9.rcwi                | 30 +++++++++++++++++++
+ .../twins/rcw_2000_700_2400_8S_9_2_auto.rcw   | 26 ++++++++++++++++
+ .../twins/rcw_2000_700_2600_8S_9_2_auto.rcw   | 26 ++++++++++++++++
+ .../twins/rcw_2000_700_2666_8S_9_2_auto.rcw   | 26 ++++++++++++++++
+ .../twins/rcw_2000_700_2900_8S_9_2_auto.rcw   | 26 ++++++++++++++++
+ .../twins/rcw_2000_700_3200_8S_9_2_auto.rcw   | 26 ++++++++++++++++
+ lx2160acex7_twins.tmpl                        | 26 ++++++++++++++++
+ 8 files changed, 191 insertions(+)
+ create mode 100644 lx2160acex7/include/SD2_9.rcwi
+ create mode 100644 lx2160acex7_rev2/twins/rcw_2000_700_2400_8S_9_2_auto.rcw
+ create mode 100644 lx2160acex7_rev2/twins/rcw_2000_700_2600_8S_9_2_auto.rcw
+ create mode 100644 lx2160acex7_rev2/twins/rcw_2000_700_2666_8S_9_2_auto.rcw
+ create mode 100644 lx2160acex7_rev2/twins/rcw_2000_700_2900_8S_9_2_auto.rcw
+ create mode 100644 lx2160acex7_rev2/twins/rcw_2000_700_3200_8S_9_2_auto.rcw
+ create mode 100644 lx2160acex7_twins.tmpl
+
+diff --git a/GenerateSRConfigs.sh b/GenerateSRConfigs.sh
+index d1afa7b..8d1aaea 100755
+--- a/GenerateSRConfigs.sh
++++ b/GenerateSRConfigs.sh
+@@ -73,3 +73,8 @@ for DDR_SPEED in 2400 2600 2900 3200; do
+ 	generate lx2160acex6_evb.tmpl lx2160acex6 2 evb 2000 700 ${DDR_SPEED} 3 3 2 auto
+ 	generate lx2160acex6_evb.tmpl lx2160acex6 2 evb 2200 750 ${DDR_SPEED} 3 3 2 auto
+ done
++
++# generate LX2160A CEX-7 Internal Twins Board
++for DDR_SPEED in 2400 2600 2666 2900 3200; do
++	generate lx2160acex7_twins.tmpl lx2160acex7 2 twins 2000 700 ${DDR_SPEED} 8S 9 2 auto
++done
+diff --git a/lx2160acex7/include/SD2_9.rcwi b/lx2160acex7/include/SD2_9.rcwi
+new file mode 100644
+index 0000000..b3722a0
+--- /dev/null
++++ b/lx2160acex7/include/SD2_9.rcwi
+@@ -0,0 +1,30 @@
++/*
++ * Serdes 2 Reference Clocks:
++ * - PLLF = 100MHz
++ * - PLLS = 100MHz
++ */
++
++/* Serdes 2 Protocol 9: 8x1Gbps */
++SRDS_PRTCL_S2=9
++
++/* Enable PLLF */
++SRDS_PLL_PD_PLL3=0
++
++/* Don't use PLLF for PLLS */
++SRDS_INTRA_REF_CLK_S2=0
++
++/* Enable PLLS */
++SRDS_PLL_PD_PLL4=0
++
++/*
++ * Select PLLF frequency 100MHz: Bit 0 = 0
++ * Select PLLS frequency 100MHz: Bit 1 = 0
++ * (See QorIQ LX2160A Reference Manual, Rev. 0, 07/2020, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 934-935)
++ */
++SRDS_PLL_REF_CLK_SEL_S2=0
++
++/* Support up to PCI-e Gen 3 */
++SRDS_DIV_PEX_S2=1
++
++/* Configure Ethernet Controller 1 Pins as GPIOs to avoid competing for WRIO MAC 17 */
++EC1_PMUX=1
+diff --git a/lx2160acex7_rev2/twins/rcw_2000_700_2400_8S_9_2_auto.rcw b/lx2160acex7_rev2/twins/rcw_2000_700_2400_8S_9_2_auto.rcw
+new file mode 100644
+index 0000000..3e39c19
+--- /dev/null
++++ b/lx2160acex7_rev2/twins/rcw_2000_700_2400_8S_9_2_auto.rcw
+@@ -0,0 +1,26 @@
++/*
++ * SerDes Protocol 1 -  8S
++ * SerDes Protocol 2 -  9
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2400 MT/s
++ *
++ * Silicon 2.0
++ * Boot from AUTO
++ */
++
++#define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2400.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8S.rcwi>
++#include <../lx2160acex7/include/SD2_9.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_rev2/twins/rcw_2000_700_2600_8S_9_2_auto.rcw b/lx2160acex7_rev2/twins/rcw_2000_700_2600_8S_9_2_auto.rcw
+new file mode 100644
+index 0000000..dd38456
+--- /dev/null
++++ b/lx2160acex7_rev2/twins/rcw_2000_700_2600_8S_9_2_auto.rcw
+@@ -0,0 +1,26 @@
++/*
++ * SerDes Protocol 1 -  8S
++ * SerDes Protocol 2 -  9
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2600 MT/s
++ *
++ * Silicon 2.0
++ * Boot from AUTO
++ */
++
++#define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2600.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8S.rcwi>
++#include <../lx2160acex7/include/SD2_9.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_rev2/twins/rcw_2000_700_2666_8S_9_2_auto.rcw b/lx2160acex7_rev2/twins/rcw_2000_700_2666_8S_9_2_auto.rcw
+new file mode 100644
+index 0000000..2a73cd4
+--- /dev/null
++++ b/lx2160acex7_rev2/twins/rcw_2000_700_2666_8S_9_2_auto.rcw
+@@ -0,0 +1,26 @@
++/*
++ * SerDes Protocol 1 -  8S
++ * SerDes Protocol 2 -  9
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2666 MT/s
++ *
++ * Silicon 2.0
++ * Boot from AUTO
++ */
++
++#define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2666.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8S.rcwi>
++#include <../lx2160acex7/include/SD2_9.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_rev2/twins/rcw_2000_700_2900_8S_9_2_auto.rcw b/lx2160acex7_rev2/twins/rcw_2000_700_2900_8S_9_2_auto.rcw
+new file mode 100644
+index 0000000..4dd4c9b
+--- /dev/null
++++ b/lx2160acex7_rev2/twins/rcw_2000_700_2900_8S_9_2_auto.rcw
+@@ -0,0 +1,26 @@
++/*
++ * SerDes Protocol 1 -  8S
++ * SerDes Protocol 2 -  9
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2900 MT/s
++ *
++ * Silicon 2.0
++ * Boot from AUTO
++ */
++
++#define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8S.rcwi>
++#include <../lx2160acex7/include/SD2_9.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_rev2/twins/rcw_2000_700_3200_8S_9_2_auto.rcw b/lx2160acex7_rev2/twins/rcw_2000_700_3200_8S_9_2_auto.rcw
+new file mode 100644
+index 0000000..3eb73e4
+--- /dev/null
++++ b/lx2160acex7_rev2/twins/rcw_2000_700_3200_8S_9_2_auto.rcw
+@@ -0,0 +1,26 @@
++/*
++ * SerDes Protocol 1 -  8S
++ * SerDes Protocol 2 -  9
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 3200 MT/s
++ *
++ * Silicon 2.0
++ * Boot from AUTO
++ */
++
++#define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_3200.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8S.rcwi>
++#include <../lx2160acex7/include/SD2_9.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_twins.tmpl b/lx2160acex7_twins.tmpl
+new file mode 100644
+index 0000000..f2fa9ab
+--- /dev/null
++++ b/lx2160acex7_twins.tmpl
+@@ -0,0 +1,26 @@
++/*
++ * SerDes Protocol 1 -  %SD1%
++ * SerDes Protocol 2 -  %SD2%
++ * SerDes Protocol 3 -  %SD3%
++ *
++ * Frequencies:
++ * Core     -- %CPU_SPEED% MHz
++ * Platform -- %BUS_SPEED%  MHz
++ * DDR      -- %DDR_SPEED% MT/s
++ *
++ * Silicon %SOC_REVISION%.0
++ * Boot from %BOOTSOURCE%
++ */
++
++#define LX_SR %SOC_REVISION%
++#define LX_BOOTSOURCE_%BOOTSOURCE%
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../%module%/include/pll_%CPU_SPEED%_%BUS_SPEED%_xxxx.rcwi>
++#include <../%module%/include/pll_xxxx_xxx_%DDR_SPEED%.rcwi>
++#include <../%module%/include/common.rcwi>
++#include <../%module%/include/SD1_%SD1%.rcwi>
++#include <../%module%/include/SD2_%SD2%.rcwi>
++#include <../%module%/include/SD3_%SD3%.rcwi>
++#include <../%module%/include/common_pbi.rcwi>
++#include <../%module%/include/bootlocptr.rcwi>
+-- 
+2.43.0
+

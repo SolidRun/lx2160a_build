@@ -118,6 +118,18 @@ case "${TARGET}" in
 		UBOOT_FDT=fsl-lx2160a-honeycomb
 		RCW_BOARD=CLEARFOG-CX
 	;;
+	LX2160A_CEX7_HALF-TWINS_8S_9_2)
+		ATF_PLATFORM=lx2160acex7
+		ATF_DISABLE_S5=1
+		DPC=twins-s1_8-s2_9-dpc.dtb
+		DPL=twins-s1_8-s2_9-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-half-twins.dtb"
+		OPTEE_PLATFORM=ls-lx2160ardb
+		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+		UBOOT_FDT=fsl-lx2160a-half-twins
+		UBOOT_ETHPRIME="DPMAC13@sgmii" # right-most bottom sfp port
+		RCW_BOARD=TWINS
+	;;
 	LX2162A_SOM_CLEARFOG_0_0_0)
 		# no serdes ports, can be used as base for new configurations
 		ATF_PLATFORM=lx2162asom
@@ -341,6 +353,7 @@ do_build_atf() {
 	make \
 		-j${PARALLEL} V=1 \
 		PLAT=${ATF_PLATFORM} \
+		DISABLE_S5=${ATF_DISABLE_S5:=0} \
 		BOOT_MODE=${BOOT_MODE} \
 		RCW=${rcwimg} \
 		BL32=$ROOTDIR/images/tmp/optee/tee-pager_v2.bin SPD=opteed \

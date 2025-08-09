@@ -1,0 +1,48 @@
+From 86632dc5b14530a088c87e0513caae4784d5cd43 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 9 Aug 2025 18:54:35 +0200
+Subject: [PATCH 16/17] board: solidrun: lx2160cex7: fix read rcw from dcsr
+ memory
+
+LX2160 can override RCW configuration at runtime in the DCSR memory at
+0x700100100 and following while the original values in the DCFG memory
+at 0x01e00100 are read-only.
+
+The DCSR area however must be initialised by a write before
+reading from it, otherwise zero is read.
+
+This causes several subtle bugs, e.g. introduced by mainline kernel
+since 6.12 changing pinmux of i2c does accidentally also change sdhc
+card-detect pinmux causing software to detect sdcard removal during
+boot.
+
+Copy the RCW from DCFG to DCSR during board_early_init_f to ensure
+successive reads from the reconfiguration area are valid.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ board/solidrun/lx2160acex7/lx2160a.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/board/solidrun/lx2160acex7/lx2160a.c b/board/solidrun/lx2160acex7/lx2160a.c
+index f6b3856b8dc..76302e8e568 100644
+--- a/board/solidrun/lx2160acex7/lx2160a.c
++++ b/board/solidrun/lx2160acex7/lx2160a.c
+@@ -25,6 +25,14 @@ DECLARE_GLOBAL_DATA_PTR;
+ int board_early_init_f(void)
+ {
+ 	fsl_lsch3_early_init_f();
++
++	/*
++	 * RCW DCSR area for runtime re-configuration must be written
++	 * before read to avoid reading (invalid) zeros.
++	 * copy RCW values from read-only DCFG to read-write DCSR.
++	 */
++	memcpy((void *)0x700100100, (void *)0x01e00100, 0x180);
++
+ 	return 0;
+ }
+ 
+-- 
+2.43.0
+

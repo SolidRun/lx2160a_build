@@ -1,0 +1,66 @@
+From 77fc969e546ffdb9e369ff5a926b770c035f7522 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 9 Aug 2025 17:50:40 +0200
+Subject: [PATCH] psci: add build-time flag to disable SYSTEM_OFF function
+
+Add support for build-time flag DISABLE_PSCI_SYSTEM_OFF to remove
+support for SYSTEM_OFF from psci, which can be used to prevent operating
+systems from powering off the system.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ Makefile                                 | 2 ++
+ make_helpers/defaults.mk                 | 4 ++++
+ plat/nxp/common/psci/include/plat_psci.h | 4 ++++
+ 3 files changed, 10 insertions(+)
+
+diff --git a/Makefile b/Makefile
+index ea5701347..12d92fc7e 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1238,6 +1238,7 @@ $(eval $(call assert_booleans,\
+ 	PSA_CRYPTO	\
+ 	ENABLE_CONSOLE_GETC \
+ 	INIT_UNUSED_NS_EL2	\
++	DISABLE_S5 \
+ )))
+ 
+ # Numeric_Flags
+@@ -1432,6 +1433,7 @@ $(eval $(call add_defines,\
+ 	PSA_CRYPTO	\
+ 	ENABLE_CONSOLE_GETC \
+ 	INIT_UNUSED_NS_EL2	\
++	DISABLE_S5 \
+ )))
+ 
+ ifeq (${SANITIZE_UB},trap)
+diff --git a/make_helpers/defaults.mk b/make_helpers/defaults.mk
+index ec2a32767..bffd922dc 100644
+--- a/make_helpers/defaults.mk
++++ b/make_helpers/defaults.mk
+@@ -377,3 +377,7 @@ ENABLE_CONSOLE_GETC		:= 0
+ # functions must be enabled by platforms if they require it.
+ # Disabled by default.
+ INIT_UNUSED_NS_EL2		:= 0
++
++# Build option to disable S5 state.
++# Disabled by default.
++DISABLE_S5		:= 0
+diff --git a/plat/nxp/common/psci/include/plat_psci.h b/plat/nxp/common/psci/include/plat_psci.h
+index 7fc48fb73..d26602c2a 100644
+--- a/plat/nxp/common/psci/include/plat_psci.h
++++ b/plat/nxp/common/psci/include/plat_psci.h
+@@ -101,6 +101,10 @@
+ #define SOC_SYSTEM_PWR_DWN    0x1
+ #endif
+ 
++#if DISABLE_S5
++#define SOC_SYSTEM_OFF        0x0
++#endif
++
+ #ifndef SOC_SYSTEM_OFF
+ #define SOC_SYSTEM_OFF        0x1
+ #endif
+-- 
+2.43.0
+

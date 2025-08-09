@@ -1,0 +1,56 @@
+From ef94c50ce8f609ab319aef9a15195ef25bc57602 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 10 Aug 2025 12:27:10 +0200
+Subject: [PATCH] lib: optee: always copy optee to OS DTB regardless if already
+ present
+
+OS DTB can't know whether optee is present or not, regardless if it has
+been put there previously.
+
+Always patch OS DTB.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lib/optee/optee.c | 19 ++++++-------------
+ 1 file changed, 6 insertions(+), 13 deletions(-)
+
+diff --git a/lib/optee/optee.c b/lib/optee/optee.c
+index 393f2715a9c..53a08370b73 100644
+--- a/lib/optee/optee.c
++++ b/lib/optee/optee.c
+@@ -80,9 +80,12 @@ static int optee_copy_firmware_node(ofnode node, void *fdt_blob)
+ 			return offs;
+ 	}
+ 
+-	offs = fdt_add_subnode(fdt_blob, offs, "optee");
+-	if (offs < 0)
+-		return offs;
++	offs = fdt_path_offset(fdt_blob, "/firmware/optee");
++	if (offs < 0) {
++		offs = fdt_add_subnode(fdt_blob, offs, "optee");
++		if (offs < 0)
++			return offs;
++	}
+ 
+ 	/* copy the compatible property */
+ 	prop = ofnode_get_property(node, "compatible", &len);
+@@ -125,16 +128,6 @@ int optee_copy_fdt_nodes(void *new_blob)
+ 		return 0;
+ 	}
+ 
+-	/*
+-	 * Do not proceed if the target dt already has an OP-TEE node.
+-	 * In this case assume that the system knows better somehow,
+-	 * so do not interfere.
+-	 */
+-	if (fdt_path_offset(new_blob, "/firmware/optee") >= 0) {
+-		debug("OP-TEE Device Tree node already exists in target");
+-		return 0;
+-	}
+-
+ 	ret = optee_copy_firmware_node(node, new_blob);
+ 	if (ret < 0) {
+ 		printf("Failed to add OP-TEE firmware node\n");
+-- 
+2.43.0
+
