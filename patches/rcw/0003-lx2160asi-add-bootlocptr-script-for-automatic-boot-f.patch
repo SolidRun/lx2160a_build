@@ -1,0 +1,80 @@
+From e6d93b4dfb67a89339527c90ec1c50c2325b025b Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 7 Oct 2024 14:37:13 +0200
+Subject: [PATCH 3/8] lx2160asi: add  bootlocptr script for automatic boot from
+ SD/eMMC/SPI
+
+For each boot source test rcw source, and set bootlocl/h accordingly.
+
+For single boot-source atf create_pbl adds block copy commands
+and sets boot location pointer.
+Automatic boot relies on rcw to include the blockcopy and bootlocptr
+commands, create_pbl then replaces their arguments with actual  load
+addresses.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2160asi/bootlocptr_auto.rcw | 51 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 51 insertions(+)
+ create mode 100644 lx2160asi/bootlocptr_auto.rcw
+
+diff --git a/lx2160asi/bootlocptr_auto.rcw b/lx2160asi/bootlocptr_auto.rcw
+new file mode 100644
+index 0000000..08e7916
+--- /dev/null
++++ b/lx2160asi/bootlocptr_auto.rcw
+@@ -0,0 +1,51 @@
++/*
++ * Generic code for auto booting.
++ *
++ * For each boot source test rcw source, and set bootlocl/h accordingly.
++ *
++ * For single boot-source atf create_pbl adds block copy commands
++ * and sets boot location pointer.
++ * Automatic boot relies on rcw to include the blockcopy and bootlocptr
++ * commands, create_pbl then replaces their arguments.
++ *
++ * Copyright 2020 Rabeeh Khoury <rabeeh@solid-run.com>
++ * Copyright 2024 Josua Mayer <josua@solid-run.com>
++ *
++ * Changelog:
++ * - 28/09/2024: changed formatting and comments
++ * - 07/10/2024: removed unnecessary commands to reduce size
++ */
++.pbi
++/* Load condition PORSR1 and mask RCW_SRC */
++loadc 0x01e00000,0x07800000
++
++/* If condition is 0x8 << 23 (SDHC1) then skip the following jump command */
++jumpc 0x00000014,0x04000000
++
++/* skip sdhc1 boot */
++jump 0x20 /* this jump + blockcopy = (4+4+4+4)+(4+4)=24 bytes */
++
++/* copy blocks from sdhc1 (atf create_pbl will fixup arguments) */
++blockcopy 0x08,0x0000a000,0x1800d000,0x00020000
++write 0x01e00400,0x1800d000
++
++/* If condition is 0x9 << 23 (SDHC2) then skip the following jump command */
++jumpc 0x00000014,0x04800000
++
++/* skip sdhc2 boot */
++jump 0x20 /* this jump + blockcopy = (4+4+4+4)+(4+4)=24 bytes */
++
++/* copy blocks from sdhc1 (atf create_pbl will fixup arguments) */
++blockcopy 0x09,0x0000a000,0x1800d000,0x00020000
++write 0x01e00400,0x1800d000
++
++/* If condition is 0xf << 23 (XSPI) then skip the following jump command */
++jumpc 0x00000014,0x07800000
++
++/* skip xspi boot */
++jump 0x20 /* this jump + blockcopy = (4+4+4+4)+(4+4)=24 bytes */
++
++/* copy blocks from xspi (atf create_pbl will fixup arguments) */
++blockcopy 0x0f,0x20009000,0x1800d000,0x00020000
++write 0x01e00400,0x1800d000
++.end
+-- 
+2.43.0
+

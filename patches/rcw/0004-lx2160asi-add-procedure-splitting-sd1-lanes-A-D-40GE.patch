@@ -1,7 +1,7 @@
-From fdc505da33e235ce9d99cdf9958fa48283b5ae5d Mon Sep 17 00:00:00 2001
+From 942b1c5c5c1442092cb0834e5b7dd97202ac9026 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Wed, 6 Aug 2025 19:14:37 +0200
-Subject: [PATCH 23/24] lx2160asi: add procedure splitting sd1 lanes A-D 40GE.2
+Subject: [PATCH 4/8] lx2160asi: add procedure splitting sd1 lanes A-D 40GE.2
  into 4x10g
 
 Implement custom procedure to reconfigure SD1 protocols 19/20 splitting

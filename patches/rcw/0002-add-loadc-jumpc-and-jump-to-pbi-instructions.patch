@@ -1,7 +1,7 @@
-From 8ddac248665778fdb5ed5fde5ea6cf0cd0fe0fa8 Mon Sep 17 00:00:00 2001
+From 8d262bafc2bb4b57ce2331b6eb31d7ad749eaf6c Mon Sep 17 00:00:00 2001
 From: Rabeeh Khoury <rabeeh@solid-run.com>
 Date: Mon, 23 Mar 2020 12:16:13 +0200
-Subject: [PATCH 05/22] add loadc, jumpc and jump to pbi instructions
+Subject: [PATCH 2/8] add loadc, jumpc and jump to pbi instructions
 
 Add 'load conditional', 'jump condidional' and 'jump' to PBI
 instructions.
