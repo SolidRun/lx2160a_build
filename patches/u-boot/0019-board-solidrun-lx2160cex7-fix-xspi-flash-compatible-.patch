@@ -1,0 +1,30 @@
+From 01418030bef11425c956caaff185e08e34ce4553 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 10 Aug 2025 15:56:54 +0200
+Subject: [PATCH] board: solidrun: lx2160cex7: fix xspi flash compatible string
+
+The SPI nor flash on LX2160A CEX-7 is not an m25p80 but MT35.
+Fi the device-tree compatible string to use jedec ids and automatic
+identification.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm/dts/fsl-lx2160a-cex7.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/fsl-lx2160a-cex7.dtsi b/arch/arm/dts/fsl-lx2160a-cex7.dtsi
+index e4b72707081..fa5bae4d796 100644
+--- a/arch/arm/dts/fsl-lx2160a-cex7.dtsi
++++ b/arch/arm/dts/fsl-lx2160a-cex7.dtsi
+@@ -165,7 +165,7 @@
+ 	flash@0 {
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+-		compatible = "micron,m25p80";
++		compatible = "jedec,spi-nor";
+ 		m25p,fast-read;
+ 		spi-max-frequency = <50000000>;
+ 		reg = <0>;
+-- 
+2.43.0
+
