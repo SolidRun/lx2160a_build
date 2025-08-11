@@ -31,7 +31,7 @@ RUN set -e; \
 RUN set -e; \
 	apt-get -y install --no-install-recommends libpython3-dev python3-pip python3-setuptools python3-wheel swig; \
 	pip3 install importlib-metadata; \
-	pip3 install dtschema; \
+	pip3 install pylibfdt==1.7.0.post1 dtschema; \
 	pip3 install cryptography; \
 	pip3 install pyelftools; \
 	:
