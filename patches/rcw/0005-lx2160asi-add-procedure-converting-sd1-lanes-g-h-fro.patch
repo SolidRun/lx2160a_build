@@ -1,0 +1,65 @@
+From cbcd1e26bc5e2c07954fd01e55b3b330d4c7b214 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 24 Aug 2025 14:21:00 +0200
+Subject: [PATCH 05/10] lx2160asi: add procedure converting sd1 lanes g&h from
+ 10g to 25g
+
+Add procedure converting sd1 lanes G and H from 10G to 25G, yielding in
+protocol 18 4x 25G plus 4x 10G ports total.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2160asi/sd1_lane_g_h_xfi_to_25g.rcw | 41 +++++++++++++++++++++++++++
+ 1 file changed, 41 insertions(+)
+ create mode 100644 lx2160asi/sd1_lane_g_h_xfi_to_25g.rcw
+
+diff --git a/lx2160asi/sd1_lane_g_h_xfi_to_25g.rcw b/lx2160asi/sd1_lane_g_h_xfi_to_25g.rcw
+new file mode 100644
+index 0000000..40756d8
+--- /dev/null
++++ b/lx2160asi/sd1_lane_g_h_xfi_to_25g.rcw
+@@ -0,0 +1,41 @@
++/* Convert the SD#1 LANE G and H from XFI to 25G */
++#define SRDS_BASE 0x1ea0000 /* SerDes 1 */
++#include <../serdes_28g.rcw>
++
++.pbi
++/* Issue a halt request on the lanes */
++write LNmTRSTCTL(6), T_HLT_REQ(1)
++write LNmRRSTCTL(6), R_HLT_REQ(1)
++write LNmTRSTCTL(7), T_HLT_REQ(1)
++write LNmRRSTCTL(7), R_HLT_REQ(1)
++wait 100
++
++/* Convert lane G from 10G to 25G */
++write LNmGCR0(6), PROTO_SEL(0x1a) | IF_WIDTH(0x4)
++write LNmTGCR0(6), 0x03000000
++write LNmRGCR0(6), 0x03000000
++write LNmRGCR1(6), 0x00000000
++
++/* Convert lane H from 10G to 25G */
++write LNmGCR0(7), PROTO_SEL(0x1a) | IF_WIDTH(0x4)
++write LNmTGCR0(7), 0x03000000
++write LNmRGCR0(7), 0x03000000
++write LNmRGCR1(7), 0x00000000
++
++/* Disable the 10G protocol converters on lanes G and H (enable on A-D, disable E-H) */
++/* TODO: don't change A-D bits? */
++write PCCC, SXGMIIGA_CFG(1) | SXGMIIGB_CFG(1) | SXGMIIGC_CFG(1) | SXGMIIGD_CFG(1) | SXGMIIGA_XFI(1) | SXGMIIGB_XFI(1) | SXGMIIGC_XFI(1) | SXGMIIGD_XFI(1)
++
++/* Enable the 25G protocol converters on lanes G and H (enable on E-H, disable A-D) */
++/* TODO: don't change A-D bits? */
++write PCCD, E25GA_CFG(1) | E25GB_CFG(1) | E25GC_CFG(1) | E25GD_CFG(1)
++
++/* Issue a reset request on the lanes */
++write LNmTRSTCTL(6), T_RST_REQ(1)
++write LNmRRSTCTL(6), R_RST_REQ(1)
++write LNmTRSTCTL(7), T_RST_REQ(1)
++write LNmRRSTCTL(7), R_RST_REQ(1)
++wait 100
++.end
++
++#undef SRDS_BASE
+-- 
+2.43.0
+

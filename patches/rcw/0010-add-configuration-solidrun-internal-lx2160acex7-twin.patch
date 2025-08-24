@@ -1,7 +1,8 @@
-From 4b2c7cc1570c930da9e38186698b1efbbd97bfd6 Mon Sep 17 00:00:00 2001
+From bc8e352efbc32a584f023f5818d9d6ee1503be1e Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 9 Aug 2025 16:53:43 +0200
-Subject: [PATCH] add configuration solidrun internal lx2160acex7 twins board
+Subject: [PATCH 10/10] add configuration solidrun internal lx2160acex7 twins
+ board
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---

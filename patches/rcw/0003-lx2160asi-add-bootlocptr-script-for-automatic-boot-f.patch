@@ -1,8 +1,8 @@
 From e6d93b4dfb67a89339527c90ec1c50c2325b025b Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Mon, 7 Oct 2024 14:37:13 +0200
-Subject: [PATCH 3/8] lx2160asi: add  bootlocptr script for automatic boot from
- SD/eMMC/SPI
+Subject: [PATCH 03/10] lx2160asi: add  bootlocptr script for automatic boot
+ from SD/eMMC/SPI
 
 For each boot source test rcw source, and set bootlocl/h accordingly.
 

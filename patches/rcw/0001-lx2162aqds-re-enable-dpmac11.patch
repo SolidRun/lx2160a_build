@@ -1,7 +1,7 @@
 From 84fa771a260161361a598eaf77591cf07729557f Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 27 May 2023 17:20:22 +0300
-Subject: [PATCH 1/8] lx2162aqds: re-enable dpmac11
+Subject: [PATCH 01/10] lx2162aqds: re-enable dpmac11
 
 dpmac11 was unintentionally disabled along with dpmac7-10.
 Fix the initializer value of DEVDISR2 to only disable dpmac7-10.

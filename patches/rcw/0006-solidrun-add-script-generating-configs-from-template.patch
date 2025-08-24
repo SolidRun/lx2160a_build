@@ -1,7 +1,7 @@
-From da3e92ce006f3b6e83666c3909b0fe9540ef1658 Mon Sep 17 00:00:00 2001
+From fe2a405040fe87cd77cb4bf48bd57d0e65777811 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Thu, 7 Nov 2024 13:26:49 +0100
-Subject: [PATCH 5/8] solidrun: add script generating configs from template
+Subject: [PATCH 06/10] solidrun: add script generating configs from template
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---
