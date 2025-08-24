@@ -879,7 +879,6 @@ parted --script $ROOTDIR/images/tmp/$ROOTFS.img mklabel msdos mkpart primary 64M
 # Generate the above partuuid 3030303030 which is the 4 characters of '0' in ascii
 echo "0000" | dd of=$ROOTDIR/images/tmp/$ROOTFS.img bs=1 seek=440 conv=notrunc
 dd if=$ROOTDIR/images/tmp/$ROOTFS.ext4 of=$ROOTDIR/images/tmp/$ROOTFS.img bs=1M seek=64 conv=notrunc
-IMAGES+=("images/tmp/$ROOTFS.img")
 
 # add default prefix for short DPL/DPC variables
 if [[ ! $DPL =~ / ]]; then
@@ -932,6 +931,30 @@ do_populate_bootimg() {
 	dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=32768 conv=notrunc
 }
 
+# generate SD boot image
+if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc1 ]]); then
+	echo "Assembling SD Boot Image"
+	cd $ROOTDIR/
+
+	IMG=${SOC,,}_rev${CPU_REVISION}_${MODULE,,}_${BOARD,,}_sd_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
+	cp --sparse=always $ROOTDIR/images/tmp/$ROOTFS.img images/${IMG}
+	do_populate_bootimg "${IMG}" sdhc
+
+	IMAGES+=("images/${IMG}")
+fi
+
+# generate eMMC boot image
+if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc2 ]]); then
+	echo "Assembling eMMC Boot Image"
+	cd $ROOTDIR/
+
+	IMG=${SOC,,}_rev${CPU_REVISION}_${MODULE,,}_${BOARD,,}_emmc_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
+	cp --sparse=always $ROOTDIR/images/tmp/$ROOTFS.img images/${IMG}
+	do_populate_bootimg "${IMG}" sdhc
+
+	IMAGES+=("images/${IMG}")
+fi
+
 # generate SPI boot image
 if ([ "${BOOTSOURCE}" = "auto" ] || [ "${BOOTSOURCE}" = "xspi" ]); then
 	echo "Assembling XSPI Boot Image"
@@ -946,9 +969,9 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [ "${BOOTSOURCE}" = "xspi" ]); then
 	IMAGES+=("images/${XSPI_IMG}")
 fi
 
-# generate SD boot image
-if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc* ]]); then
-	echo "Assembling SDHC Boot Image"
+# generate auto boot image (sd + emmc + xspi)
+if [ "${BOOTSOURCE}" = "auto" ]; then
+	echo "Assembling SD Auto Boot Image"
 	cd $ROOTDIR/
 
 	# generate partition 1 for boot image
@@ -959,15 +982,13 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc* ]]); then
 	BOOTPART_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/boot.part)
 
 	# generate boot image
-	IMG=${SOC,,}_rev${CPU_REVISION}_${MODULE,,}_${BOARD,,}_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
+	IMG=${SOC,,}_rev${CPU_REVISION}_${MODULE,,}_${BOARD,,}_multi_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
 	rm -rf $ROOTDIR/images/${IMG}
 	truncate -s 64M $ROOTDIR/images/${IMG}
 	truncate -s +$BOOTPART_SIZE $ROOTDIR/images/${IMG}
 	parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB $((64*1024*1024+BOOTPART_SIZE-1))B
 
-	if [ "${BOOTSOURCE}" = "auto" ]; then
-		e2cp -G 0 -O 0 $ROOTDIR/images/${XSPI_IMG} $ROOTDIR/images/tmp/boot.part:/xspi.img
-	fi
+	e2cp -G 0 -O 0 $ROOTDIR/images/${XSPI_IMG} $ROOTDIR/images/tmp/boot.part:/xspi.img
 
 	do_populate_bootimg "${IMG}" sdhc
 
@@ -975,7 +996,7 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc* ]]); then
 	dd if=images/${IMG} of=$ROOTDIR/images/tmp/$ROOTFS.img bs=512 seek=1 skip=1 count=131071 conv=notrunc
 
 	# Copy rootfs image as a file into boot image for eMMC installation
-	e2cp -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.img $ROOTDIR/images/tmp/boot.part:/
+	e2cp -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.img $ROOTDIR/images/tmp/boot.part:/emmc.img
 	dd if=$ROOTDIR/images/tmp/boot.part of=$ROOTDIR/images/${IMG} bs=1M seek=64
 
 	IMAGES+=("images/${IMG}")
