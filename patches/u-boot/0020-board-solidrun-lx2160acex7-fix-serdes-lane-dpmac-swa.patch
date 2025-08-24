@@ -1,0 +1,124 @@
+From 54e0af56a7f7b87fd1da202a296d10e7037bc000 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 24 Aug 2025 16:31:56 +0200
+Subject: [PATCH] board: solidrun: lx2160acex7: fix serdes lane dpmac swap
+
+SerDes lane numbering and protocol converter register bitfield names are
+inconsistent on LX2160 for SerDes #1.
+
+E.g. 10G Protocol converter Port C is SD1 lane F (number 2) dpmac 5.
+
+Swap the dpmacs in lookup tables so that correct speed and status are
+configured during board_fix_fdt.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ board/solidrun/lx2160acex7/serdes.c | 32 ++++++++++++++---------------
+ 1 file changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/board/solidrun/lx2160acex7/serdes.c b/board/solidrun/lx2160acex7/serdes.c
+index c6b6d9bbfdc..c62a54d1681 100644
+--- a/board/solidrun/lx2160acex7/serdes.c
++++ b/board/solidrun/lx2160acex7/serdes.c
+@@ -150,82 +150,82 @@ static void board_fix_fdt_macs(void *fdt) {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+ 			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIA_CFG,
+ 			.mode = "sgmii",
+-			.mac = DPMAC3,
++			.mac = DPMAC10,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+ 			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIB_CFG,
+ 			.mode = "sgmii",
+-			.mac = DPMAC4,
++			.mac = DPMAC9,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+ 			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIC_CFG,
+ 			.mode = "sgmii",
+-			.mac = DPMAC5,
++			.mac = DPMAC8,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+ 			.pcr_ena_mask = LYNX_28G_PCC8_SGMIID_CFG,
+ 			.mode = "sgmii",
+-			.mac = DPMAC6,
++			.mac = DPMAC7,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+ 			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIE_CFG,
+ 			.mode = "sgmii",
+-			.mac = DPMAC7,
++			.mac = DPMAC6,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+ 			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIF_CFG,
+ 			.mode = "sgmii",
+-			.mac = DPMAC8,
++			.mac = DPMAC5,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+ 			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIG_CFG,
+ 			.mode = "sgmii",
+-			.mac = DPMAC9,
++			.mac = DPMAC4,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+ 			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIH_CFG,
+ 			.mode = "sgmii",
+-			.mac = DPMAC10,
++			.mac = DPMAC3,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+ 			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIA_CFG,
+ 			.mode = "xgmii",
+-			.mac = DPMAC3,
++			.mac = DPMAC10,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+ 			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIB_CFG,
+ 			.mode = "xgmii",
+-			.mac = DPMAC4,
++			.mac = DPMAC9,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+ 			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIC_CFG,
+ 			.mode = "xgmii",
+-			.mac = DPMAC5,
++			.mac = DPMAC8,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+ 			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIID_CFG,
+ 			.mode = "xgmii",
+-			.mac = DPMAC6,
++			.mac = DPMAC7,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+ 			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIE_CFG,
+ 			.mode = "xgmii",
+-			.mac = DPMAC7,
++			.mac = DPMAC6,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+ 			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIF_CFG,
+ 			.mode = "xgmii",
+-			.mac = DPMAC8,
++			.mac = DPMAC5,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+ 			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIG_CFG,
+ 			.mode = "xgmii",
+-			.mac = DPMAC9,
++			.mac = DPMAC4,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+ 			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIH_CFG,
+ 			.mode = "xgmii",
+-			.mac = DPMAC10,
++			.mac = DPMAC3,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
+ 			.pcr_ena_mask = LYNX_28G_PCCD_E25GA_CFG,
+-- 
+2.43.0
+
