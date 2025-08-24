@@ -40,7 +40,7 @@ set -e
 # - jammy (22.04)
 # - noble (24.04)
 : ${UBUNTU_VERSION:=noble}
-: ${UBUNTU_ROOTFS_SIZE:=400M}
+: ${UBUNTU_ROOTFS_SIZE:=350M}
 # Debian Version
 # - bullseye (11)
 # - bookworm (12)
@@ -254,7 +254,7 @@ do_build_rcw() {
 
 	cd $ROOTDIR/build/rcw
 	make BOARDS="${BOARD_TARGETS}" clean
-	make BOARDS="${BOARD_TARGETS}"
+	make BOARDS="${BOARD_TARGETS}" -j${PARALLEL}
 	make BOARDS="${BOARD_TARGETS}" DESTDIR=${ROOTDIR}/images/tmp install
 }
 echo "Building RCW"
@@ -565,7 +565,7 @@ test -n "$APTPROXY" && printf 'Acquire::http { Proxy "%s"; }\n' $APTPROXY | tee 
 
 apt-get update
 env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C \
-	apt-get install --no-install-recommends -y apt apt-utils ethtool fdisk htop i2c-tools ifupdown iproute2 iptables iputils-ping isc-dhcp-client kmod less libatomic1 lm-sensors locales net-tools network-manager ntpdate openssh-server pciutils procps psmisc python3 rng-tools sudo systemd-sysv tee-supplicant wget $EXTRA_PKGS
+	apt-get install --no-install-recommends -y apt apt-utils ethtool fdisk i2c-tools ifupdown iproute2 iptables iputils-ping isc-dhcp-client kmod less libatomic1 lm-sensors locales net-tools ntpdate openssh-server pciutils procps psmisc python3 sudo systemd-sysv tee-supplicant wget $EXTRA_PKGS
 apt-get clean
 
 # set root password
