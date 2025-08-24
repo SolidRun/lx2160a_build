@@ -522,7 +522,7 @@ if [[ $DISTRO == ubuntu ]]; then
 			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/ubuntu-base-22.04.5-base-arm64.tar.gz
 		;;
 		noble)
-			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.2-base-arm64.tar.gz
+			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/24.04.3/release/ubuntu-base-24.04.3-base-arm64.tar.gz
 			EXTRA_PKGS="unminimize util-linux-extra"
 		;;
 		*)
