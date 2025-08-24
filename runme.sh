@@ -81,7 +81,7 @@ case "${TARGET}" in
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
 	;;
-	LX2160A_CEX7_CLEARFOG-CX_0_0_*)
+	LX2160A_CEX7_CLEARFOG-CX_0_0_0)
 		# no serdes ports, can be used as base for new configurations
 		ATF_PLATFORM=lx2160acex7
 		DPC=lx2160a/LX2160A-CEX7/null-s1_0-s2_0-dpc.dtb
@@ -108,7 +108,7 @@ case "${TARGET}" in
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
 		UBOOT_FDT=fsl-lx2160a-clearfog-cx
 	;;
-	LX2160A_CEX7_HONEYCOMB_4_5_*|LX2160A_CEX7_HONEYCOMB_8_5_*|LX2160A_CEX7_HONEYCOMB_8S_5_*|LX2160A_CEX7_HONEYCOMB_18_5_*)
+	LX2160A_CEX7_HONEYCOMB_4_5_*|LX2160A_CEX7_HONEYCOMB_8_5_*|LX2160A_CEX7_HONEYCOMB_8S_5_*)
 		ATF_PLATFORM=lx2160acex7
 		DPC=clearfog-cx-s1_8-s2_0-dpc.dtb
 		DPL=clearfog-cx-s1_8-s2_0-dpl.dtb
@@ -117,6 +117,16 @@ case "${TARGET}" in
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
 		UBOOT_FDT=fsl-lx2160a-honeycomb
 		RCW_BOARD=CLEARFOG-CX
+	;;
+	LX2160A_CEX7_HONEYCOMB_20_5_*)
+		# for clearfog-cx revision 1.2 and earlier (with QSFP, without retimer)
+		ATF_PLATFORM=lx2160acex7
+		DPC=clearfog-cx-s1_20-s2_0-dpc.dtb
+		DPL=clearfog-cx-s1_20-s2_0-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-honeycomb.dtb"
+		OPTEE_PLATFORM=ls-lx2160ardb
+		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+		UBOOT_FDT=fsl-lx2160a-honeycomb
 	;;
 	LX2160A_CEX7_HALF-TWINS_8S_9_2)
 		ATF_PLATFORM=lx2160acex7
