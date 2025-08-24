@@ -312,10 +312,14 @@ do_build_atf() {
 		RCW_BOARD=${BOARD}
 	fi
 	local BOOT_MODE=
+	# atf create_pbl appends 24 bytes of additional instructions - max size is 4072
+	local rcwsize_max=4072
 	case ${BOOTSOURCE} in
 	auto)
 		BOOT_MODE=auto
 		RCW_BOOTSOURCE=auto
+		# for auto-boot atf create_pbl does not append any additional instructions
+		rcwsize_max=4096
 		;;
 	sdhc1)
 		BOOT_MODE=sd
@@ -337,6 +341,11 @@ do_build_atf() {
 	if [ ! -e "${rcwimg}" ]; then
 		echo "cannot stat \"${rcwimg}\"!"
 		echo "Please specify a supported combination of BOOTSOURCE, CPU_REVISION, CPU_SPEED, BUS_SPEED, TARGET."
+		return 1
+	fi
+	local rcwsize=$(stat -c "%s" $rcwimg)
+	if [ ${rcwsize} -gt ${rcwsize_max} ]; then
+		echo "RCW exceeds maximum size!"
 		return 1
 	fi
 
