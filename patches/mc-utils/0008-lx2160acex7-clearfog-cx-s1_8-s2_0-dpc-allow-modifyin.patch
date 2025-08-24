@@ -1,0 +1,36 @@
+From 8a9dd41261754fd78d8e31571bd464c56a29be6d Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 24 Aug 2025 16:44:11 +0200
+Subject: [PATCH] lx2160acex7: clearfog-cx-s1_8-s2_0-dpc: allow modifying
+ serdes protocol
+
+Enable reading protocol configuration registers for MC firmware to
+enable picking up protocol modifications implemented in RCW.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../lx2160a/LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpc.dts   | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpc.dts b/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpc.dts
+index 9a508d2..6b5277b 100644
+--- a/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpc.dts
++++ b/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpc.dts
+@@ -104,5 +104,14 @@
+ 				link_type = "MAC_LINK_TYPE_PHY";
+ 			};
+ 		};
++
++		serdes {
++			/* Do not rely on the RCW protocol number, but rather read
++			 * the protocol status registers (PSSR) for each SerDes
++			 * block. That information will be used to enable/disable
++			 * the appropriate MACs.
++			 */
++			follow_hw_pssr;
++		};
+ 	};
+ };
+-- 
+2.43.0
+

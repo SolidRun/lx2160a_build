@@ -1,4 +1,4 @@
-From a7e7945698d548378608e9501b3454f64e95ae24 Mon Sep 17 00:00:00 2001
+From b4cdbd33d22ce8e56eb6dd02bcb9cda2334a8ab7 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 9 Aug 2025 19:08:29 +0200
 Subject: [PATCH] lx2160acex7: add configuration for solidrun internal twins
@@ -14,7 +14,7 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
 
 diff --git a/config/lx2160a/LX2160A-CEX7/twins-s1_8-s2_9-dpc.dts b/config/lx2160a/LX2160A-CEX7/twins-s1_8-s2_9-dpc.dts
 new file mode 100644
-index 0000000..fc51b55
+index 0000000..fc0c73a
 --- /dev/null
 +++ b/config/lx2160a/LX2160A-CEX7/twins-s1_8-s2_9-dpc.dts
 @@ -0,0 +1,145 @@
@@ -81,7 +81,7 @@ index 0000000..fc51b55
 +			 * as many 2-WQ channels. This allows the creation of a
 +			 * larger number of DPCONs.
 +			 */
-+			wq_ch_conversion = <32>;
++			wq_ch_conversion = <64>;
 +		};
 +	};
 +
