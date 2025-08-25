@@ -1,0 +1,513 @@
+From e37c29a62535fa9e57bd3a0a31f616fcdbbae36f Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 25 Aug 2025 14:54:38 +0200
+Subject: [PATCH 22/23] board: solidrun: lx2160cex7: setup retimers for active
+ configuration
+
+LX2160 Clearfog-CX and  LX2162 Clearfog boards have retimers to support
+25Gbps speed on some serdes lanes.
+
+Configure the retimer during boot according to current active speed of
+the various macs.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ board/solidrun/lx2160acex7/Makefile  |   1 +
+ board/solidrun/lx2160acex7/lx2160a.c |   3 +
+ board/solidrun/lx2160acex7/retimer.c | 458 +++++++++++++++++++++++++++
+ 3 files changed, 462 insertions(+)
+ create mode 100644 board/solidrun/lx2160acex7/retimer.c
+
+diff --git a/board/solidrun/lx2160acex7/Makefile b/board/solidrun/lx2160acex7/Makefile
+index a4bcd539cf8..9fe2b10310e 100644
+--- a/board/solidrun/lx2160acex7/Makefile
++++ b/board/solidrun/lx2160acex7/Makefile
+@@ -8,4 +8,5 @@
+ obj-y += lx2160a.o
+ obj-y += ddr.o
+ obj-$(CONFIG_TARGET_LX2160ACEX7) += eth_lx2160acex7.o
++obj-y += retimer.o
+ obj-y += serdes.o
+diff --git a/board/solidrun/lx2160acex7/lx2160a.c b/board/solidrun/lx2160acex7/lx2160a.c
+index 76302e8e568..dbfb1dc9d4d 100644
+--- a/board/solidrun/lx2160acex7/lx2160a.c
++++ b/board/solidrun/lx2160acex7/lx2160a.c
+@@ -211,8 +211,11 @@ static int setup_fan_ctrl(void) {
+ 	return ret;
+ }
+ 
++int setup_retimers(void);
++
+ int fsl_board_late_init(void) {
+ 	setup_fan_ctrl();
++	setup_retimers();
+ 
+ 	return 0;
+ }
+diff --git a/board/solidrun/lx2160acex7/retimer.c b/board/solidrun/lx2160acex7/retimer.c
+new file mode 100644
+index 00000000000..30f9863ce1f
+--- /dev/null
++++ b/board/solidrun/lx2160acex7/retimer.c
+@@ -0,0 +1,458 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Copyright 2022-2025 Josua Mayer <josua@solid-run.com>
++ *
++ */
++
++#include <dm/device.h>
++#include <dm/ofnode.h>
++#include <dm/read.h>
++#include <dm/uclass.h>
++#include <i2c.h>
++
++#define ds250dfx10_write_register(dev, addr, val, mask) dm_i2c_reg_clrset(dev, addr, mask, val)
++
++static void ds250dfx10_config_1g(struct udevice *dev, uint8_t channel)
++{
++	int ret = 0;
++
++	// enable smbus access to single channel
++	ret |= ds250dfx10_write_register(dev, 0xFF, 0x01, 0x03);
++
++	// select channel
++	ret |= ds250dfx10_write_register(dev, 0xFC, 1 << channel, 0xFF);
++
++	// reset channel registers
++	ret |= ds250dfx10_write_register(dev, 0x00, 0x04, 0x04);
++
++	// assert cdr
++	ret |= ds250dfx10_write_register(dev, 0x0A, 0x0C, 0x0C);
++
++	// set manual data rate override to 1.25Gbps
++	ret |= ds250dfx10_write_register(dev, 0x60, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(dev, 0x61, 0xb2, 0xFF);
++	ret |= ds250dfx10_write_register(dev, 0x62, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(dev, 0x63, 0xb2, 0xFF);
++
++	// set maximum ppm delta tolerance
++	ret |= ds250dfx10_write_register(dev, 0x64, 0xFF, 0xFF);
++
++	// enable manual divider override
++	ret |= ds250dfx10_write_register(dev, 0x09, 0x04, 0x04);
++
++	// set divider to 16
++	ret |= ds250dfx10_write_register(dev, 0x18, 0x40, 0x70);
++
++	// enable pre- and post-fir
++	ret |= ds250dfx10_write_register(dev, 0x3D, 0x80, 0x80);
++
++	// set main cursor magnitude +15
++	ret |= ds250dfx10_write_register(dev, 0x3D, 0x00, 0x40);
++	ret |= ds250dfx10_write_register(dev, 0x3D, 0x0F, 0x1F);
++
++	// set pre cursor magnitude -4
++	ret |= ds250dfx10_write_register(dev, 0x3E, 0x40, 0x40);
++	ret |= ds250dfx10_write_register(dev, 0x3E, 0x04, 0x0F);
++
++	// set post cursor magnitude -4
++	ret |= ds250dfx10_write_register(dev, 0x3F, 0x40, 0x40);
++	ret |= ds250dfx10_write_register(dev, 0x3F, 0x04, 0x0F);
++
++	// deassert cdr
++	ret |= ds250dfx10_write_register(dev, 0x0A, 0x00, 0x0C);
++
++	if (!ret)
++		debug("failed to configure channel %u for 1G\n", channel);
++}
++
++static void ds250dfx10_config_10g(struct udevice *dev, uint8_t channel)
++{
++	int ret = 0;
++
++	// enable smbus access to single channel
++	ret |= ds250dfx10_write_register(dev, 0xFF, 0x01, 0x03);
++
++	// select channel
++	ret |= ds250dfx10_write_register(dev, 0xFC, 1 << channel, 0xFF);
++
++	// reset channel registers
++	ret |= ds250dfx10_write_register(dev, 0x00, 0x04, 0x04);
++
++	// assert cdr
++	ret |= ds250dfx10_write_register(dev, 0x0A, 0x0C, 0x0C);
++
++	// disable manual data rate override
++	ret |= ds250dfx10_write_register(dev, 0x60, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(dev, 0x61, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(dev, 0x62, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(dev, 0x63, 0x00, 0xFF);
++
++	// set minimum ppm delta tolerance (reset-default)
++	ret |= ds250dfx10_write_register(dev, 0x64, 0x00, 0xFF);
++
++	// disable manual divider override
++	ret |= ds250dfx10_write_register(dev, 0x09, 0x00, 0x04);
++
++	// select 10.3125 rate
++	ret |= ds250dfx10_write_register(dev, 0x2F, 0x00, 0xF0);
++
++	// enable pre- and post-fir
++	ret |= ds250dfx10_write_register(dev, 0x3D, 0x80, 0x80);
++
++	// set main cursor magnitude +15
++	ret |= ds250dfx10_write_register(dev, 0x3D, 0x00, 0x40);
++	ret |= ds250dfx10_write_register(dev, 0x3D, 0x0F, 0x1F);
++
++	// set pre cursor magnitude -4
++	ret |= ds250dfx10_write_register(dev, 0x3E, 0x40, 0x40);
++	ret |= ds250dfx10_write_register(dev, 0x3E, 0x04, 0x0F);
++
++	// set post cursor magnitude -4
++	ret |= ds250dfx10_write_register(dev, 0x3F, 0x40, 0x40);
++	ret |= ds250dfx10_write_register(dev, 0x3F, 0x04, 0x0F);
++
++	// deassert cdr
++	ret |= ds250dfx10_write_register(dev, 0x0A, 0x00, 0x0C);
++
++	if (!ret)
++		debug("failed to configure channel %u for 10G\n", channel);
++}
++
++static void ds250dfx10_config_25g(struct udevice *dev, uint8_t channel)
++{
++	int ret = 0;
++
++	// enable smbus access to single channel
++	ret |= ds250dfx10_write_register(dev, 0xFF, 0x01, 0x03);
++
++	// select channel
++	ret |= ds250dfx10_write_register(dev, 0xFC, 1 << channel, 0xFF);
++
++	// reset channel registers
++	ret |= ds250dfx10_write_register(dev, 0x00, 0x04, 0x04);
++
++	// assert cdr
++	ret |= ds250dfx10_write_register(dev, 0x0A, 0x0C, 0x0C);
++
++	// disable manual data rate override
++	ret |= ds250dfx10_write_register(dev, 0x60, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(dev, 0x61, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(dev, 0x62, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(dev, 0x63, 0x00, 0xFF);
++
++	// set minimum ppm delta tolerance (reset-default)
++	ret |= ds250dfx10_write_register(dev, 0x64, 0x00, 0xFF);
++
++	// disable manual divider override
++	ret |= ds250dfx10_write_register(dev, 0x09, 0x00, 0x04);
++
++	// select 25.78125 rate
++	ret |= ds250dfx10_write_register(dev, 0x2F, 0x50, 0xF0);
++
++	// enable pre- and post-fir
++	ret |= ds250dfx10_write_register(dev, 0x3D, 0x80, 0x80);
++
++	// set main cursor magnitude +15
++	ret |= ds250dfx10_write_register(dev, 0x3D, 0x00, 0x40);
++	ret |= ds250dfx10_write_register(dev, 0x3D, 0x0F, 0x1F);
++
++	// set pre cursor magnitude -4
++	ret |= ds250dfx10_write_register(dev, 0x3E, 0x40, 0x40);
++	ret |= ds250dfx10_write_register(dev, 0x3E, 0x04, 0x0F);
++
++	// set post cursor magnitude -4
++	ret |= ds250dfx10_write_register(dev, 0x3F, 0x40, 0x40);
++	ret |= ds250dfx10_write_register(dev, 0x3F, 0x04, 0x0F);
++
++	// deassert cdr
++	ret |= ds250dfx10_write_register(dev, 0x0A, 0x00, 0x0C);
++
++	if (ret)
++		debug("failed to configure channel %u for 25G\n", channel);
++}
++
++static int ds250dfx10_phy_set_mode(struct udevice *dev, uint8_t channel, const phy_interface_t submode)
++{
++	switch (submode) {
++	case PHY_INTERFACE_MODE_SGMII:
++		ds250dfx10_config_1g(dev, channel);
++		break;
++	case PHY_INTERFACE_MODE_10GBASER:
++		ds250dfx10_config_10g(dev, channel);
++		break;
++	case PHY_INTERFACE_MODE_25GBASER:
++		ds250dfx10_config_25g(dev, channel);
++		break;
++#if defined(CONFIG_ARCH_LX2160A) || defined(CONFIG_ARCH_LX2162A)
++	case PHY_INTERFACE_MODE_XLAUI:
++		ds250dfx10_config_10g(dev, channel);
++		break;
++	case PHY_INTERFACE_MODE_25G_AUI:
++	case PHY_INTERFACE_MODE_CAUI2:
++	case PHY_INTERFACE_MODE_CAUI4:
++		ds250dfx10_config_25g(dev, channel);
++		break;
++#endif
++	default:
++		debug("unsupported interface submode %s\n", phy_string_for_interface(submode));
++		return -EOPNOTSUPP;
++	}
++
++	return 0;
++}
++
++enum {
++	DPMAC1 = 0,
++	DPMAC2,
++	DPMAC3,
++	DPMAC4,
++	DPMAC5,
++	DPMAC6,
++	DPMAC7,
++	DPMAC8,
++	DPMAC9,
++	DPMAC10,
++	DPMAC11,
++	DPMAC12,
++	DPMAC13,
++	DPMAC14,
++	DPMAC15,
++	DPMAC16,
++	DPMAC17,
++	DPMAC18,
++	DPMAC_MAX
++};
++
++static const char *const macs[] = {
++	"/fsl-mc@80c000000/dpmacs/dpmac@1",
++	"/fsl-mc@80c000000/dpmacs/dpmac@2",
++	"/fsl-mc@80c000000/dpmacs/dpmac@3",
++	"/fsl-mc@80c000000/dpmacs/dpmac@4",
++	"/fsl-mc@80c000000/dpmacs/dpmac@5",
++	"/fsl-mc@80c000000/dpmacs/dpmac@6",
++	"/fsl-mc@80c000000/dpmacs/dpmac@7",
++	"/fsl-mc@80c000000/dpmacs/dpmac@8",
++	"/fsl-mc@80c000000/dpmacs/dpmac@9",
++	"/fsl-mc@80c000000/dpmacs/dpmac@a",
++	"/fsl-mc@80c000000/dpmacs/dpmac@b",
++	"/fsl-mc@80c000000/dpmacs/dpmac@c",
++	"/fsl-mc@80c000000/dpmacs/dpmac@d",
++	"/fsl-mc@80c000000/dpmacs/dpmac@e",
++	"/fsl-mc@80c000000/dpmacs/dpmac@f",
++	"/fsl-mc@80c000000/dpmacs/dpmac@10",
++	"/fsl-mc@80c000000/dpmacs/dpmac@11",
++	"/fsl-mc@80c000000/dpmacs/dpmac@12",
++};
++
++static const char *const lx2160a_cex7_clearfog_cx = "solidrun,clearfog-cx";
++static const char *const lx2162a_som_clearfog = "lx2162a-clearfog";
++static const char *const lx2160a_i2c0_cex7_smb = "i2c@2000000->i2c-mux@77->i2c@3";
++static const char *const lx2160a_i2c2 = "i2c@2020000";
++
++/* configure retimers according to active network interface configuration */
++int setup_retimers(void) {
++	int ret = -ENODEV;
++	ofnode node;
++	phy_interface_t mode;
++	struct udevice *bus, *dev;
++
++	struct {
++		const char *const machine;
++		const unsigned int mac;
++		struct {
++			const char *const bus;
++			const uint8_t addr;
++			const uint8_t channel_mask;
++		} retimer[2];
++		const phy_interface_t mode;
++	} configs[] = {
++		{	/* lx2160 clearfog-cx dpmac1 @ 40G qsfp 4 lanes */
++			.machine = lx2160a_cex7_clearfog_cx,
++			.mac = DPMAC1,
++			.retimer = {
++				{	/* tx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x22,
++					.channel_mask = (1U << 0) | (1U << 1)  | (1U << 2) | (1U << 3),
++				}, {	/* rx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x23,
++					.channel_mask = (1U << 0) | (1U << 1)  | (1U << 2) | (1U << 3),
++				}
++			},
++			.mode = PHY_INTERFACE_MODE_XLAUI,
++		}, {	/* lx2160 clearfog-cx dpmac1 @ 100G qsfp 4 lanes */
++			.machine = lx2160a_cex7_clearfog_cx,
++			.mac = DPMAC1,
++			.retimer = {
++				{	/* tx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x22,
++					.channel_mask = (1U << 0) | (1U << 1)  | (1U << 2) | (1U << 3),
++				}, {	/* rx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x23,
++					.channel_mask = (1U << 0) | (1U << 1)  | (1U << 2) | (1U << 3),
++				}
++			},
++			.mode = PHY_INTERFACE_MODE_CAUI4,
++		}, {	/* lx2160 clearfog-cx dpmac1 @ 50G qsfp 2 lanes */
++			.machine = lx2160a_cex7_clearfog_cx,
++			.mac = DPMAC1,
++			.retimer = {
++				{	/* tx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x22,
++					.channel_mask = (1U << 2) | (1U << 3),
++				}, {	/* rx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x23,
++					.channel_mask = (1U << 2) | (1U << 3),
++				}
++			},
++			.mode = PHY_INTERFACE_MODE_CAUI2,
++		}, {	/* lx2160 clearfog-cx dpmac2 @ 50G qsfp 2 lanes */
++			.machine = lx2160a_cex7_clearfog_cx,
++			.mac = DPMAC2,
++			.retimer = {
++				{	/* tx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x22,
++					.channel_mask = (1U << 0) | (1U << 1),
++				}, {	/* rx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x23,
++					.channel_mask = (1U << 0) | (1U << 1),
++				}
++			},
++			.mode = PHY_INTERFACE_MODE_CAUI2,
++		}, {	/* lx2160 clearfog-cx dpmac6 */
++			.machine = lx2160a_cex7_clearfog_cx,
++			.mac = DPMAC6,
++			.retimer = {
++				{	/* tx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x22,
++					.channel_mask = (1U << 0),
++				}, {	/* rx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x23,
++					.channel_mask = (1U << 0),
++				}
++			},
++		}, {	/* lx2160 clearfog-cx dpmac5 */
++			.machine = lx2160a_cex7_clearfog_cx,
++			.mac = DPMAC5,
++			.retimer = {
++				{	/* tx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x22,
++					.channel_mask = (1U << 1),
++				}, {	/* rx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x23,
++					.channel_mask = (1U << 1),
++				}
++			},
++		}, {	/* lx2160 clearfog-cx dpmac4 */
++			.machine = lx2160a_cex7_clearfog_cx,
++			.mac = DPMAC4,
++			.retimer = {
++				{	/* tx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x22,
++					.channel_mask = (1U << 2),
++				}, {	/* rx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x23,
++					.channel_mask = (1U << 2),
++				}
++			},
++		}, {	/* lx2160 clearfog-cx dpmac3 tx */
++			.machine = lx2160a_cex7_clearfog_cx,
++			.mac = DPMAC3,
++			.retimer = {
++				{	/* tx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x22,
++					.channel_mask = (1U << 3),
++				}, {	/* rx */
++					.bus = lx2160a_i2c0_cex7_smb,
++					.addr = 0x23,
++					.channel_mask = (1U << 3),
++				}
++			},
++		}, {	/* lx2162 clearfog dpmac6 tx */
++			.machine = lx2162a_som_clearfog,
++			.mac = DPMAC6,
++			.retimer = {
++				{	/* tx */
++					.bus = lx2160a_i2c2,
++					.addr = 0x18,
++					.channel_mask = (1U << 0),
++				}, {	/* rx */
++					.bus = lx2160a_i2c2,
++					.addr = 0x18,
++					.channel_mask = (1U << 1),
++				}
++			},
++		}, {	/* lx2162 clearfog dpmac5 tx */
++			.machine = lx2162a_som_clearfog,
++			.mac = DPMAC5,
++			.retimer = {
++				{	/* tx */
++					.bus = lx2160a_i2c2,
++					.addr = 0x18,
++					.channel_mask = (1U << 2),
++				}, {	/* rx */
++					.bus = lx2160a_i2c2,
++					.addr = 0x18,
++					.channel_mask = (1U << 3),
++				}
++			},
++		},
++	};
++
++	for (int i = 0; i < ARRAY_SIZE(configs); i++) {
++		if (!of_machine_is_compatible(configs[i].machine))
++			continue;
++
++		node = ofnode_path(macs[configs[i].mac]);
++		if (!ofnode_valid(node))
++			continue;
++
++		mode = ofnode_read_phy_mode(node);
++		if (mode == PHY_INTERFACE_MODE_NA)
++			continue;
++
++		if ((configs[i].mode != PHY_INTERFACE_MODE_NA) && (mode != configs[i].mode))
++			continue;
++
++		for (int j = 0; j < 2; j++) {
++			for (int k = 0; k < 8; k++) {
++				if (!(configs[i].retimer[j].channel_mask & (1 << k)))
++					continue;
++
++				ret = uclass_get_device_by_name(UCLASS_I2C, configs[i].retimer[j].bus, &bus);
++				if (ret) {
++					printf("failed to get i2c bus %s: %d\n", configs[i].retimer[j].bus, ret);
++					return ret;
++				}
++
++				ret = i2c_get_chip(bus, configs[i].retimer[j].addr, 1, &dev);
++				if (ret) {
++					printf("failed to get %s->retimer@%x: %d\n", configs[i].retimer[j].bus, configs[i].retimer[j].addr, ret);
++					return ret;
++				}
++
++				ret = ds250dfx10_phy_set_mode(dev, k, mode);
++				if (ret) {
++					printf("failed to configure %s->retimer@%x channel %u for %s: %d\n", configs[i].retimer[j].bus, configs[i].retimer[j].addr, k, phy_string_for_interface(mode), ret);
++					return ret;
++				}
++			}
++		}
++	}
++
++	return ret;
++}
+-- 
+2.43.0
+
