@@ -1,0 +1,31 @@
+From 843be8bb55370449e0b331a84e0b99dc89b4edb4 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 25 Aug 2025 12:47:18 +0200
+Subject: [PATCH] lib: optee: fix adding optee subnode if not present
+
+OS DTB may or may not have /firmware/optee node.
+After probing for the node, offs variable was -1 and no longer pointing
+to the /firmware node.
+Re-initialise it before trying to create subnode optee under /firmware.
+
+Fixes: "lib: optee: always copy optee to OS DTB regardless if already present"
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lib/optee/optee.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/lib/optee/optee.c b/lib/optee/optee.c
+index 53a08370b73..bfdce258a38 100644
+--- a/lib/optee/optee.c
++++ b/lib/optee/optee.c
+@@ -82,6 +82,7 @@ static int optee_copy_firmware_node(ofnode node, void *fdt_blob)
+ 
+ 	offs = fdt_path_offset(fdt_blob, "/firmware/optee");
+ 	if (offs < 0) {
++		offs = fdt_path_offset(fdt_blob, "/firmware");
+ 		offs = fdt_add_subnode(fdt_blob, offs, "optee");
+ 		if (offs < 0)
+ 			return offs;
+-- 
+2.43.0
+
