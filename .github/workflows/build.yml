@@ -106,7 +106,7 @@ jobs:
             cp -L images/linux-*.tar deploy/
             cp -L images/linux-headers-*.tar deploy/
             cp -L images/*.img deploy/
-            xz -9 deploy/*
+            xz -9 -T 0 deploy/*
             ls -lh deploy
 
       - name: Deploy to the local minio storage
