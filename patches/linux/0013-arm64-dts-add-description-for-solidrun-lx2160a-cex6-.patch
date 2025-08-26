@@ -1,7 +1,7 @@
-From 703141df18468aa4b2a0c4e6c923d2eff92f4c4d Mon Sep 17 00:00:00 2001
+From 66979a4cd797926445c19a46fa80c46609b73114 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Fri, 11 Oct 2024 18:21:42 +0200
-Subject: [PATCH 03/21] arm64: dts: add description for solidrun lx2160a cex6
+Subject: [PATCH 13/13] arm64: dts: add description for solidrun lx2160a cex6
  evalution board
 
 Add description for the Solid-Run internal CEX Type 6 module and
@@ -10,14 +10,14 @@ evaluation board.
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---
  arch/arm64/boot/dts/freescale/Makefile        |   1 +
- .../dts/freescale/fsl-lx2160a-cex6-evb.dts    | 234 ++++++++++++++
+ .../dts/freescale/fsl-lx2160a-cex6-evb.dts    | 229 ++++++++++++++
  .../boot/dts/freescale/fsl-lx2160a-cex6.dtsi  | 294 ++++++++++++++++++
- 3 files changed, 529 insertions(+)
+ 3 files changed, 524 insertions(+)
  create mode 100644 arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6-evb.dts
  create mode 100644 arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6.dtsi
 
 diff --git a/arch/arm64/boot/dts/freescale/Makefile b/arch/arm64/boot/dts/freescale/Makefile
-index efe32533733e..63d8c762e18c 100644
+index 59375a2edb5a..e2a7258c4e34 100644
 --- a/arch/arm64/boot/dts/freescale/Makefile
 +++ b/arch/arm64/boot/dts/freescale/Makefile
 @@ -42,6 +42,7 @@ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls2088a-qds.dtb
@@ -30,10 +30,10 @@ index efe32533733e..63d8c762e18c 100644
  dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-qds.dtb
 diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6-evb.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6-evb.dts
 new file mode 100644
-index 000000000000..55a4c81023a5
+index 000000000000..ea6a43a9a5c8
 --- /dev/null
 +++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6-evb.dts
-@@ -0,0 +1,234 @@
+@@ -0,0 +1,229 @@
 +// SPDX-License-Identifier: (GPL-2.0 OR MIT)
 +//
 +// Device Tree file for LX2160A-CEx6 Evaluation Board
@@ -171,61 +171,45 @@ index 000000000000..55a4c81023a5
 +};
 +
 +&dspi2 {
-+	w25q32fvzpig0: flash@0 {
-+		#address-cells = <1>;
-+		#size-cells = <1>;
-+		compatible = "jedec,spi-nor";
-+		m25p,fast-read;
-+		spi-max-frequency = <50000000>;
++	/* 1x W25Q32FVZPIG (U7) shared by 4 chip-select */
++	spi-num-chipselects = <4>;
++
++	flash@0 {
++		compatible = "winbond,w25q32", "jedec,spi-nor";
 +		reg = <0>;
-+		spi-rx-bus-width = <1>;
-+		spi-tx-bus-width = <1>;
++		spi-max-frequency = <104000000>;
++		m25p,fast-read;
 +	};
 +
-+	w25q32fvzpig1: flash@1 {
-+		#address-cells = <1>;
-+		#size-cells = <1>;
-+		compatible = "jedec,spi-nor";
-+		m25p,fast-read;
-+		spi-max-frequency = <50000000>;
++	flash@1 {
++		compatible = "winbond,w25q32", "jedec,spi-nor";
 +		reg = <1>;
-+		spi-rx-bus-width = <1>;
-+		spi-tx-bus-width = <1>;
++		spi-max-frequency = <104000000>;
++		m25p,fast-read;
 +	};
 +
-+	w25q32fvzpig2: flash@2 {
-+		#address-cells = <1>;
-+		#size-cells = <1>;
-+		compatible = "jedec,spi-nor";
-+		m25p,fast-read;
-+		spi-max-frequency = <50000000>;
++	flash@2 {
++		compatible = "winbond,w25q32", "jedec,spi-nor";
 +		reg = <2>;
-+		spi-rx-bus-width = <1>;
-+		spi-tx-bus-width = <1>;
++		spi-max-frequency = <104000000>;
++		m25p,fast-read;
 +	};
 +
-+	w25q32fvzpig3: dflash@3 {
-+		#address-cells = <1>;
-+		#size-cells = <1>;
-+		compatible = "jedec,spi-nor";
-+		m25p,fast-read;
-+		spi-max-frequency = <50000000>;
++	flash@3 {
++		compatible = "winbond,w25q32", "jedec,spi-nor";
 +		reg = <3>;
-+		spi-rx-bus-width = <1>;
-+		spi-tx-bus-width = <1>;
++		spi-max-frequency = <104000000>;
++		m25p,fast-read;
 +	};
 +};
 +
 +&fspi {
-+	mt35xu512aba1: flash@1 {
-+		#address-cells = <1>;
-+		#size-cells = <1>;
-+		compatible = "jedec,spi-nor";
-+		m25p,fast-read;
-+		spi-max-frequency = <50000000>;
++	/* flash / xspi extension header @ 1 */
++	spi@1 {
++		compatible = "rohm,dh2228fv";
 +		reg = <1>;
-+		spi-rx-bus-width = <8>;
-+		spi-tx-bus-width = <8>;
++		/* level shifter on COM may limit speed */
++		spi-max-frequency = <20000000>;
 +	};
 +};
 +
@@ -242,6 +226,22 @@ index 000000000000..55a4c81023a5
 +	};
 +};
 +
++&pcie2 {
++	status = "okay";
++};
++
++&pcie3 {
++	status = "okay";
++};
++
++&pcie4 {
++	status = "okay";
++};
++
++&pcie5 {
++	status = "okay";
++};
++
 +&pcs_mdio4 {
 +	status = "okay";
 +};
@@ -252,11 +252,6 @@ index 000000000000..55a4c81023a5
 +
 +&pcs_mdio6 {
 +	status = "okay";
-+};
-+
-+&serdes_1 {
-+	/* disable driver for lanes A-D */
-+	fsl,unmanaged-lanes = <0x0f>;
 +};
 +
 +&usb0 {
@@ -270,7 +265,7 @@ index 000000000000..55a4c81023a5
 +};
 diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6.dtsi
 new file mode 100644
-index 000000000000..17a8047e25f4
+index 000000000000..1d97a25bc57f
 --- /dev/null
 +++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex6.dtsi
 @@ -0,0 +1,294 @@
@@ -336,7 +331,7 @@ index 000000000000..17a8047e25f4
 +	status = "okay";
 +
 +	flash@0 {
-+		compatible = "jedec,spi-nor";
++		compatible = "micron,mt35xu512aba", "jedec,spi-nor";
 +		reg = <0>;
 +		m25p,fast-read;
 +		spi-max-frequency = <50000000>;

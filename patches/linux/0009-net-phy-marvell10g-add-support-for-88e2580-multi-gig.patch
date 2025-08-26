@@ -1,0 +1,177 @@
+From 4c726de9178562721d101bd6f564a2f979bd1d76 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 3 Nov 2022 17:12:18 +0200
+Subject: [PATCH 09/13] net: phy: marvell10g: add support for 88e2580 multi-gig
+ ethernet phy
+
+The Marvell 88E2580 is an 8-port multi-gigabit phy supporting 10Mbps to
+5GBase-T Ethernet.
+
+Each port is addressed individually on mdio by its own address, and they
+all share the same phy identifier.
+
+Add basic support for the 88E2540 PHY operating each port individually,
+i.e. DXGMII/QXGMII/OXGMII are not implemented.
+
+The PHY supports most registers with 3310 but uses particular values for
+mactype selection.
+
+match_phy_device is not implemented because no incompatible phy id
+collisions are currently known.
+
+get_features is not implemented because the tested 88e2580 phy does not
+need pma_ngbaset_quirk.
+
+Tested on LX2162A Clearfog board with up to 1gbase-t only.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/phy/marvell10g.c | 77 ++++++++++++++++++++++++++++++++++++
+ include/linux/marvell_phy.h  |  1 +
+ 2 files changed, 78 insertions(+)
+
+diff --git a/drivers/net/phy/marvell10g.c b/drivers/net/phy/marvell10g.c
+index d4bb90d76881..cdb931b12844 100644
+--- a/drivers/net/phy/marvell10g.c
++++ b/drivers/net/phy/marvell10g.c
+@@ -113,6 +113,7 @@ enum {
+ 	MV_V2_PORT_CTRL_PWRDOWN					= BIT(11),
+ 	MV_V2_33X0_PORT_CTRL_SWRST				= BIT(15),
+ 	MV_V2_33X0_PORT_CTRL_MACTYPE_MASK			= 0x7,
++	MV_V2_2580_PORT_CTRL_MACTYPE_USXGMII			= 0x0,
+ 	MV_V2_33X0_PORT_CTRL_MACTYPE_RXAUI			= 0x0,
+ 	MV_V2_3310_PORT_CTRL_MACTYPE_XAUI_RATE_MATCH		= 0x1,
+ 	MV_V2_3340_PORT_CTRL_MACTYPE_RXAUI_NO_SGMII_AN		= 0x1,
+@@ -702,6 +703,22 @@ static int mv3310_select_mactype(unsigned long *interfaces)
+ 		return -1;
+ }
+ 
++static int mv2580_select_mactype(unsigned long *interfaces)
++{
++	/* mv88e2580 supports usxgmii, 10gbase-r with sgmii AN and 10gbase-kr,
++	 * rate-matching is not supported.
++	 */
++	if (test_bit(PHY_INTERFACE_MODE_USXGMII, interfaces))
++		return MV_V2_2580_PORT_CTRL_MACTYPE_USXGMII;
++	else if ((test_bit(PHY_INTERFACE_MODE_SGMII, interfaces)) ||
++		 (test_bit(PHY_INTERFACE_MODE_10GBASER, interfaces)))
++		return MV_V2_33X0_PORT_CTRL_MACTYPE_10GBASER;
++	else if (test_bit(PHY_INTERFACE_MODE_10GKR, interfaces))
++		return MV_V2_33X0_PORT_CTRL_MACTYPE_10GBASER_NO_SGMII_AN;
++	else
++		return -1;
++}
++
+ static int mv2110_init_interface(struct phy_device *phydev, int mactype)
+ {
+ 	struct mv3310_priv *priv = dev_get_drvdata(&phydev->mdio.dev);
+@@ -768,6 +785,24 @@ static int mv3340_init_interface(struct phy_device *phydev, int mactype)
+ 	return err;
+ }
+ 
++static int mv2580_init_interface(struct phy_device *phydev, int mactype)
++{
++	struct mv3310_priv *priv = dev_get_drvdata(&phydev->mdio.dev);
++
++	priv->rate_match = false;
++
++	if (mactype == MV_V2_2580_PORT_CTRL_MACTYPE_USXGMII)
++		priv->const_interface = PHY_INTERFACE_MODE_USXGMII;
++	else if (mactype == MV_V2_33X0_PORT_CTRL_MACTYPE_10GBASER)
++		priv->const_interface = PHY_INTERFACE_MODE_10GBASER;
++	else if(mactype == MV_V2_33X0_PORT_CTRL_MACTYPE_10GBASER_NO_SGMII_AN)
++		priv->const_interface = PHY_INTERFACE_MODE_10GKR;
++	else
++		return -EINVAL;
++
++	return 0;
++}
++
+ static int mv3310_config_init(struct phy_device *phydev)
+ {
+ 	struct mv3310_priv *priv = dev_get_drvdata(&phydev->mdio.dev);
+@@ -1157,6 +1192,16 @@ static void mv2111_init_supported_interfaces(unsigned long *mask)
+ 	__set_bit(PHY_INTERFACE_MODE_USXGMII, mask);
+ }
+ 
++static void mv2580_init_supported_interfaces(unsigned long *mask)
++{
++	__set_bit(PHY_INTERFACE_MODE_SGMII, mask);
++	__set_bit(PHY_INTERFACE_MODE_2500BASEX, mask);
++	__set_bit(PHY_INTERFACE_MODE_5GBASER, mask);
++	__set_bit(PHY_INTERFACE_MODE_10GBASER, mask);
++	__set_bit(PHY_INTERFACE_MODE_10GKR, mask);
++	__set_bit(PHY_INTERFACE_MODE_USXGMII, mask);
++}
++
+ static const struct mv3310_chip mv3310_type = {
+ 	.has_downshift = mv3310_has_downshift,
+ 	.init_supported_interfaces = mv3310_init_supported_interfaces,
+@@ -1207,6 +1252,18 @@ static const struct mv3310_chip mv2111_type = {
+ #endif
+ };
+ 
++static const struct mv3310_chip mv2580_type = {
++	.init_supported_interfaces = mv2580_init_supported_interfaces,
++	.get_mactype = mv3310_get_mactype,
++	.set_mactype = mv3310_set_mactype,
++	.select_mactype = mv2580_select_mactype,
++	.init_interface = mv2580_init_interface,
++
++#ifdef CONFIG_HWMON
++	.hwmon_read_temp_reg = mv2110_hwmon_read_temp_reg,
++#endif
++};
++
+ static int mv3310_get_number_of_ports(struct phy_device *phydev)
+ {
+ 	int ret;
+@@ -1417,6 +1474,25 @@ static struct phy_driver mv3310_drivers[] = {
+ 		.remove		= mv3310_remove,
+ 		.set_loopback	= genphy_c45_loopback,
+ 	},
++	{
++		.phy_id		= MARVELL_PHY_ID_88E2580,
++		.phy_id_mask	= MARVELL_PHY_ID_MASK,
++		.name		= "mv88e2580",
++		.driver_data	= &mv2580_type,
++		.probe		= mv3310_probe,
++		.suspend	= mv3310_suspend,
++		.resume		= mv3310_resume,
++		.config_init	= mv3310_config_init,
++		.config_aneg	= mv3310_config_aneg,
++		.aneg_done	= mv3310_aneg_done,
++		.read_status	= mv3310_read_status,
++		.get_tunable	= mv3310_get_tunable,
++		.set_tunable	= mv3310_set_tunable,
++		.remove		= mv3310_remove,
++		.set_loopback	= genphy_c45_loopback,
++		.get_wol	= mv3110_get_wol,
++		.set_wol	= mv3110_set_wol,
++	},
+ };
+ 
+ module_phy_driver(mv3310_drivers);
+@@ -1424,6 +1500,7 @@ module_phy_driver(mv3310_drivers);
+ static struct mdio_device_id __maybe_unused mv3310_tbl[] = {
+ 	{ MARVELL_PHY_ID_88X3310, MARVELL_PHY_ID_MASK },
+ 	{ MARVELL_PHY_ID_88E2110, MARVELL_PHY_ID_MASK },
++	{ MARVELL_PHY_ID_88E2580, MARVELL_PHY_ID_MASK },
+ 	{ },
+ };
+ MODULE_DEVICE_TABLE(mdio, mv3310_tbl);
+diff --git a/include/linux/marvell_phy.h b/include/linux/marvell_phy.h
+index 9b54c4f0677f..81e6f7b506a0 100644
+--- a/include/linux/marvell_phy.h
++++ b/include/linux/marvell_phy.h
+@@ -24,6 +24,7 @@
+ #define MARVELL_PHY_ID_88E3016		0x01410e60
+ #define MARVELL_PHY_ID_88X3310		0x002b09a0
+ #define MARVELL_PHY_ID_88E2110		0x002b09b0
++#define MARVELL_PHY_ID_88E2580		0x002b0bc3
+ #define MARVELL_PHY_ID_88X2222		0x01410f10
+ #define MARVELL_PHY_ID_88Q2110		0x002b0980
+ 
+-- 
+2.43.0
+

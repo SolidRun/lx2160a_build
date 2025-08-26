@@ -1,7 +1,7 @@
-From 81acb6ab0d0019f9059ac55d2933c345344d92ff Mon Sep 17 00:00:00 2001
+From e77c9f9a082b42a765fd2365e6a745007dc49b8f Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sun, 16 Apr 2023 13:24:31 +0300
-Subject: [PATCH 16/21] arm64: dts: lx2162-clearfog: add description for
+Subject: [PATCH 11/13] arm64: dts: lx2162-clearfog: add description for
  retimer
 
 LX2162 Clearfog has a retimer on 2x SFP+ connectors.

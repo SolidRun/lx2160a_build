@@ -1,7 +1,7 @@
-From c633298f40fb288b52ac799ad9da72d7361df804 Mon Sep 17 00:00:00 2001
+From ac06d0c2e7787ccdcb693445a43cb21b29865b49 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sun, 20 Oct 2024 14:19:43 +0200
-Subject: [PATCH 04/21] arm64: dts: lx2160a-clearfog-itx: enable pcie nodes for
+Subject: [PATCH 05/13] arm64: dts: lx2160a-clearfog-itx: enable pcie nodes for
  x4 and x8 slots
 
 SolidRun Clearfog CX and Honeycomb have LX2160A PEX3 and PEX5 exposed on

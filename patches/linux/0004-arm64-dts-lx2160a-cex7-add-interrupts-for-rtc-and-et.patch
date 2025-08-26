@@ -1,0 +1,39 @@
+From b9c71f412bc8ce51383d230756fa40118d5cb31b Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 25 Aug 2025 19:19:38 +0200
+Subject: [PATCH 04/13] arm64: dts: lx2160a-cex7: add interrupts  for rtc and
+ ethernet phy
+
+SolidRun LX2160A CEX-7 module has interrupts wired for both the rtc and
+ethernet phy.
+
+Add description for those interrupts to the rtc and phy nodes.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+index d32a52ab00a4..8f9007ca4941 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+@@ -41,6 +41,7 @@ &emdio1 {
+ 	rgmii_phy1: ethernet-phy@1 {
+ 		reg = <1>;
+ 		qca,smarteee-tw-us-1g = <24>;
++		interrupts-extended = <&gpio2 4 IRQ_TYPE_EDGE_FALLING>;
+ 	};
+ };
+ 
+@@ -159,6 +160,7 @@ &i2c4 {
+ 	rtc@51 {
+ 		compatible = "nxp,pcf2129";
+ 		reg = <0x51>;
++		interrupts-extended = <&gpio2 8 IRQ_TYPE_LEVEL_LOW>;
+ 	};
+ };
+ 
+-- 
+2.43.0
+

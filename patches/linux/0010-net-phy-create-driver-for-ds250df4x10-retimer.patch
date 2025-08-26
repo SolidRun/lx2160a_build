@@ -1,7 +1,7 @@
-From 0c24a9b0932fcf1e74b90d11d42b1292f51e0725 Mon Sep 17 00:00:00 2001
+From a8889bce584f0caa8777eabdb4e5ff45fab9f9e5 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Wed, 12 Oct 2022 18:46:09 +0300
-Subject: [PATCH 15/21] net: phy: create driver for ds250df4x10 retimer
+Subject: [PATCH 10/13] net: phy: create driver for ds250df4x10 retimer
 
 Create driver for the TI DS250DF410 and DS250DF810 retimers.
 Both variants feature either 4 or 8 channels to be configured
@@ -11,9 +11,9 @@ dividing either with 2 or 4.
 Configuration is provided to other drivers by implementing a generic phy
 with support for set_mode.
 
-For now only 2 of the standard configurations are supported, to support
-10 & 25Gbps ethernet modes:
-- PHY_INTERFACE_MODE_10GBASER: 10.3125Gbps
+3 standard configurations for 1/10/25G Ethernet are supported:
+- PHY_INTERFACE_MODE_SGMII:     1.25   Gbps
+- PHY_INTERFACE_MODE_10GBASER: 10.3125 Gbps
 - PHY_INTERFACE_MODE_25GBASER: 25.78125Gbps
 
 The driver also hardcodes signal conditioning parameters.
@@ -23,8 +23,8 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---
  drivers/phy/ti/Kconfig             |   9 +
  drivers/phy/ti/Makefile            |   1 +
- drivers/phy/ti/phy-ti-ds250dfx10.c | 352 +++++++++++++++++++++++++++++
- 3 files changed, 362 insertions(+)
+ drivers/phy/ti/phy-ti-ds250dfx10.c | 432 +++++++++++++++++++++++++++++
+ 3 files changed, 442 insertions(+)
  create mode 100644 drivers/phy/ti/phy-ti-ds250dfx10.c
 
 diff --git a/drivers/phy/ti/Kconfig b/drivers/phy/ti/Kconfig
@@ -61,10 +61,10 @@ index e68445ddd848..f1459b9e5fab 100644
  obj-$(CONFIG_PHY_AM654_SERDES)		+= phy-am654-serdes.o
 diff --git a/drivers/phy/ti/phy-ti-ds250dfx10.c b/drivers/phy/ti/phy-ti-ds250dfx10.c
 new file mode 100644
-index 000000000000..86e717332498
+index 000000000000..bab1a29669c3
 --- /dev/null
 +++ b/drivers/phy/ti/phy-ti-ds250dfx10.c
-@@ -0,0 +1,352 @@
+@@ -0,0 +1,432 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + * Driver for the TI DS250DF410 Retimer
@@ -138,6 +138,59 @@ index 000000000000..86e717332498
 +	return 0;
 +}
 +
++static void ds250dfx10_config_1g(struct i2c_client *client, uint8_t channel)
++{
++	int ret = 0;
++
++	// enable smbus access to single channel
++	ret |= ds250dfx10_write_register(client, 0xFF, 0x01, 0x03);
++
++	// select channel
++	ret |= ds250dfx10_write_register(client, 0xFC, 1 << channel, 0xFF);
++
++	// reset channel registers
++	ret |= ds250dfx10_write_register(client, 0x00, 0x04, 0x04);
++
++	// assert cdr
++	ret |= ds250dfx10_write_register(client, 0x0A, 0x0C, 0x0C);
++
++	// set manual data rate override to 1.25Gbps
++	ret |= ds250dfx10_write_register(client, 0x60, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(client, 0x61, 0xb2, 0xFF);
++	ret |= ds250dfx10_write_register(client, 0x62, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(client, 0x63, 0xb2, 0xFF);
++
++	// set maximum ppm delta tolerance
++	ret |= ds250dfx10_write_register(client, 0x64, 0xFF, 0xFF);
++
++	// enable manual divider override
++	ret |= ds250dfx10_write_register(client, 0x09, 0x04, 0x04);
++
++	// set divider to 16
++	ret |= ds250dfx10_write_register(client, 0x18, 0x40, 0x70);
++
++	// enable pre- and post-fir
++	ret |= ds250dfx10_write_register(client, 0x3D, 0x80, 0x80);
++
++	// set main cursor magnitude +15
++	ret |= ds250dfx10_write_register(client, 0x3D, 0x00, 0x40);
++	ret |= ds250dfx10_write_register(client, 0x3D, 0x0F, 0x1F);
++
++	// set pre cursor magnitude -4
++	ret |= ds250dfx10_write_register(client, 0x3E, 0x40, 0x40);
++	ret |= ds250dfx10_write_register(client, 0x3E, 0x04, 0x0F);
++
++	// set post cursor magnitude -4
++	ret |= ds250dfx10_write_register(client, 0x3F, 0x40, 0x40);
++	ret |= ds250dfx10_write_register(client, 0x3F, 0x04, 0x0F);
++
++	// deassert cdr
++	ret |= ds250dfx10_write_register(client, 0x0A, 0x00, 0x0C);
++
++	if (!ret)
++		dev_info(&client->dev, "configured channel %u for 1G\n", channel);
++}
++
 +static void ds250dfx10_config_10g(struct i2c_client *client, uint8_t channel)
 +{
 +	int ret = 0;
@@ -153,6 +206,18 @@ index 000000000000..86e717332498
 +
 +	// assert cdr
 +	ret |= ds250dfx10_write_register(client, 0x0A, 0x0C, 0x0C);
++
++	// disable manual data rate override
++	ret |= ds250dfx10_write_register(client, 0x60, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(client, 0x61, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(client, 0x62, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(client, 0x63, 0x00, 0xFF);
++
++	// set minimum ppm delta tolerance (reset-default)
++	ret |= ds250dfx10_write_register(client, 0x64, 0x00, 0xFF);
++
++	// disable manual divider override
++	ret |= ds250dfx10_write_register(client, 0x09, 0x00, 0x04);
 +
 +	// select 10.3125 rate
 +	ret |= ds250dfx10_write_register(client, 0x2F, 0x00, 0xF0);
@@ -195,6 +260,18 @@ index 000000000000..86e717332498
 +	// assert cdr
 +	ret |= ds250dfx10_write_register(client, 0x0A, 0x0C, 0x0C);
 +
++	// disable manual data rate override
++	ret |= ds250dfx10_write_register(client, 0x60, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(client, 0x61, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(client, 0x62, 0x00, 0xFF);
++	ret |= ds250dfx10_write_register(client, 0x63, 0x00, 0xFF);
++
++	// set minimum ppm delta tolerance (reset-default)
++	ret |= ds250dfx10_write_register(client, 0x64, 0x00, 0xFF);
++
++	// disable manual divider override
++	ret |= ds250dfx10_write_register(client, 0x09, 0x00, 0x04);
++
 +	// select 25.78125 rate
 +	ret |= ds250dfx10_write_register(client, 0x2F, 0x50, 0xF0);
 +
@@ -228,6 +305,9 @@ index 000000000000..86e717332498
 +		return -EOPNOTSUPP;
 +
 +	switch (submode) {
++	case PHY_INTERFACE_MODE_SGMII:
++		ds250dfx10_config_1g(priv->client, priv->channel);
++		break;
 +	case PHY_INTERFACE_MODE_10GBASER:
 +		ds250dfx10_config_10g(priv->client, priv->channel);
 +		break;

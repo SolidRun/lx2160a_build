@@ -1,7 +1,7 @@
-From 4c563b063acbf0bbe586bec68e371af0209d03be Mon Sep 17 00:00:00 2001
+From f9752ad55b1340bdab2df082efe7131db9f8da75 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Tue, 12 Mar 2024 20:56:55 +0100
-Subject: [PATCH 11/21] arm64: dts: fsl-lx2162a-clearfog: add alias for i2c bus
+Subject: [PATCH 03/13] arm64: dts: fsl-lx2162a-clearfog: add alias for i2c bus
  iic6
 
 SoM dts has enabled  i2c bus IIC6 (dts i2c5), but defines no aliases.

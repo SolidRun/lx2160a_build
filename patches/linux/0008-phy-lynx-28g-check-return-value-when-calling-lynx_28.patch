@@ -1,0 +1,138 @@
+From 074660f91ef6019ac7884b27249a78d5b448ddfb Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 26 Aug 2025 14:28:16 +0200
+Subject: [PATCH 08/13] phy: lynx-28g: check return value when calling
+ lynx_28g_pll_get
+
+The lynx_28g_pll_get function may return NULL when called with an
+unsupported submode argument.
+
+In the calling code driver authors did not anticipate unsupported modes
+passed through the pcs set_mode function and failed to add null checks.
+
+Check return value at every invocation and return error code where
+possible.
+
+Also print a warning the first time lynx_28g_pll_get returns NULL
+because calling code should validate modes before set.
+
+Fixes null-pointer dereference when set_mode is called for an
+unsupported mode, such as 2.5GBase-T - encountered in a v6.6.52 based
+vendor kernel:
+
+[  127.019924] fsl_dpaa2_eth dpni.4 eth5: dpmac_set_protocol(2500base-x) = -ENOTSUPP
+[  127.027451] Unable to handle kernel NULL pointer dereference at virtual address 0000000000000014
+[  127.036245] Mem abort info:
+[  127.039044]   ESR = 0x0000000096000004
+[  127.042794]   EC = 0x25: DABT (current EL), IL = 32 bits
+[  127.048107]   SET = 0, FnV = 0
+[  127.051161]   EA = 0, S1PTW = 0
+[  127.054301]   FSC = 0x04: level 0 translation fault
+[  127.059179] Data abort info:
+[  127.062059]   ISV = 0, ISS = 0x00000004, ISS2 = 0x00000000
+[  127.067547]   CM = 0, WnR = 0, TnD = 0, TagAccess = 0
+[  127.072596]   GCS = 0, Overlay = 0, DirtyBit = 0, Xs = 0
+[  127.077907] user pgtable: 4k pages, 48-bit VAs, pgdp=00000020816c9000
+[  127.084344] [0000000000000014] pgd=0000000000000000, p4d=0000000000000000
+[  127.091133] Internal error: Oops: 0000000096000004 [#1] PREEMPT SMP
+[  127.097390] Modules linked in: cfg80211 rfkill fsl_jr_uio caam_jr dpaa2_caam caamkeyblob_desc crypto_engine caamhash_desc onboard_usb_hub caamalg_desc crct10dif_ce libdes caam error at24 rtc_ds1307 rtc_fsl_ftm_alarm nvmem_layerscape_sfp layerscape_edac_mod dm_mod nfnetlink ip_tables
+[  127.122436] CPU: 5 PID: 96 Comm: kworker/u35:0 Not tainted 6.6.52-g3578ef896722 #10
+[  127.130083] Hardware name: SolidRun LX2162A Clearfog (DT)
+[  127.135470] Workqueue: events_power_efficient phylink_resolve
+[  127.141219] pstate: 60000005 (nZCv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[  127.148170] pc : lynx_28g_set_lane_mode+0x300/0x818
+[  127.153041] lr : lynx_28g_set_lane_mode+0x2fc/0x818
+[  127.157909] sp : ffff8000806f3b80
+[  127.161212] x29: ffff8000806f3b80 x28: 0000000000000000 x27: 0000000000000000
+[  127.168340] x26: ffff29d6c11f3098 x25: 0000000000000000 x24: 0000000000000000
+[  127.175467] x23: ffff29d6c11f31f0 x22: ffff29d6c11f3080 x21: 0000000000000001
+[  127.182595] x20: ffff29d6c11f4c00 x19: 0000000000000000 x18: 0000000000000006
+[  127.189722] x17: 4f4e452d203d2029 x16: 782d657361623030 x15: 3532286c6f636f74
+[  127.196849] x14: 6f72705f7465735f x13: ffffd7a8ff991cc0 x12: 0000000000000acb
+[  127.203976] x11: 0000000000000399 x10: ffffd7a8ff9e9cc0 x9 : 0000000000000000
+[  127.211104] x8 : 0000000000000000 x7 : 0000000000000000 x6 : ffff29d6c11f3080
+[  127.218231] x5 : 0000000000000000 x4 : 0000000040800030 x3 : 000000000000034c
+[  127.225358] x2 : ffff29d6c11f3080 x1 : 000000000000034c x0 : 0000000000000000
+[  127.232486] Call trace:
+[  127.234921]  lynx_28g_set_lane_mode+0x300/0x818
+[  127.239443]  lynx_28g_set_mode+0x12c/0x148
+[  127.243529]  phy_set_mode_ext+0x5c/0xa8
+[  127.247356]  lynx_pcs_config+0x64/0x294
+[  127.251184]  phylink_major_config+0x184/0x49c
+[  127.255532]  phylink_resolve+0x2a0/0x5d8
+[  127.259446]  process_one_work+0x138/0x248
+[  127.263448]  worker_thread+0x320/0x438
+[  127.267187]  kthread+0x114/0x118
+[  127.270406]  ret_from_fork+0x10/0x20
+[  127.273973] Code: 2a1303e1 aa0603e0 97fffd3b aa0003e5 (b9401400)
+[  127.280055] ---[ end trace 0000000000000000 ]---
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 28 +++++++++++++++++++-----
+ 1 file changed, 23 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index 7be7ebe86704..c00a636338d0 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -893,6 +893,10 @@ static struct lynx_28g_pll *lynx_28g_pll_get(struct lynx_28g_priv *priv,
+ 			return pll;
+ 	}
+ 
++	/* no pll supports requested mode, caller should have called
++	 * lynx_28g_supports_lane_mode first
++	 */
++	dev_WARN_ONCE(priv->dev, 1, "no pll for lane_mode %d\n", mode);
+ 	return NULL;
+ }
+ 
+@@ -1403,8 +1407,12 @@ static void lynx_28g_lane_remap_pll(struct lynx_28g_lane *lane,
+ 	struct lynx_28g_priv *priv = lane->priv;
+ 	struct lynx_28g_pll *pll;
+ 
+-	/* Switch to the PLL that works with this interface type */
++	/* Find the PLL that works with this interface type */
+ 	pll = lynx_28g_pll_get(priv, lane_mode);
++	if (unlikely(pll == NULL))
++		return;
++
++	/* Switch to the PLL that works with this interface type */
+ 	lynx_28g_lane_set_pll(lane, pll);
+ 
+ 	/* Choose the portion of clock net to be used on this lane */
+@@ -1571,6 +1579,7 @@ static int lynx_28g_set_lane_mode(struct phy *phy, enum lynx_28g_lane_mode lane_
+ {
+ 	struct lynx_28g_lane *lane = phy_get_drvdata(phy);
+ 	struct lynx_28g_priv *priv = lane->priv;
++	struct lynx_28g_pll *pll;
+ 	bool powered_up = lane->powered_up;
+ 	bool is_backplane;
+ 	int err;
+@@ -1607,10 +1616,19 @@ static int lynx_28g_set_lane_mode(struct phy *phy, enum lynx_28g_lane_mode lane_
+ 	/* 1000Base-KX lanes need their PLL to generate a 312.5 MHz frequency
+ 	 * through EX_DLY_CLK.
+ 	 */
+-	if (lane_mode == LANE_MODE_1000BASEKX)
+-		lynx_28g_pll_get_ex_dly_clk(lynx_28g_pll_get(priv, lane_mode));
+-	else if (lane->mode == LANE_MODE_1000BASEKX)
+-		lynx_28g_pll_put_ex_dly_clk(lynx_28g_pll_get(priv, lane->mode));
++	if (lane_mode == LANE_MODE_1000BASEKX) {
++		pll = lynx_28g_pll_get(priv, lane_mode);
++		if (unlikely(pll == NULL))
++			return -EINVAL;
++
++		lynx_28g_pll_get_ex_dly_clk(pll);
++	} else if (lane->mode == LANE_MODE_1000BASEKX) {
++		pll = lynx_28g_pll_get(priv, lane->mode);
++		if (unlikely(pll == NULL))
++			return -EINVAL;
++
++		lynx_28g_pll_put_ex_dly_clk(pll);
++	}
+ 
+ 	lane->mode = lane_mode;
+ 
+-- 
+2.43.0
+

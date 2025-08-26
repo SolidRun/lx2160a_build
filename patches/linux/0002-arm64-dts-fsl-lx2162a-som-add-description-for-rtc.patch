@@ -1,7 +1,7 @@
-From b22caa11559e4a98bd82a8a9d73ae234aebf7ce8 Mon Sep 17 00:00:00 2001
+From 29e09ee374235ae096344cdd62f80989a3ec2c71 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Tue, 12 Mar 2024 20:56:54 +0100
-Subject: [PATCH 10/21] arm64: dts: fsl-lx2162a-som: add description for rtc
+Subject: [PATCH 02/13] arm64: dts: fsl-lx2162a-som: add description for rtc
 
 SolidRun LX2162A SoM has an RTC on bus IIC6 (dts i2c5).
 Enable this bus and add description for the rtc.

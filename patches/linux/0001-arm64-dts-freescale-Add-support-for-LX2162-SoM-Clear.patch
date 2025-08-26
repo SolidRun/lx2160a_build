@@ -1,7 +1,7 @@
-From 141d812d9421f341b09c8028831e125da0cdd907 Mon Sep 17 00:00:00 2001
+From ec7eefbeacc6516a1f77a8c85f9b21efe88cce4e Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sun, 1 Oct 2023 12:32:59 +0200
-Subject: [PATCH 09/21] arm64: dts: freescale: Add support for LX2162 SoM &
+Subject: [PATCH 01/13] arm64: dts: freescale: Add support for LX2162 SoM &
  Clearfog Board
 
 Add support for the SolidRun LX2162A System on Module (SoM), and the
@@ -45,10 +45,10 @@ Signed-off-by: Shawn Guo <shawnguo@kernel.org>
  create mode 100644 arch/arm64/boot/dts/freescale/fsl-lx2162a-sr-som.dtsi
 
 diff --git a/arch/arm64/boot/dts/freescale/Makefile b/arch/arm64/boot/dts/freescale/Makefile
-index 63d8c762e18c..e2a7258c4e34 100644
+index efe32533733e..59375a2edb5a 100644
 --- a/arch/arm64/boot/dts/freescale/Makefile
 +++ b/arch/arm64/boot/dts/freescale/Makefile
-@@ -47,6 +47,7 @@ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-clearfog-cx.dtb
+@@ -46,6 +46,7 @@ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-clearfog-cx.dtb
  dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-honeycomb.dtb
  dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-qds.dtb
  dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-rdb.dtb

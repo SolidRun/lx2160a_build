@@ -1,7 +1,7 @@
-From fa19238f5f09e364115c9bc3fb3698d92c92b649 Mon Sep 17 00:00:00 2001
+From 0ad1b0e326062f8c32f3006d3960f4381fdac61b Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Thu, 31 Oct 2024 15:46:16 +0100
-Subject: [PATCH 18/21] arm64: dts: lx2160a-clearfog-cx: add description for
+Subject: [PATCH 12/13] arm64: dts: lx2160a-clearfog-cx: add description for
  retimers
 
 SolidRun Clearfog-CX (unlike Honeycomb) has QSFP connector driven by
@@ -16,14 +16,14 @@ honeycomb dts.
 Signed-off-by: Josua Mayer <josua@solid-run.com>
 ---
  .../boot/dts/freescale/fsl-lx2160a-cex7.dtsi  |  2 +-
- .../dts/freescale/fsl-lx2160a-clearfog-cx.dts | 38 +++++++++++++++++++
- 2 files changed, 39 insertions(+), 1 deletion(-)
+ .../dts/freescale/fsl-lx2160a-clearfog-cx.dts | 36 +++++++++++++++++++
+ 2 files changed, 37 insertions(+), 1 deletion(-)
 
 diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
-index f733098e79aa..7a88e187c995 100644
+index 8f9007ca4941..3fae11353813 100644
 --- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
 +++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
-@@ -155,7 +155,7 @@ regulator@5c {
+@@ -112,7 +112,7 @@ regulator@5c {
  			};
  		};
  
@@ -33,10 +33,10 @@ index f733098e79aa..7a88e187c995 100644
  			#size-cells = <0>;
  			reg = <3>;
 diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-cx.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-cx.dts
-index 86a9b771428d..60151fccd198 100644
+index 86a9b771428d..050d2b565650 100644
 --- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-cx.dts
 +++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-cx.dts
-@@ -13,3 +13,41 @@ / {
+@@ -13,3 +13,39 @@ / {
  	compatible = "solidrun,clearfog-cx",
  		"solidrun,lx2160a-cex7", "fsl,lx2160a";
  };
@@ -62,8 +62,6 @@ index 86a9b771428d..60151fccd198 100644
 +};
 +
 +&i2c_smb {
-+	status = "okay";
-+
 +	/* tx direction */
 +	retimer0: retimer@22 {
 +		compatible = "ti,ds250df410";
