@@ -1,0 +1,703 @@
+From a5f43e23c745093b58b2df1dce0cad0580fba6fc Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 27 Aug 2025 12:31:04 +0200
+Subject: [PATCH 24/25] board: solidrun: lx2160acex7: fix various mistakes in
+ serdes #2 regs
+
+1. The protocol converter register bitfield names and dpmac numbers are
+   inconsistent on LX2160 SerDes #2.
+
+   In particular on SerDes #2:
+   -  1G protocol converter port A is lane A (number 0) dpmac 11
+   -  1G protocol converter port E is lane E (number 4) dpmac 15
+   - 10G protocol converter port G is lane G (number 6) dpmac 13
+   - 10G protocol converter port H is lane H (number 7) dpmac 14
+
+   Reorder the dpmacs in lookup tables so that correct speed and status
+   are configured during board_fix_fdt.
+
+2.  SerDes #2 only supports 10G speeds on lanes G/H dpmac 13/14, and
+    does not support 25G speeds at all.
+
+    Remove code handling these configurations.
+
+3. Match the protocol converter configuration registers by value instead
+   of not-equal-zero so that configurations such as usxgmii/xfi can be
+   matched accurately.
+
+4. Add USXXGMII configurations. For now usxgmii is only enabled through
+   DPL, when starting Linux, hence for u-boot itself this changes
+   nothing.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ board/solidrun/lx2160acex7/serdes.c | 417 +++++++++++++++++-----------
+ 1 file changed, 253 insertions(+), 164 deletions(-)
+
+diff --git a/board/solidrun/lx2160acex7/serdes.c b/board/solidrun/lx2160acex7/serdes.c
+index c62a54d1681..8e19a471b04 100644
+--- a/board/solidrun/lx2160acex7/serdes.c
++++ b/board/solidrun/lx2160acex7/serdes.c
+@@ -6,62 +6,109 @@
+ 
+ #include <fdt_support.h>
+ 
++/* Devoce Configuration Register base address */
++#define DCFG_CCSR_BASE				(void *)0x01E00000
++
+ /* SerDes base address */
+-#define LYNX_28G_SDn_BASE(block)		((void *)0x01EA0000 + (block) * 0x10000)
++#define LYNX_28G_SDn_BASE(block)		(DCFG_CCSR_BASE + 0x000A0000 + (block) * 0x10000)
+ 
+ /* Protocol Configuration Register 0 */
+ #define LYNX_28G_PCC0				0x1080
+-#define LYNX_28G_PCC0_PEXA_CFG			GENMASK(30, 28)
+-#define LYNX_28G_PCC0_PEXB_CFG			GENMASK(26, 24)
++#define LYNX_28G_PCC0_PEXA_CFG_MASK		GENMASK(30, 28)
++#define LYNX_28G_PCC0_PEXA_CFG(val)		((val << 28) & LYNX_28G_PCC0_PEXA_CFG_MASK)
++#define LYNX_28G_PCC0_PEXB_CFG_MASK		GENMASK(26, 24)
++#define LYNX_28G_PCC0_PEXB_CFG(val)		((val << 24) & LYNX_28G_PCC0_PEXB_CFG_MASK)
+ 
+ /* Protocol Configuration Register 2 */
+ #define LYNX_28G_PCC2				0x1088
+-#define LYNX_28G_PCC2_SATAA_CFG			GENMASK(30, 28)
+-#define LYNX_28G_PCC2_SATAB_CFG			GENMASK(26, 24)
+-#define LYNX_28G_PCC2_SATAC_CFG			GENMASK(22, 20)
+-#define LYNX_28G_PCC2_SATAD_CFG			GENMASK(18, 16)
++#define LYNX_28G_PCC2_SATAA_CFG_MASK		GENMASK(30, 28)
++#define LYNX_28G_PCC2_SATAA_CFG(val)		((val << 28) & LYNX_28G_PCC2_SATAA_CFG_MASK)
++#define LYNX_28G_PCC2_SATAB_CFG_MASK		GENMASK(26, 24)
++#define LYNX_28G_PCC2_SATAB_CFG(val)		((val << 24) & LYNX_28G_PCC2_SATAB_CFG_MASK)
++#define LYNX_28G_PCC2_SATAC_CFG_MASK		GENMASK(22, 20)
++#define LYNX_28G_PCC2_SATAC_CFG(val)		((val << 20) & LYNX_28G_PCC2_SATAC_CFG_MASK)
++#define LYNX_28G_PCC2_SATAD_CFG_MASK		GENMASK(18, 16)
++#define LYNX_28G_PCC2_SATAD_CFG(val)		((val << 16) & LYNX_28G_PCC2_SATAD_CFG_MASK)
+ 
+ /* Protocol Configuration Register 8 */
+ #define LYNX_28G_PCC8				0x10A0
+-#define LYNX_28G_PCC8_SGMIIA_CFG		GENMASK(30, 28)
+-#define LYNX_28G_PCC8_SGMIIB_CFG		GENMASK(26, 24)
+-#define LYNX_28G_PCC8_SGMIIC_CFG		GENMASK(22, 20)
+-#define LYNX_28G_PCC8_SGMIID_CFG		GENMASK(18, 16)
+-#define LYNX_28G_PCC8_SGMIIE_CFG		GENMASK(14, 12)
+-#define LYNX_28G_PCC8_SGMIIF_CFG		GENMASK(10, 8)
+-#define LYNX_28G_PCC8_SGMIIG_CFG		GENMASK(6, 4)
+-#define LYNX_28G_PCC8_SGMIIH_CFG		GENMASK(2, 0)
++#define LYNX_28G_PCC8_SGMIIA_CFG_MASK		GENMASK(30, 28)
++#define LYNX_28G_PCC8_SGMIIA_CFG(val)		((val << 28) & LYNX_28G_PCC8_SGMIIA_CFG_MASK)
++#define LYNX_28G_PCC8_SGMIIB_CFG_MASK		GENMASK(26, 24)
++#define LYNX_28G_PCC8_SGMIIB_CFG(val)		((val << 24) & LYNX_28G_PCC8_SGMIIB_CFG_MASK)
++#define LYNX_28G_PCC8_SGMIIC_CFG_MASK		GENMASK(22, 20)
++#define LYNX_28G_PCC8_SGMIIC_CFG(val)		((val << 20) & LYNX_28G_PCC8_SGMIIC_CFG_MASK)
++#define LYNX_28G_PCC8_SGMIID_CFG_MASK		GENMASK(18, 16)
++#define LYNX_28G_PCC8_SGMIID_CFG(val)		((val << 16) & LYNX_28G_PCC8_SGMIID_CFG_MASK)
++#define LYNX_28G_PCC8_SGMIIE_CFG_MASK		GENMASK(14, 12)
++#define LYNX_28G_PCC8_SGMIIE_CFG(val)		((val << 12) & LYNX_28G_PCC8_SGMIIE_CFG_MASK)
++#define LYNX_28G_PCC8_SGMIIF_CFG_MASK		GENMASK(10, 8)
++#define LYNX_28G_PCC8_SGMIIF_CFG(val)		((val << 8) & LYNX_28G_PCC8_SGMIIF_CFG_MASK)
++#define LYNX_28G_PCC8_SGMIIG_CFG_MASK		GENMASK(6, 4)
++#define LYNX_28G_PCC8_SGMIIG_CFG(val)		((val << 4) & LYNX_28G_PCC8_SGMIIG_CFG_MASK)
++#define LYNX_28G_PCC8_SGMIIH_CFG_MASK		GENMASK(2, 0)
++#define LYNX_28G_PCC8_SGMIIH_CFG(val)		((val << 0) & LYNX_28G_PCC8_SGMIIH_CFG_MASK)
+ 
+ /* Protocol Configuration Register C */
+ #define LYNX_28G_PCCC				0x10B0
+-#define LYNX_28G_PCCC_SXGMIIA_CFG		GENMASK(30, 28)
+-#define LYNX_28G_PCCC_SXGMIIB_CFG		GENMASK(26, 24)
+-#define LYNX_28G_PCCC_SXGMIIC_CFG		GENMASK(22, 20)
+-#define LYNX_28G_PCCC_SXGMIID_CFG		GENMASK(18, 16)
+-#define LYNX_28G_PCCC_SXGMIIE_CFG		GENMASK(14, 12)
+-#define LYNX_28G_PCCC_SXGMIIF_CFG		GENMASK(10, 8)
+-#define LYNX_28G_PCCC_SXGMIIG_CFG		GENMASK(6, 4)
+-#define LYNX_28G_PCCC_SXGMIIH_CFG		GENMASK(2, 0)
++#define LYNX_28G_PCCC_SXGMIIA_XFI		BIT(31)
++#define LYNX_28G_PCCC_SXGMIIA_CFG_MASK		GENMASK(30, 28)
++#define LYNX_28G_PCCC_SXGMIIA_CFG(val)		((val << 28) & LYNX_28G_PCCC_SXGMIIA_CFG_MASK)
++#define LYNX_28G_PCCC_SXGMIIB_XFI		BIT(27)
++#define LYNX_28G_PCCC_SXGMIIB_CFG_MASK		GENMASK(26, 24)
++#define LYNX_28G_PCCC_SXGMIIB_CFG(val)		((val << 24) & LYNX_28G_PCCC_SXGMIIB_CFG_MASK)
++#define LYNX_28G_PCCC_SXGMIIC_XFI		BIT(23)
++#define LYNX_28G_PCCC_SXGMIIC_CFG_MASK		GENMASK(22, 20)
++#define LYNX_28G_PCCC_SXGMIIC_CFG(val)		((val << 20) & LYNX_28G_PCCC_SXGMIIC_CFG_MASK)
++#define LYNX_28G_PCCC_SXGMIID_XFI		BIT(19)
++#define LYNX_28G_PCCC_SXGMIID_CFG_MASK		GENMASK(18, 16)
++#define LYNX_28G_PCCC_SXGMIID_CFG(val)		((val << 16) & LYNX_28G_PCCC_SXGMIID_CFG_MASK)
++#define LYNX_28G_PCCC_SXGMIIE_XFI		BIT(15)
++#define LYNX_28G_PCCC_SXGMIIE_CFG_MASK		GENMASK(14, 12)
++#define LYNX_28G_PCCC_SXGMIIE_CFG(val)		((val << 12) & LYNX_28G_PCCC_SXGMIIE_CFG_MASK)
++#define LYNX_28G_PCCC_SXGMIIF_XFI		BIT(11)
++#define LYNX_28G_PCCC_SXGMIIF_CFG_MASK		GENMASK(10, 8)
++#define LYNX_28G_PCCC_SXGMIIF_CFG(val)		((val << 8) & LYNX_28G_PCCC_SXGMIIF_CFG_MASK)
++#define LYNX_28G_PCCC_SXGMIIG_XFI		BIT(7)
++#define LYNX_28G_PCCC_SXGMIIG_CFG_MASK		GENMASK(6, 4)
++#define LYNX_28G_PCCC_SXGMIIG_CFG(val)		((val << 4) & LYNX_28G_PCCC_SXGMIIG_CFG_MASK)
++#define LYNX_28G_PCCC_SXGMIIH_XFI		BIT(3)
++#define LYNX_28G_PCCC_SXGMIIH_CFG_MASK		GENMASK(2, 0)
++#define LYNX_28G_PCCC_SXGMIIH_CFG(val)		((val << 0) & LYNX_28G_PCCC_SXGMIIH_CFG_MASK)
+ 
+ /* Protocol Configuration Register D */
+ #define LYNX_28G_PCCD				0x10B4
+-#define LYNX_28G_PCCD_E25GA_CFG			GENMASK(30, 28)
+-#define LYNX_28G_PCCD_E25GB_CFG			GENMASK(26, 24)
+-#define LYNX_28G_PCCD_E25GC_CFG			GENMASK(22, 20)
+-#define LYNX_28G_PCCD_E25GD_CFG			GENMASK(18, 16)
+-#define LYNX_28G_PCCD_E25GE_CFG			GENMASK(14, 12)
+-#define LYNX_28G_PCCD_E25GF_CFG			GENMASK(10, 8)
+-#define LYNX_28G_PCCD_E25GG_CFG			GENMASK(6, 4)
+-#define LYNX_28G_PCCD_E25GH_CFG			GENMASK(2, 0)
++#define LYNX_28G_PCCD_E25GA_CFG_MASK		GENMASK(30, 28)
++#define LYNX_28G_PCCD_E25GA_CFG(val)		((val << 28) & LYNX_28G_PCCD_E25GA_CFG_MASK)
++#define LYNX_28G_PCCD_E25GB_CFG_MASK		GENMASK(26, 24)
++#define LYNX_28G_PCCD_E25GB_CFG(val)		((val << 24) & LYNX_28G_PCCD_E25GB_CFG_MASK)
++#define LYNX_28G_PCCD_E25GC_CFG_MASK		GENMASK(22, 20)
++#define LYNX_28G_PCCD_E25GC_CFG(val)		((val << 20) & LYNX_28G_PCCD_E25GC_CFG_MASK)
++#define LYNX_28G_PCCD_E25GD_CFG_MASK		GENMASK(18, 16)
++#define LYNX_28G_PCCD_E25GD_CFG(val)		((val << 16) & LYNX_28G_PCCD_E25GD_CFG_MASK)
++#define LYNX_28G_PCCD_E25GE_CFG_MASK		GENMASK(14, 12)
++#define LYNX_28G_PCCD_E25GE_CFG(val)		((val << 12) & LYNX_28G_PCCD_E25GE_CFG_MASK)
++#define LYNX_28G_PCCD_E25GF_CFG_MASK		GENMASK(10, 8)
++#define LYNX_28G_PCCD_E25GF_CFG(val)		((val << 8) & LYNX_28G_PCCD_E25GF_CFG_MASK)
++#define LYNX_28G_PCCD_E25GG_CFG_MASK		GENMASK(6, 4)
++#define LYNX_28G_PCCD_E25GG_CFG(val)		((val << 4) & LYNX_28G_PCCD_E25GG_CFG_MASK)
++#define LYNX_28G_PCCD_E25GH_CFG_MASK		GENMASK(2, 0)
++#define LYNX_28G_PCCD_E25GH_CFG(val)		((val << 0) & LYNX_28G_PCCD_E25GH_CFG_MASK)
+ 
+ /* Protocol Configuration Register E */
+ #define LYNX_28G_PCCE				0x10B8
+-#define LYNX_28G_PCCE_E40GA_CFG			GENMASK(30, 28)
+-#define LYNX_28G_PCCE_E40GB_CFG			GENMASK(26, 24)
+-#define LYNX_28G_PCCE_E50GA_CFG			GENMASK(22, 20)
+-#define LYNX_28G_PCCE_E50GB_CFG			GENMASK(18, 16)
+-#define LYNX_28G_PCCE_E100GA_CFG		GENMASK(14, 12)
+-#define LYNX_28G_PCCE_E100GB_CFG		GENMASK(10, 8)
++#define LYNX_28G_PCCE_E40GA_CFG_MASK		GENMASK(30, 28)
++#define LYNX_28G_PCCE_E40GA_CFG(val)		((val << 28) & LYNX_28G_PCCE_E40GA_CFG_MASK)
++#define LYNX_28G_PCCE_E40GB_CFG_MASK		GENMASK(26, 24)
++#define LYNX_28G_PCCE_E40GB_CFG(val)		((val << 24) & LYNX_28G_PCCE_E40GB_CFG_MASK)
++#define LYNX_28G_PCCE_E50GA_CFG_MASK		GENMASK(22, 20)
++#define LYNX_28G_PCCE_E50GA_CFG(val)		((val << 20) & LYNX_28G_PCCE_E50GA_CFG_MASK)
++#define LYNX_28G_PCCE_E50GB_CFG_MASK		GENMASK(18, 16)
++#define LYNX_28G_PCCE_E50GB_CFG(val)		((val << 16) & LYNX_28G_PCCE_E50GB_CFG_MASK)
++#define LYNX_28G_PCCE_E100GA_CFG_MASK		GENMASK(14, 12)
++#define LYNX_28G_PCCE_E100GA_CFG(val)		((val << 12) & LYNX_28G_PCCE_E100GA_CFG_MASK)
++#define LYNX_28G_PCCE_E100GB_CFG_MASK		GENMASK(10, 8)
++#define LYNX_28G_PCCE_E100GB_CFG(val)		((val << 8) & LYNX_28G_PCCE_E100GB_CFG_MASK)
+ 
+ /* Lane a General Control Register */
+ #define LYNX_28G_LNaGCR0(lane)			(0x800 + (lane) * 0x100 + 0x0)
+@@ -141,286 +188,317 @@ static void board_fix_fdt_macs(void *fdt) {
+ 	};
+ 
+ 	struct {
+-		const u32 __iomem *pcr;
++		const u32 __iomem *const pcr;
+ 		const u32 pcr_ena_mask;
++		const u32 pcr_ena_val;
+ 		const char *const mode;
+ 		const unsigned int mac;
+ 	} ports[] = {
+ 		{
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIA_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIA_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIIA_CFG(1),
+ 			.mode = "sgmii",
+ 			.mac = DPMAC10,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIB_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIB_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIIB_CFG(1),
+ 			.mode = "sgmii",
+ 			.mac = DPMAC9,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIC_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIC_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIIC_CFG(1),
+ 			.mode = "sgmii",
+ 			.mac = DPMAC8,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIID_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIID_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIID_CFG(1),
+ 			.mode = "sgmii",
+ 			.mac = DPMAC7,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIE_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIE_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIIE_CFG(1),
+ 			.mode = "sgmii",
+ 			.mac = DPMAC6,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIF_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIF_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIIF_CFG(1),
+ 			.mode = "sgmii",
+ 			.mac = DPMAC5,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIG_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIG_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIIG_CFG(1),
+ 			.mode = "sgmii",
+ 			.mac = DPMAC4,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIH_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIH_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIIH_CFG(1),
+ 			.mode = "sgmii",
+ 			.mac = DPMAC3,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIA_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIA_CFG_MASK | LYNX_28G_PCCC_SXGMIIA_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIA_CFG(1) | LYNX_28G_PCCC_SXGMIIA_XFI,
+ 			.mode = "xgmii",
+ 			.mac = DPMAC10,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIB_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIB_CFG_MASK | LYNX_28G_PCCC_SXGMIIB_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIB_CFG(1) | LYNX_28G_PCCC_SXGMIIB_XFI,
+ 			.mode = "xgmii",
+ 			.mac = DPMAC9,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIC_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIC_CFG_MASK | LYNX_28G_PCCC_SXGMIIC_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIC_CFG(1) | LYNX_28G_PCCC_SXGMIIC_XFI,
+ 			.mode = "xgmii",
+ 			.mac = DPMAC8,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIID_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIID_CFG_MASK | LYNX_28G_PCCC_SXGMIID_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIID_CFG(1) | LYNX_28G_PCCC_SXGMIID_XFI,
+ 			.mode = "xgmii",
+ 			.mac = DPMAC7,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIE_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIE_CFG_MASK | LYNX_28G_PCCC_SXGMIIE_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIE_CFG(1) | LYNX_28G_PCCC_SXGMIIE_XFI,
+ 			.mode = "xgmii",
+ 			.mac = DPMAC6,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIF_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIF_CFG_MASK | LYNX_28G_PCCC_SXGMIIF_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIF_CFG(1) | LYNX_28G_PCCC_SXGMIIF_XFI,
+ 			.mode = "xgmii",
+ 			.mac = DPMAC5,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIG_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIG_CFG_MASK | LYNX_28G_PCCC_SXGMIIG_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIG_CFG(1) | LYNX_28G_PCCC_SXGMIIG_XFI,
+ 			.mode = "xgmii",
+ 			.mac = DPMAC4,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIH_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIH_CFG_MASK | LYNX_28G_PCCC_SXGMIIH_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIH_CFG(1) | LYNX_28G_PCCC_SXGMIIH_XFI,
+ 			.mode = "xgmii",
+ 			.mac = DPMAC3,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIA_CFG_MASK | LYNX_28G_PCCC_SXGMIIA_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIA_CFG(1),
++			.mode = "usxgmii",
++			.mac = DPMAC10,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIB_CFG_MASK | LYNX_28G_PCCC_SXGMIIB_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIB_CFG(1),
++			.mode = "usxgmii",
++			.mac = DPMAC9,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIC_CFG_MASK | LYNX_28G_PCCC_SXGMIIC_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIC_CFG(1),
++			.mode = "usxgmii",
++			.mac = DPMAC8,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIID_CFG_MASK | LYNX_28G_PCCC_SXGMIID_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIID_CFG(1),
++			.mode = "usxgmii",
++			.mac = DPMAC7,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIE_CFG_MASK | LYNX_28G_PCCC_SXGMIIE_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIE_CFG(1),
++			.mode = "usxgmii",
++			.mac = DPMAC6,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIF_CFG_MASK | LYNX_28G_PCCC_SXGMIIF_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIF_CFG(1),
++			.mode = "usxgmii",
++			.mac = DPMAC5,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIG_CFG_MASK | LYNX_28G_PCCC_SXGMIIG_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIG_CFG(1),
++			.mode = "usxgmii",
++			.mac = DPMAC4,
++		}, {
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIH_CFG_MASK | LYNX_28G_PCCC_SXGMIIH_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIH_CFG(1),
++			.mode = "usxgmii",
++			.mac = DPMAC3,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GA_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GA_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCCD_E25GA_CFG(1),
+ 			.mode = "25g-aui",
+ 			.mac = DPMAC3,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GB_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GB_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCCD_E25GB_CFG(1),
+ 			.mode = "25g-aui",
+ 			.mac = DPMAC4,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GC_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GC_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCCD_E25GC_CFG(1),
+ 			.mode = "25g-aui",
+ 			.mac = DPMAC5,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GD_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GD_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCCD_E25GD_CFG(1),
+ 			.mode = "25g-aui",
+ 			.mac = DPMAC6,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GE_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GE_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCCD_E25GE_CFG(1),
+ 			.mode = "25g-aui",
+ 			.mac = DPMAC7,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GF_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GF_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCCD_E25GF_CFG(1),
+ 			.mode = "25g-aui",
+ 			.mac = DPMAC8,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GG_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GG_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCCD_E25GG_CFG(1),
+ 			.mode = "25g-aui",
+ 			.mac = DPMAC9,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GH_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCD_E25GH_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCCD_E25GH_CFG(1),
+ 			.mode = "25g-aui",
+ 			.mac = DPMAC10,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCE,
+-			.pcr_ena_mask = LYNX_28G_PCCE_E40GA_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCE_E40GA_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCCE_E40GA_CFG(1),
+ 			.mode = "xlaui4",
+ 			.mac = DPMAC1,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCE,
+-			.pcr_ena_mask = LYNX_28G_PCCE_E40GB_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCE_E40GB_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCCE_E40GB_CFG(1),
+ 			.mode = "xlaui4",
+ 			.mac = DPMAC2,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCE,
+-			.pcr_ena_mask = LYNX_28G_PCCE_E50GA_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCE_E50GA_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCCE_E50GA_CFG(1),
+ 			.mode = "caui2",
+ 			.mac = DPMAC1,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCE,
+-			.pcr_ena_mask = LYNX_28G_PCCE_E50GB_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCE_E50GB_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCCE_E50GB_CFG(1),
+ 			.mode = "caui2",
+ 			.mac = DPMAC2,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCE,
+-			.pcr_ena_mask = LYNX_28G_PCCE_E100GA_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCE_E100GA_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCCE_E100GA_CFG(1),
+ 			.mode = "caui4",
+ 			.mac = DPMAC1,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCE,
+-			.pcr_ena_mask = LYNX_28G_PCCE_E100GB_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCE_E100GB_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCCE_E100GB_CFG(1),
+ 			.mode = "caui4",
+ 			.mac = DPMAC2,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIA_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIA_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIIA_CFG(1),
+ 			.mode = "sgmii",
+-			.mac = DPMAC18,
++			.mac = DPMAC11,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIB_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIB_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIIB_CFG(1),
+ 			.mode = "sgmii",
+-			.mac = DPMAC17,
++			.mac = DPMAC12,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIC_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIC_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIIC_CFG(1),
+ 			.mode = "sgmii",
+-			.mac = DPMAC16,
++			.mac = DPMAC17,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIID_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIID_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIID_CFG(1),
+ 			.mode = "sgmii",
+-			.mac = DPMAC15,
++			.mac = DPMAC18,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIE_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIE_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIIE_CFG(1),
+ 			.mode = "sgmii",
+-			.mac = DPMAC14,
++			.mac = DPMAC15,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIF_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIF_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIIF_CFG(1),
+ 			.mode = "sgmii",
+-			.mac = DPMAC13,
++			.mac = DPMAC16,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIG_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIG_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIIG_CFG(1),
+ 			.mode = "sgmii",
+-			.mac = DPMAC12,
++			.mac = DPMAC13,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
+-			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIH_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC8_SGMIIH_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC8_SGMIIH_CFG(1),
+ 			.mode = "sgmii",
+-			.mac = DPMAC11,
+-		}, {
+-			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIA_CFG,
+-			.mode = "xgmii",
+-			.mac = DPMAC18,
+-		}, {
+-			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIB_CFG,
+-			.mode = "xgmii",
+-			.mac = DPMAC17,
+-		}, {
+-			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIC_CFG,
+-			.mode = "xgmii",
+-			.mac = DPMAC16,
++			.mac = DPMAC14,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIID_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIG_CFG_MASK | LYNX_28G_PCCC_SXGMIIG_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIG_CFG(1) | LYNX_28G_PCCC_SXGMIIG_XFI,
+ 			.mode = "xgmii",
+-			.mac = DPMAC15,
++			.mac = DPMAC13,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIE_CFG,
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIH_CFG_MASK | LYNX_28G_PCCC_SXGMIIH_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIH_CFG(1) | LYNX_28G_PCCC_SXGMIIH_XFI,
+ 			.mode = "xgmii",
+ 			.mac = DPMAC14,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIF_CFG,
+-			.mode = "xgmii",
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIG_CFG_MASK | LYNX_28G_PCCC_SXGMIIG_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIG_CFG(1),
++			.mode = "usxgmii",
+ 			.mac = DPMAC13,
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIG_CFG,
+-			.mode = "xgmii",
+-			.mac = DPMAC12,
+-		}, {
+-			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
+-			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIH_CFG,
+-			.mode = "xgmii",
+-			.mac = DPMAC11,
+-		}, {
+-			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GA_CFG,
+-			.mode = "25g-aui",
+-			.mac = DPMAC18,
+-		}, {
+-			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GB_CFG,
+-			.mode = "25g-aui",
+-			.mac = DPMAC17,
+-		}, {
+-			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GC_CFG,
+-			.mode = "25g-aui",
+-			.mac = DPMAC16,
+-		}, {
+-			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GD_CFG,
+-			.mode = "25g-aui",
+-			.mac = DPMAC15,
+-		}, {
+-			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GE_CFG,
+-			.mode = "25g-aui",
++			.pcr_ena_mask = LYNX_28G_PCCC_SXGMIIH_CFG_MASK | LYNX_28G_PCCC_SXGMIIH_XFI,
++			.pcr_ena_val = LYNX_28G_PCCC_SXGMIIH_CFG(1),
++			.mode = "usxgmii",
+ 			.mac = DPMAC14,
+-		}, {
+-			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GF_CFG,
+-			.mode = "25g-aui",
+-			.mac = DPMAC13,
+-		}, {
+-			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GG_CFG,
+-			.mode = "25g-aui",
+-			.mac = DPMAC12,
+-		}, {
+-			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCD,
+-			.pcr_ena_mask = LYNX_28G_PCCD_E25GH_CFG,
+-			.mode = "25g-aui",
+-			.mac = DPMAC11,
+ 		}
+ 	};
+ 
+ 	for (int i = 0; i < ARRAY_SIZE(ports); i++) {
+-		if (*ports[i].pcr & ports[i].pcr_ena_mask) {
++		if ((*ports[i].pcr & ports[i].pcr_ena_mask) == ports[i].pcr_ena_val) {
+ 			macs[ports[i].mac].status = "okay";
+ 			macs[ports[i].mac].mode = ports[i].mode;
+ 		}
+@@ -448,56 +526,67 @@ static void board_fix_fdt_macs(void *fdt) {
+ 
+ static void board_fix_fdt_pci_sata(void *fdt) {
+ 	struct {
+-		const u32 __iomem *pcr;
++		const u32 __iomem *const pcr;
+ 		const u32 pcr_ena_mask;
++		const u32 pcr_ena_val;
+ 		const char *const path;
+ 	} ports[] = {
+ 		{
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC0,
+-			.pcr_ena_mask = LYNX_28G_PCC0_PEXA_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXA_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC0_PEXA_CFG(1),
+ 			.path = "/pcie@3400000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC0,
+-			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC0_PEXB_CFG(1),
+ 			.path = "/pcie@3500000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC0,
+-			.pcr_ena_mask = LYNX_28G_PCC0_PEXA_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXA_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC0_PEXA_CFG(1),
+ 			.path = "/pcie@3600000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC0,
+-			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC0_PEXB_CFG(1),
+ 			.path = "/pcie@3700000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(2) + LYNX_28G_PCC0,
+-			.pcr_ena_mask = LYNX_28G_PCC0_PEXA_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXA_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC0_PEXA_CFG(1),
+ 			.path = "/pcie@3800000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(2) + LYNX_28G_PCC0,
+-			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC0_PEXB_CFG(1),
+ 			.path = "/pcie@3900000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC2,
+-			.pcr_ena_mask = LYNX_28G_PCC2_SATAA_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC2_SATAA_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC2_SATAA_CFG(1),
+ 			.path = "/sata@3200000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC2,
+-			.pcr_ena_mask = LYNX_28G_PCC2_SATAB_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC2_SATAB_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC2_SATAB_CFG(1),
+ 			.path = "/sata@3210000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC2,
+-			.pcr_ena_mask = LYNX_28G_PCC2_SATAC_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC2_SATAC_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC2_SATAC_CFG(1),
+ 			.path = "/sata@3220000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC2,
+-			.pcr_ena_mask = LYNX_28G_PCC2_SATAD_CFG,
++			.pcr_ena_mask = LYNX_28G_PCC2_SATAD_CFG_MASK,
++			.pcr_ena_val = LYNX_28G_PCC2_SATAD_CFG(1),
+ 			.path = "/sata@3230000",
+ 		},
+ 	};
+ 
+ 	for (int i = 0; i < ARRAY_SIZE(ports); i++) {
+ 		const char *status = "disabled";
+-		if (*ports[i].pcr & ports[i].pcr_ena_mask)
++		if ((*ports[i].pcr & ports[i].pcr_ena_mask) == ports[i].pcr_ena_val)
+ 			status = "okay";
+ 
+ 		do_fixup_by_path_string(fdt, ports[i].path, "status", status);
+-- 
+2.43.0
+

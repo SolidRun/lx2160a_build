@@ -1,0 +1,367 @@
+From 7e08716c520590240497c3beedb1a34f0603af3b Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 27 Aug 2025 17:06:19 +0200
+Subject: [PATCH 25/25] board: solidrun: lx2160acex7: disable disabled ports
+ protocol converters
+
+LX2160A can disable ports through DEVDISR registers, which cuts their
+root clocks. This does not disable the protocol converters connected to
+the MACs.
+
+Evaluate DEVDISR2 register to disable the protocol converters for
+disabled MACs.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ board/solidrun/lx2160acex7/lx2160a.c |   5 +
+ board/solidrun/lx2160acex7/serdes.c  | 304 +++++++++++++++++++++++++++
+ 2 files changed, 309 insertions(+)
+
+diff --git a/board/solidrun/lx2160acex7/lx2160a.c b/board/solidrun/lx2160acex7/lx2160a.c
+index dbfb1dc9d4d..6e12f868759 100644
+--- a/board/solidrun/lx2160acex7/lx2160a.c
++++ b/board/solidrun/lx2160acex7/lx2160a.c
+@@ -22,6 +22,8 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
++void board_disable_unused_proto_converters(void);
++
+ int board_early_init_f(void)
+ {
+ 	fsl_lsch3_early_init_f();
+@@ -33,6 +35,9 @@ int board_early_init_f(void)
+ 	 */
+ 	memcpy((void *)0x700100100, (void *)0x01e00100, 0x180);
+ 
++	/* disable unused protocol converters on disabled ports */
++	board_disable_unused_proto_converters();
++
+ 	return 0;
+ }
+ 
+diff --git a/board/solidrun/lx2160acex7/serdes.c b/board/solidrun/lx2160acex7/serdes.c
+index 8e19a471b04..b4bc78c5d2c 100644
+--- a/board/solidrun/lx2160acex7/serdes.c
++++ b/board/solidrun/lx2160acex7/serdes.c
+@@ -9,6 +9,40 @@
+ /* Devoce Configuration Register base address */
+ #define DCFG_CCSR_BASE				(void *)0x01E00000
+ 
++/* Device Disable Register 1 */
++#define DCFG_CCSR_DEVDISR1			0x0070
++#define DCFG_CCSR_DEVDISR1_DCE			BIT(25)
++#define DCFG_CCSR_DEVDISR1_SEC			BIT(22)
++#define DCFG_CCSR_DEVDISR1_SATA4		BIT(19)
++#define DCFG_CCSR_DEVDISR1_SATA3		BIT(18)
++#define DCFG_CCSR_DEVDISR1_SATA2		BIT(17)
++#define DCFG_CCSR_DEVDISR1_SATA1		BIT(16)
++#define DCFG_CCSR_DEVDISR1_USB1			BIT(12)
++#define DCFG_CCSR_DEVDISR1_ESDHC2		BIT(10)
++#define DCFG_CCSR_DEVDISR1_QDMA			BIT(8)
++#define DCFG_CCSR_DEVDISR1_ESDHC1		BIT(2)
++
++/* Device Disable Register 2 */
++#define DCFG_CCSR_DEVDISR2			0x0074
++#define DCFG_CCSR_DEVDISR2_MAC18		BIT(17)
++#define DCFG_CCSR_DEVDISR2_MAC17		BIT(16)
++#define DCFG_CCSR_DEVDISR2_MAC16		BIT(15)
++#define DCFG_CCSR_DEVDISR2_MAC15		BIT(14)
++#define DCFG_CCSR_DEVDISR2_MAC14		BIT(13)
++#define DCFG_CCSR_DEVDISR2_MAC13		BIT(12)
++#define DCFG_CCSR_DEVDISR2_MAC12		BIT(11)
++#define DCFG_CCSR_DEVDISR2_MAC11		BIT(10)
++#define DCFG_CCSR_DEVDISR2_MAC10		BIT(9)
++#define DCFG_CCSR_DEVDISR2_MAC9			BIT(8)
++#define DCFG_CCSR_DEVDISR2_MAC8			BIT(7)
++#define DCFG_CCSR_DEVDISR2_MAC7			BIT(6)
++#define DCFG_CCSR_DEVDISR2_MAC6			BIT(5)
++#define DCFG_CCSR_DEVDISR2_MAC5			BIT(4)
++#define DCFG_CCSR_DEVDISR2_MAC4			BIT(3)
++#define DCFG_CCSR_DEVDISR2_MAC3			BIT(2)
++#define DCFG_CCSR_DEVDISR2_MAC2			BIT(1)
++#define DCFG_CCSR_DEVDISR2_MAC1			BIT(0)
++
+ /* SerDes base address */
+ #define LYNX_28G_SDn_BASE(block)		(DCFG_CCSR_BASE + 0x000A0000 + (block) * 0x10000)
+ 
+@@ -158,6 +192,276 @@ enum {
+ 	DPMAC_MAX
+ };
+ 
++/* Device Disable Register 1 */
++#define DCFG_CCSR_DEVDISR1			0x0070
++#define DCFG_CCSR_DEVDISR1_DCE			BIT(25)
++#define DCFG_CCSR_DEVDISR1_SEC			BIT(22)
++#define DCFG_CCSR_DEVDISR1_SATA4		BIT(19)
++#define DCFG_CCSR_DEVDISR1_SATA3		BIT(18)
++#define DCFG_CCSR_DEVDISR1_SATA2		BIT(17)
++#define DCFG_CCSR_DEVDISR1_SATA1		BIT(16)
++#define DCFG_CCSR_DEVDISR1_USB1			BIT(12)
++#define DCFG_CCSR_DEVDISR1_ESDHC2		BIT(10)
++#define DCFG_CCSR_DEVDISR1_QDMA			BIT(8)
++#define DCFG_CCSR_DEVDISR1_ESDHC1		BIT(2)
++
++/* Device Disable Register 2 */
++#define DCFG_CCSR_DEVDISR2			0x0074
++#define DCFG_CCSR_DEVDISR2_MAC18		BIT(17)
++#define DCFG_CCSR_DEVDISR2_MAC17		BIT(16)
++#define DCFG_CCSR_DEVDISR2_MAC16		BIT(15)
++#define DCFG_CCSR_DEVDISR2_MAC15		BIT(14)
++#define DCFG_CCSR_DEVDISR2_MAC14		BIT(13)
++#define DCFG_CCSR_DEVDISR2_MAC13		BIT(12)
++#define DCFG_CCSR_DEVDISR2_MAC12		BIT(11)
++#define DCFG_CCSR_DEVDISR2_MAC11		BIT(10)
++#define DCFG_CCSR_DEVDISR2_MAC10		BIT(9)
++#define DCFG_CCSR_DEVDISR2_MAC9			BIT(8)
++#define DCFG_CCSR_DEVDISR2_MAC8			BIT(7)
++#define DCFG_CCSR_DEVDISR2_MAC7			BIT(6)
++#define DCFG_CCSR_DEVDISR2_MAC6			BIT(5)
++#define DCFG_CCSR_DEVDISR2_MAC5			BIT(4)
++#define DCFG_CCSR_DEVDISR2_MAC4			BIT(3)
++#define DCFG_CCSR_DEVDISR2_MAC3			BIT(2)
++#define DCFG_CCSR_DEVDISR2_MAC2			BIT(1)
++#define DCFG_CCSR_DEVDISR2_MAC1			BIT(0)
++
++/*
++ * evaluate DEVDISR registers to understand which interfaces are not
++ * available, and disable their protocol converters.
++ */
++void board_disable_unused_proto_converters(void) {
++	struct {
++		const u32 __iomem *devdisr;
++		const u32 devdisr_bit;
++		u32 __iomem *const pcr;
++		const u32 pcr_dis_mask;
++		const u32 pcr_dis_val;
++	} map[] = {
++		{	/* dpmac1: 40G/50G/100G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC1,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCE,
++			.pcr_dis_mask = LYNX_28G_PCCE_E40GA_CFG_MASK | LYNX_28G_PCCE_E50GA_CFG_MASK | LYNX_28G_PCCE_E100GA_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCE_E40GA_CFG(0) | LYNX_28G_PCCE_E50GA_CFG(0) | LYNX_28G_PCCE_E100GA_CFG(0),
++		}, {	/* dpmac2: 40G/50G/100G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC2,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCE,
++			.pcr_dis_mask = LYNX_28G_PCCE_E40GB_CFG_MASK | LYNX_28G_PCCE_E50GB_CFG_MASK | LYNX_28G_PCCE_E100GB_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCE_E40GB_CFG(0) | LYNX_28G_PCCE_E50GB_CFG(0) | LYNX_28G_PCCE_E100GB_CFG(0),
++		}, {	/* dpmac3: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC3,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIIH_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIIH_CFG(0),
++		}, {	/* dpmac3: 10G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC3,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_dis_mask = LYNX_28G_PCCC_SXGMIIH_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCC_SXGMIIH_CFG(0),
++		}, {	/* dpmac3: 25G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC3,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_dis_mask = LYNX_28G_PCCD_E25GA_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCD_E25GA_CFG(0),
++		}, {	/* dpmac4: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC4,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIIG_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIIG_CFG(0),
++		}, {	/* dpmac4: 10G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC4,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_dis_mask = LYNX_28G_PCCC_SXGMIIG_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCC_SXGMIIG_CFG(0),
++		}, {	/* dpmac4: 25G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC4,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_dis_mask = LYNX_28G_PCCD_E25GB_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCD_E25GB_CFG(0),
++		}, {	/* dpmac5: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC5,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIIF_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIIF_CFG(0),
++		}, {	/* dpmac5: 10G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC5,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_dis_mask = LYNX_28G_PCCC_SXGMIIF_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCC_SXGMIIF_CFG(0),
++		}, {	/* dpmac5: 25G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC5,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_dis_mask = LYNX_28G_PCCD_E25GC_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCD_E25GC_CFG(0),
++		}, {	/* dpmac6: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC6,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIIE_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIIE_CFG(0),
++		}, {	/* dpmac6: 10G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC6,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_dis_mask = LYNX_28G_PCCC_SXGMIIE_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCC_SXGMIIE_CFG(0),
++		}, {	/* dpmac6: 25G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC6,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_dis_mask = LYNX_28G_PCCD_E25GD_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCD_E25GD_CFG(0),
++		}, {	/* dpmac7: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC7,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIID_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIID_CFG(0),
++		}, {	/* dpmac7: 10G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC7,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_dis_mask = LYNX_28G_PCCC_SXGMIID_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCC_SXGMIID_CFG(0),
++		}, {	/* dpmac7: 25G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC7,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_dis_mask = LYNX_28G_PCCD_E25GE_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCD_E25GE_CFG(0),
++		}, {	/* dpmac8: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC8,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIIC_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIIC_CFG(0),
++		}, {	/* dpmac8: 10G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC8,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_dis_mask = LYNX_28G_PCCC_SXGMIIC_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCC_SXGMIIC_CFG(0),
++		}, {	/* dpmac8: 25G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC8,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_dis_mask = LYNX_28G_PCCD_E25GF_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCD_E25GF_CFG(0),
++		}, {	/* dpmac9: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC9,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIIB_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIIB_CFG(0),
++		}, {	/* dpmac9: 10G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC9,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_dis_mask = LYNX_28G_PCCC_SXGMIIB_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCC_SXGMIIB_CFG(0),
++		}, {	/* dpmac9: 25G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC9,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_dis_mask = LYNX_28G_PCCD_E25GG_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCD_E25GG_CFG(0),
++		}, {	/* dpmac10: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC10,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIIA_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIIA_CFG(0),
++		}, {	/* dpmac10: 10G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC10,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCC,
++			.pcr_dis_mask = LYNX_28G_PCCC_SXGMIIA_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCC_SXGMIIA_CFG(0),
++		}, {	/* dpmac10: 25G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC10,
++			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCCD,
++			.pcr_dis_mask = LYNX_28G_PCCD_E25GH_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCD_E25GH_CFG(0),
++		}, {	/* dpmac11: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC11,
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIIA_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIIA_CFG(0),
++		}, {	/* dpmac12: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC12,
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIIB_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIIB_CFG(0),
++		}, {	/* dpmac17: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC17,
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIIC_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIIC_CFG(0),
++		}, {	/* dpmac18: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC18,
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIID_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIID_CFG(0),
++		}, {	/* dpmac15: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC15,
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIIE_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIIE_CFG(0),
++		}, {	/* dpmac16: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC16,
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIIF_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIIF_CFG(0),
++		}, {	/* dpmac13: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC13,
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIIG_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIIG_CFG(0),
++		}, {	/* dpmac13: 10G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC13,
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
++			.pcr_dis_mask = LYNX_28G_PCCC_SXGMIIG_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCC_SXGMIIG_CFG(0),
++		}, {	/* dpmac14: 1G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC14,
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC8,
++			.pcr_dis_mask = LYNX_28G_PCC8_SGMIIH_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC8_SGMIIH_CFG(0),
++		}, {	/* dpmac14: 10G */
++			.devdisr = DCFG_CCSR_BASE +  DCFG_CCSR_DEVDISR2,
++			.devdisr_bit = DCFG_CCSR_DEVDISR2_MAC14,
++			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCCC,
++			.pcr_dis_mask = LYNX_28G_PCCC_SXGMIIH_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCCC_SXGMIIH_CFG(0),
++		},
++	};
++
++	for (int i = 0; i < ARRAY_SIZE(map); i++)
++		if (*map[i].devdisr & map[i].devdisr_bit)
++			*map[i].pcr &= ~map[i].pcr_dis_mask | map[i].pcr_dis_val;
++}
++
+ #ifdef CONFIG_OF_BOARD_FIXUP
+ 
+ /* fix mac nodes based on serdes protocol */
+-- 
+2.43.0
+
