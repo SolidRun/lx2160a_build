@@ -1,0 +1,133 @@
+From e9987f2acfe75e1424afada18c9ace377755acf4 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 27 Aug 2025 17:12:54 +0200
+Subject: [PATCH] lx2162asom_rev2: disable mac7-10, apply mac5-6 default eq
+ params for 25g
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2162asom_clearfog.tmpl                                    | 6 ++++++
+ lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_11_0_auto.rcw | 6 ++++++
+ lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_7_0_auto.rcw  | 6 ++++++
+ lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_9_0_auto.rcw  | 6 ++++++
+ lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_11_0_auto.rcw  | 6 ++++++
+ lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_7_0_auto.rcw   | 6 ++++++
+ lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_9_0_auto.rcw   | 6 ++++++
+ lx2162asom_rev2/include/common_pbi.rcwi                     | 3 +++
+ 8 files changed, 45 insertions(+)
+
+diff --git a/lx2162asom_clearfog.tmpl b/lx2162asom_clearfog.tmpl
+index 073de69..ce05689 100644
+--- a/lx2162asom_clearfog.tmpl
++++ b/lx2162asom_clearfog.tmpl
+@@ -23,3 +23,9 @@
+ #include <../lx2160acex7/include/SD3_0.rcwi>
+ #include <../%module%_rev%SOC_REVISION%/include/common_pbi.rcwi>
+ #include <../lx2160acex7/include/bootlocptr.rcwi>
++
++#if %nSD1% == 18 || %nSD1% == -18
++/* set default serdes lane equalization parameters for 25G */
++#include <../lx2160asi/25g_eq_s1_lane_e.rcw>
++#include <../lx2160asi/25g_eq_s1_lane_f.rcw>
++#endif
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_11_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_11_0_auto.rcw
+index e79479e..e61c6e5 100644
+--- a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_11_0_auto.rcw
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_11_0_auto.rcw
+@@ -23,3 +23,9 @@
+ #include <../lx2160acex7/include/SD3_0.rcwi>
+ #include <../lx2162asom_rev2/include/common_pbi.rcwi>
+ #include <../lx2160acex7/include/bootlocptr.rcwi>
++
++#if 18 == 18 || 18 == -18
++/* set default serdes lane equalization parameters for 25G */
++#include <../lx2160asi/25g_eq_s1_lane_e.rcw>
++#include <../lx2160asi/25g_eq_s1_lane_f.rcw>
++#endif
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_7_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_7_0_auto.rcw
+index 4724239..ba1f0d0 100644
+--- a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_7_0_auto.rcw
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_7_0_auto.rcw
+@@ -23,3 +23,9 @@
+ #include <../lx2160acex7/include/SD3_0.rcwi>
+ #include <../lx2162asom_rev2/include/common_pbi.rcwi>
+ #include <../lx2160acex7/include/bootlocptr.rcwi>
++
++#if 18 == 18 || 18 == -18
++/* set default serdes lane equalization parameters for 25G */
++#include <../lx2160asi/25g_eq_s1_lane_e.rcw>
++#include <../lx2160asi/25g_eq_s1_lane_f.rcw>
++#endif
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_9_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_9_0_auto.rcw
+index 3a7703d..7738294 100644
+--- a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_9_0_auto.rcw
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_18_9_0_auto.rcw
+@@ -23,3 +23,9 @@
+ #include <../lx2160acex7/include/SD3_0.rcwi>
+ #include <../lx2162asom_rev2/include/common_pbi.rcwi>
+ #include <../lx2160acex7/include/bootlocptr.rcwi>
++
++#if 18 == 18 || 18 == -18
++/* set default serdes lane equalization parameters for 25G */
++#include <../lx2160asi/25g_eq_s1_lane_e.rcw>
++#include <../lx2160asi/25g_eq_s1_lane_f.rcw>
++#endif
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_11_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_11_0_auto.rcw
+index 6a1863d..b4383a5 100644
+--- a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_11_0_auto.rcw
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_11_0_auto.rcw
+@@ -23,3 +23,9 @@
+ #include <../lx2160acex7/include/SD3_0.rcwi>
+ #include <../lx2162asom_rev2/include/common_pbi.rcwi>
+ #include <../lx2160acex7/include/bootlocptr.rcwi>
++
++#if 2 == 18 || 2 == -18
++/* set default serdes lane equalization parameters for 25G */
++#include <../lx2160asi/25g_eq_s1_lane_e.rcw>
++#include <../lx2160asi/25g_eq_s1_lane_f.rcw>
++#endif
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_7_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_7_0_auto.rcw
+index 24cf24a..10feef7 100644
+--- a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_7_0_auto.rcw
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_7_0_auto.rcw
+@@ -23,3 +23,9 @@
+ #include <../lx2160acex7/include/SD3_0.rcwi>
+ #include <../lx2162asom_rev2/include/common_pbi.rcwi>
+ #include <../lx2160acex7/include/bootlocptr.rcwi>
++
++#if 2 == 18 || 2 == -18
++/* set default serdes lane equalization parameters for 25G */
++#include <../lx2160asi/25g_eq_s1_lane_e.rcw>
++#include <../lx2160asi/25g_eq_s1_lane_f.rcw>
++#endif
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_9_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_9_0_auto.rcw
+index 9533815..7c8e6d9 100644
+--- a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_9_0_auto.rcw
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_2_9_0_auto.rcw
+@@ -23,3 +23,9 @@
+ #include <../lx2160acex7/include/SD3_0.rcwi>
+ #include <../lx2162asom_rev2/include/common_pbi.rcwi>
+ #include <../lx2160acex7/include/bootlocptr.rcwi>
++
++#if 2 == 18 || 2 == -18
++/* set default serdes lane equalization parameters for 25G */
++#include <../lx2160asi/25g_eq_s1_lane_e.rcw>
++#include <../lx2160asi/25g_eq_s1_lane_f.rcw>
++#endif
+diff --git a/lx2162asom_rev2/include/common_pbi.rcwi b/lx2162asom_rev2/include/common_pbi.rcwi
+index b313c1e..c917829 100644
+--- a/lx2162asom_rev2/include/common_pbi.rcwi
++++ b/lx2162asom_rev2/include/common_pbi.rcwi
+@@ -25,6 +25,9 @@
+ /* SerDes Errata A-050479 */
+ #include <../lx2160asi/a050479.rcw>
+ 
++/* DPMAC7/8/9/10 clock disable (not available on LX2162) */
++#include <../lx2162aqds/disable_mac7_10.rcw>
++
+ /* PEX2/5/6 clock disable (not available on LX2162) */
+ #include <../lx2162aqds/disable_pci2_5_6.rcw>
+ 
+-- 
+2.43.0
+
