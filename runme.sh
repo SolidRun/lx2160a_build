@@ -565,7 +565,7 @@ test -n "$APTPROXY" && printf 'Acquire::http { Proxy "%s"; }\n' $APTPROXY | tee 
 
 apt-get update
 env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C \
-	apt-get install --no-install-recommends -y apt apt-utils ethtool fdisk i2c-tools ifupdown iproute2 iptables iputils-ping isc-dhcp-client kmod less libatomic1 lm-sensors locales net-tools ntpdate openssh-server pciutils procps psmisc python3 sudo systemd-sysv tee-supplicant wget $EXTRA_PKGS
+	apt-get install --no-install-recommends -y apt apt-utils busybox ethtool fdisk i2c-tools ifupdown iproute2 iptables iputils-ping isc-dhcp-client kmod less libatomic1 lm-sensors locales net-tools ntpdate openssh-server pciutils procps psmisc python3 sudo systemd-sysv tee-supplicant wget $EXTRA_PKGS
 apt-get clean
 
 # set root password
