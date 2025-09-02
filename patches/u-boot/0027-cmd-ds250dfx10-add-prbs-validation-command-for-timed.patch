@@ -1,0 +1,938 @@
+From ab33c4ff05ca138d3a62eabf073088643d40ff72 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 2 Sep 2025 16:46:31 +0200
+Subject: [PATCH] cmd: ds250dfx10: add prbs validation command for timed error
+ counting
+
+Implement a validation command using the prbs checker feature to check
+prbs pattern and count errors for a given duration of time.
+
+The command does detect cdr loss to avoid invalid results.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ cmd/ds250dfx10.c | 613 +++++++++++++++++++++++++++++++----------------
+ 1 file changed, 401 insertions(+), 212 deletions(-)
+
+diff --git a/cmd/ds250dfx10.c b/cmd/ds250dfx10.c
+index 4977b56e66b..149c92476a1 100644
+--- a/cmd/ds250dfx10.c
++++ b/cmd/ds250dfx10.c
+@@ -4,47 +4,61 @@
+  */
+ 
+ #include <command.h>
++#include <console.h>
+ #include <dm/device.h>
+ #include <dm/uclass.h>
+ #include <i2c.h>
++#include <linux/delay.h>
++#include <time.h>
++
++enum ds250dfx10_reg_type {
++	DS250DFX10_REG_GLOBAL,
++	DS250DFX10_REG_SHARED,
++	DS250DFX10_REG_CHANNEL,
++	DS250DFX10_REG_TYPE_MAX,
++};
+ 
+-/* DS250DFx10 Shared Registers			reg	offset	length */
+-
+-/* DS250DFx10 Channel Registers			reg	offset	length */
+-#define DS250DFX10_REG_POL_INV_DET		0x01,	6,	1
+-#define DS250DFX10_REG_PRBS_SEQ_DET		0x01,	1,	4
+-#define DS250DFX10_REG_BYPASS_PFD_OV		0x09,	5,	1
+-#define DS250DFX10_REG_DES_PD			0x0D,	7,	1
+-#define DS250DFX10_EOM_PD			0x11,	5,	1
+-#define DS250DFX10_EOM_SEL_VRANGE		0x11,	6,	2
+-#define DS250DFX10_SER_EN			0x1E,	4,	1
+-#define DS250DFX10_PFD_SEL_DATA_PRELCK		0x1E,	5,	3
+-#define DS250DFX10_EOM_START			0x24,	0,	1
+-#define DS250DFX10_FAST_EOM			0x24,	7,	1
+-#define DS250DFX10_EOM_DATA_HI			0x25,	0,	8
+-#define DS250DFX10_EOM_DATA_LO			0x26,	0,	8
+-#define DS250DFX10_VEO_SCALE			0x2C,	6,	1
+-#define DS250DFX10_PRBS_PATTERN_SEL_HI		0x2E,	2,	1
+-#define DS250DFX10_PRBS_PATTERN_SEL_LO		0x30,	0,	2
+-#define DS250DFX10_PRBS_EN_DIG_CLK		0x30,	3,	1
+-#define DS250DFX10_RELOAD_PRBS_CHKR		0x30,	4,	1
+-#define DS250DFX10_HV_LOCKMON_EN		0x67,	5,	1
+-#define DS250DFX10_CDR_LOCK_STATUS		0x78,	4,	1
+-#define DS250DFX10_PRBS_GEN_EN			0x79,	5,	1
+-#define DS250DFX10_PRBS_CHKR_EN			0x79,	6,	1
+-#define DS250DFX10_RST_PRBS_CNTS		0x82,	6,	1
+-#define DS250DFX10_FREEZE_PRBS_CNTR		0x82,	7,	1
+-#define DS250DFX10_PRBS_ERR_CNT_HI		0x83,	0,	3
+-#define DS250DFX10_PRBS_ERR_CNT_LO		0x84,	0,	8
+-
+-/* DS250DFx10 Global Registers			reg	offset	length */
+-#define DS250DFX10_CHAN_CONFIG_ID		0xEF,	0,	4
+-#define DS250DFX10_DEVICE_ID			0xF1,	0,	8
+-#define DS250DFX10_EN_CH(n)			0xFC,	n,	1
+-#define DS250DFX10_VENDOR_ID			0xFE,	0,	8
+-#define DS250DFX10_EN_SHARE_Q0			0xFF,	4,	1
+-#define DS250DFX10_EN_SHARE_Q1			0xFF,	5,	1
+-#define DS250DFX10_EN_CH_SMB			0xFF,	0,	1
++/* DS250DFx10 Shared Registers			domain,			reg	offset	length */
++
++/* DS250DFx10 Channel Registers			domain,			reg	offset	length */
++#define DS250DFX10_CDR_LOCK_LOSS_INT		DS250DFX10_REG_CHANNEL,	0x01,	5,	1
++#define DS250DFX10_POL_INV_DET			DS250DFX10_REG_CHANNEL,	0x01,	6,	1
++#define DS250DFX10_PRBS_SEQ_DET			DS250DFX10_REG_CHANNEL,	0x01,	1,	4
++#define DS250DFX10_BYPASS_PFD_OV		DS250DFX10_REG_CHANNEL,	0x09,	5,	1
++#define DS250DFX10_DES_PD			DS250DFX10_REG_CHANNEL,	0x0D,	7,	1
++#define DS250DFX10_EOM_PD			DS250DFX10_REG_CHANNEL,	0x11,	5,	1
++#define DS250DFX10_EOM_SEL_VRANGE		DS250DFX10_REG_CHANNEL,	0x11,	6,	2
++#define DS250DFX10_SER_EN			DS250DFX10_REG_CHANNEL,	0x1E,	4,	1
++#define DS250DFX10_PFD_SEL_DATA_PRELCK		DS250DFX10_REG_CHANNEL,	0x1E,	5,	3
++#define DS250DFX10_EOM_START			DS250DFX10_REG_CHANNEL,	0x24,	0,	1
++#define DS250DFX10_FAST_EOM			DS250DFX10_REG_CHANNEL,	0x24,	7,	1
++#define DS250DFX10_EOM_DATA_HI			DS250DFX10_REG_CHANNEL,	0x25,	0,	8
++#define DS250DFX10_EOM_DATA_LO			DS250DFX10_REG_CHANNEL,	0x26,	0,	8
++#define DS250DFX10_VEO_SCALE			DS250DFX10_REG_CHANNEL,	0x2C,	6,	1
++#define DS250DFX10_PRBS_PATTERN_SEL_HI		DS250DFX10_REG_CHANNEL,	0x2E,	2,	1
++#define DS250DFX10_PRBS_PATTERN_SEL_LO		DS250DFX10_REG_CHANNEL,	0x30,	0,	2
++#define DS250DFX10_PRBS_EN_DIG_CLK		DS250DFX10_REG_CHANNEL,	0x30,	3,	1
++#define DS250DFX10_RELOAD_PRBS_CHKR		DS250DFX10_REG_CHANNEL,	0x30,	4,	1
++#define DS250DFX10_SIGNAL_DET_LOSS_INT_EN	DS250DFX10_REG_CHANNEL,	0x31,	0,	1
++#define DS250DFX10_CDR_LOCK_LOSS_INT_EN		DS250DFX10_REG_CHANNEL,	0x31,	1,	1
++#define DS250DFX10_PRBS_INT_EN			DS250DFX10_REG_CHANNEL,	0x31,	7,	1
++#define DS250DFX10_HV_LOCKMON_EN		DS250DFX10_REG_CHANNEL,	0x67,	5,	1
++#define DS250DFX10_CDR_LOCK_STATUS		DS250DFX10_REG_CHANNEL,	0x78,	4,	1
++#define DS250DFX10_PRBS_GEN_EN			DS250DFX10_REG_CHANNEL,	0x79,	5,	1
++#define DS250DFX10_PRBS_CHKR_EN			DS250DFX10_REG_CHANNEL,	0x79,	6,	1
++#define DS250DFX10_RST_PRBS_CNTS		DS250DFX10_REG_CHANNEL,	0x82,	6,	1
++#define DS250DFX10_FREEZE_PRBS_CNTR		DS250DFX10_REG_CHANNEL,	0x82,	7,	1
++#define DS250DFX10_PRBS_ERR_CNT_HI		DS250DFX10_REG_CHANNEL,	0x83,	0,	3
++#define DS250DFX10_PRBS_ERR_CNT_LO		DS250DFX10_REG_CHANNEL,	0x84,	0,	8
++
++/* DS250DFx10 Global Registers			domain,			reg	offset	length */
++#define DS250DFX10_CHAN_CONFIG_ID		DS250DFX10_REG_GLOBAL,	0xEF,	0,	4
++#define DS250DFX10_DEVICE_ID			DS250DFX10_REG_GLOBAL,	0xF1,	0,	8
++#define DS250DFX10_EN_CH(n)			DS250DFX10_REG_GLOBAL,	0xFC,	n,	1
++#define DS250DFX10_VENDOR_ID			DS250DFX10_REG_GLOBAL,	0xFE,	0,	8
++#define DS250DFX10_EN_SHARE_Q0			DS250DFX10_REG_GLOBAL,	0xFF,	4,	1
++#define DS250DFX10_EN_SHARE_Q1			DS250DFX10_REG_GLOBAL,	0xFF,	5,	1
++#define DS250DFX10_EN_CH_SMB			DS250DFX10_REG_GLOBAL,	0xFF,	0,	1
+ 
+ enum ds250dfx10_type {
+ 	 DS250DF410 = 0,
+@@ -135,21 +149,47 @@ static enum ds250dfx10_eom_fmt ds250dfx10_eom_fmt_parse(const char *const str)
+ static struct _ds250dfx10_priv {
+ 	struct udevice *dev;
+ 	enum ds250dfx10_type type;
++	bool sel_chan_regs;
+ } _priv;
+ static struct _ds250dfx10_priv *const priv = &_priv;
+ 
+-inline int ds250dfx10_read(uint8_t reg, uint8_t, uint8_t, uint8_t *const buffer, const uint8_t len)
++static int ds250dfx10_read(const enum ds250dfx10_reg_type type, const uint8_t reg, const uint8_t, const uint8_t, uint8_t *const buffer, const uint8_t len);
++static int ds250dfx10_write(const enum ds250dfx10_reg_type type, const uint8_t reg, const uint8_t, const uint8_t, const uint8_t *const buffer, const uint8_t len);
++
++static int ds250dfx10_get(enum ds250dfx10_reg_type type, const uint8_t reg, const uint8_t offset, const uint8_t len, uint8_t *const val);
++static int ds250dfx10_set(enum ds250dfx10_reg_type type, const uint8_t reg, const uint8_t offset, const uint8_t len, const uint8_t val);
++
++static inline int ds250dfx10_sel_reg_type(const enum ds250dfx10_reg_type type);
++
++static int ds250dfx10_read(const enum ds250dfx10_reg_type type, const uint8_t reg, const uint8_t, const uint8_t, uint8_t *const buffer, const uint8_t len)
+ {
++	int ret;
++
++	ret = ds250dfx10_sel_reg_type(type);
++	if (ret)
++		return ret;
++
+ 	return dm_i2c_read(priv->dev, reg, buffer, len);
+ }
+ 
+-static int ds250dfx10_get(const uint8_t reg, const uint8_t offset, const uint8_t len, uint8_t *const val)
++static int ds250dfx10_write(const enum ds250dfx10_reg_type type, const uint8_t reg, const uint8_t, const uint8_t, const uint8_t *const buffer, const uint8_t len)
++{
++	int ret;
++
++	ret = ds250dfx10_sel_reg_type(type);
++	if (ret)
++		return ret;
++
++	return dm_i2c_write(priv->dev, reg, buffer, len);
++}
++
++static int ds250dfx10_get(enum ds250dfx10_reg_type type, const uint8_t reg, const uint8_t offset, const uint8_t len, uint8_t *const val)
+ {
+ 	int ret;
+ 	const uint8_t mask = ((2 << (len - 1)) - 1) << offset;
+ 	uint8_t _val = 0;
+ 
+-	ret = dm_i2c_read(priv->dev, reg, &_val, sizeof(_val));
++	ret = ds250dfx10_read(type, reg, offset, len, &_val, sizeof(_val));
+ 	if (ret) {
+ 		printf("failed to read register %#04x: %d\n", reg, ret);
+ 		return ret;
+@@ -161,13 +201,13 @@ static int ds250dfx10_get(const uint8_t reg, const uint8_t offset, const uint8_t
+ 	return 0;
+ }
+ 
+-static int ds250dfx10_set(const uint8_t reg, const uint8_t offset, const uint8_t len, const uint8_t val)
++static int ds250dfx10_set(enum ds250dfx10_reg_type type, const uint8_t reg, const uint8_t offset, const uint8_t len, const uint8_t val)
+ {
+ 	int ret;
+ 	const uint8_t mask = ((2 << (len - 1)) - 1) << offset;
+ 	uint8_t _val = 0;
+ 
+-	ret = dm_i2c_read(priv->dev, reg, &_val, sizeof(_val));
++	ret = ds250dfx10_read(type, reg, offset, len, &_val, sizeof(_val));
+ 	if (ret) {
+ 		printf("failed to read register %#04x: %d\n", reg, ret);
+ 		return ret;
+@@ -176,7 +216,7 @@ static int ds250dfx10_set(const uint8_t reg, const uint8_t offset, const uint8_t
+ 	_val &= ~mask;
+ 	_val |= (val << offset) & mask;
+ 
+-	dm_i2c_write(priv->dev, reg, &_val, sizeof(_val));
++	ret = ds250dfx10_write(type, reg, offset, len, &_val, sizeof(_val));
+ 	if (ret)
+ 		printf("failed to write register %#04x = %#04x: %d\n", reg, _val, ret);
+ 	//printf("dm_i2c_write %#04x = %#04x\n", reg, _val);
+@@ -184,13 +224,34 @@ static int ds250dfx10_set(const uint8_t reg, const uint8_t offset, const uint8_t
+ 	return ret;
+ }
+ 
++static inline int ds250dfx10_sel_reg_type(const enum ds250dfx10_reg_type type)
++{
++	int ret;
++
++	if (type == DS250DFX10_REG_SHARED && priv->sel_chan_regs) {
++		ret = ds250dfx10_set(DS250DFX10_EN_CH_SMB, 0);
++		if (ret)
++			return ret;
++
++		priv->sel_chan_regs = false;
++	} else if (type == DS250DFX10_REG_CHANNEL && !priv->sel_chan_regs) {
++		ret = ds250dfx10_set(DS250DFX10_EN_CH_SMB, 1);
++		if (ret)
++			return ret;
++
++		priv->sel_chan_regs = true;
++	}
++
++	return 0;
++}
++
+ static int do_ds250dfx10_dev(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+ {
+ 	const char * _bus;
+ 	struct udevice *bus;
+ 	unsigned long _addr;
+ 	unsigned int addr;
+-	uint8_t vendor_id, device_id, chan_conf;
++	uint8_t vendor_id, device_id, chan_conf, sel_chan_regs;;
+ 	int ret;
+ 
+ 	switch (argc) {
+@@ -246,6 +307,14 @@ static int do_ds250dfx10_dev(struct cmd_tbl *cmdtp, int flag, int argc, char *co
+ 			return CMD_RET_FAILURE;
+ 		}
+ 
++		/* read whether channel registers are selected */
++		ret = ds250dfx10_get(DS250DFX10_EN_CH_SMB, &sel_chan_regs);
++		if (ret < 0) {
++			priv->dev = NULL;
++			return CMD_RET_FAILURE;
++		}
++		priv->sel_chan_regs = !!sel_chan_regs;
++
+ 		if (!priv->dev) {
+ 			puts("no retimer selected\n");
+ 			return CMD_RET_FAILURE;
+@@ -343,48 +412,37 @@ static int do_ds250dfx10_pttgen_stop(void)
+ 	int ret;
+ 	uint8_t val;
+ 
+-	/* enable access to channel registers */
+-	ret = ds250dfx10_set(DS250DFX10_EN_CH_SMB, 1);
+-	if (ret)
+-		goto do_ds250dfx10_pttgen_stop_ret;
+-
+ 	/* confirm generator is active */
+ 	ret = ds250dfx10_get(DS250DFX10_PRBS_GEN_EN, &val);
+ 	if (ret) {
+-		goto do_ds250dfx10_pttgen_stop_cleanup;
++		return ret;
+ 	} else if (!val) {
+ 		puts("prbs generator not active\n");
+-		ret = -EINVAL;
+-		goto do_ds250dfx10_pttgen_stop_cleanup;
++		return -EINVAL;
+ 	}
+ 
+ 	/* disable output override */
+-	ret = ds250dfx10_set(DS250DFX10_REG_BYPASS_PFD_OV, 0);
++	ret = ds250dfx10_set(DS250DFX10_BYPASS_PFD_OV, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_pttgen_stop_cleanup;
++		return ret;
+ 
+ 	/* disable prbs generator */
+ 	ret = ds250dfx10_set(DS250DFX10_PRBS_GEN_EN, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_pttgen_stop_cleanup;
++		return ret;
+ 
+ 	/* disable prbs clock */
+ 	ret = ds250dfx10_set(DS250DFX10_PRBS_EN_DIG_CLK, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_pttgen_stop_cleanup;
++		return ret;
+ 
+ 	/* disable serializer */
+ 	ret = ds250dfx10_set(DS250DFX10_SER_EN, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_pttgen_stop_cleanup;
++		return ret;
+ 
+ 	puts("prbs generator stopped\n");
+ 
+-do_ds250dfx10_pttgen_stop_cleanup:
+-	/* disable access to channel registers */
+-	ds250dfx10_set(DS250DFX10_EN_CH_SMB, 0);
+-
+-do_ds250dfx10_pttgen_stop_ret:
+ 	return ret;
+ }
+ 
+@@ -399,62 +457,52 @@ static int do_ds250dfx10_pttgen_start(const enum ds250dfx10_prbs_pattern prbs_pt
+ 		enum ds250dfx10_prbs_pattern sel;
+ 	} prbs_ptt_sel = { .sel = prbs_ptt };
+ 
+-	/* enable access to channel registers */
+-	ret = ds250dfx10_set(DS250DFX10_EN_CH_SMB, 1);
+-	if (ret)
+-		goto do_ds250dfx10_pttgen_start_ret;
+-
+ 	/* select pattern */
+ 	ret = ds250dfx10_set(DS250DFX10_PRBS_PATTERN_SEL_HI, prbs_ptt_sel.bits.hi);
+ 	if (ret)
+-		goto do_ds250dfx10_pttgen_start_cleanup;
++		return ret;
+ 
+ 	ret = ds250dfx10_set(DS250DFX10_PRBS_PATTERN_SEL_LO, prbs_ptt_sel.bits.lo);
+ 	if (ret)
+-		goto do_ds250dfx10_pttgen_start_cleanup;
++		return ret;
+ 
+ 	/* enable serializer */
+ 	ret = ds250dfx10_set(DS250DFX10_SER_EN, 1);
+ 	if (ret)
+-		goto do_ds250dfx10_pttgen_start_cleanup;
++		return ret;
+ 
+ 	/* disable prbs generator (to reset if active) */
+ 	ret = ds250dfx10_set(DS250DFX10_PRBS_GEN_EN, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_pttgen_start_cleanup;
++		return ret;
+ 
+ 	/* enable prbs generator */
+ 	ret = ds250dfx10_set(DS250DFX10_PRBS_GEN_EN, 1);
+ 	if (ret)
+-		goto do_ds250dfx10_pttgen_start_cleanup;
++		return ret;
+ 
+ 	/* disable prbs clock (to reset if active) */
+ 	ret = ds250dfx10_set(DS250DFX10_PRBS_EN_DIG_CLK, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_pttgen_start_cleanup;
++		return ret;
+ 
+ 	/* enable prbs clock */
+ 	ret = ds250dfx10_set(DS250DFX10_PRBS_EN_DIG_CLK, 1);
+ 	if (ret)
+-		goto do_ds250dfx10_pttgen_start_cleanup;
++		return ret;
+ 
+ 	/* enable prbs generator output */
+ 	ret = ds250dfx10_set(DS250DFX10_PFD_SEL_DATA_PRELCK, 4);
+ 	if (ret)
+-		goto do_ds250dfx10_pttgen_start_cleanup;
++		return ret;
+ 
+ 	/* enable output override */
+-	ret = ds250dfx10_set(DS250DFX10_REG_BYPASS_PFD_OV, 1);
++	ret = ds250dfx10_set(DS250DFX10_BYPASS_PFD_OV, 1);
+ 	if (ret)
+-		goto do_ds250dfx10_pttgen_start_cleanup;
++		return ret;
+ 
+ 	printf("PRBS generator started with %s\n", ds250dfx10_prbs_pattern_str[prbs_ptt]);
+ 
+-do_ds250dfx10_pttgen_start_cleanup:
+-	/* disable access to channel registers */
+-	ds250dfx10_set(DS250DFX10_EN_CH_SMB, 0);
+-
+-do_ds250dfx10_pttgen_start_ret:
+ 	return ret;
+ }
+ 
+@@ -502,150 +550,290 @@ static int do_ds250dfx10_pttgen(struct cmd_tbl *cmdtp, int flag, int argc, char
+ 	return CMD_RET_SUCCESS;
+ }
+ 
+-static int do_ds250dfx10_pttchk_show(void)
++static int ds250dfx10_pttchk_enable(void)
+ {
+ 	int ret;
+-	uint8_t val1;
+-	uint16_t val2;
+-	enum ds250dfx10_prbs_pattern prbs_ptt;
+-
+-	/* enable access to channel registers */
+-	ret = ds250dfx10_set(DS250DFX10_EN_CH_SMB, 1);
+-	if (ret)
+-		goto do_ds250dfx10_pttchk_show_ret;
+-
+-	/* read detected pattern */
+-	ret = ds250dfx10_get(DS250DFX10_REG_PRBS_SEQ_DET, &val1);
+-	if (ret) {
+-		goto do_ds250dfx10_pttchk_show_cleanup;
+-	} else if (!(val1 & 0x08)) {
+-		printf("no pattern detected\n");
+-		goto do_ds250dfx10_pttchk_show_cleanup;
+-	}
+-	prbs_ptt = val1 & 0x07;
+ 
+-	/* read polarity */
+-	ret = ds250dfx10_get(DS250DFX10_REG_POL_INV_DET, &val1);
+-	if (ret)
+-		goto do_ds250dfx10_pttchk_show_cleanup;
+-
+-	puts("detected ");
+-	puts(ds250dfx10_prbs_pattern_str[prbs_ptt]);
+-	if (val1)
+-		puts(", polarity inverted");
+-	putc('\n');
+-
+-	/* freeze error counter */
+-	ret = ds250dfx10_set(DS250DFX10_FREEZE_PRBS_CNTR, 1);
++	/* enable de-serializer */
++	ret = ds250dfx10_set(DS250DFX10_DES_PD, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_pttchk_show_cleanup;
++		return ret;
+ 
+-	/* read error counter */
+-	ret = ds250dfx10_read(DS250DFX10_PRBS_ERR_CNT_HI, (uint8_t *)&val2, sizeof(val2));
++	/* enable prbs checker */
++	ret = ds250dfx10_set(DS250DFX10_PRBS_CHKR_EN, 1);
+ 	if (ret)
+-		goto do_ds250dfx10_pttchk_show_cleanup;
+-	val2 &= 0x07FF;
++		return ret;
+ 
+-	/* release error counter */
+-	ret = ds250dfx10_set(DS250DFX10_FREEZE_PRBS_CNTR, 0);
++	/* enable prbs clock */
++	ret = ds250dfx10_set(DS250DFX10_PRBS_EN_DIG_CLK, 1);
+ 	if (ret)
+-		goto do_ds250dfx10_pttchk_show_cleanup;
+-
+-	printf("errors: %u\n", val2);
+-
+-do_ds250dfx10_pttchk_show_cleanup:
+-	/* disable access to channel registers */
+-	ds250dfx10_set(DS250DFX10_EN_CH_SMB, 0);
++		return ret;
+ 
+-do_ds250dfx10_pttchk_show_ret:
+ 	return ret;
+ }
+ 
+-static int do_ds250dfx10_pttchk_start(void)
++static int ds250dfx10_pttchk_reset(void)
+ {
+ 	int ret;
+ 
+-	/* enable access to channel registers */
+-	ret = ds250dfx10_set(DS250DFX10_EN_CH_SMB, 1);
+-	if (ret)
+-		goto do_ds250dfx10_pttchk_start_ret;
+-
+-	/* enable de-serializer */
+-	ret = ds250dfx10_set(DS250DFX10_REG_DES_PD, 0);
+-	if (ret)
+-		goto do_ds250dfx10_pttchk_start_cleanup;
+-
+-	/* enable prbs checker */
+-	ret = ds250dfx10_set(DS250DFX10_PRBS_CHKR_EN, 1);
+-	if (ret)
+-		goto do_ds250dfx10_pttchk_start_cleanup;
+-
+ 	/* disable prbs clock (to reset if active) */
+ 	ret = ds250dfx10_set(DS250DFX10_PRBS_EN_DIG_CLK, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_pttchk_start_cleanup;
++		return ret;
+ 
+ 	/* enable prbs clock */
+ 	ret = ds250dfx10_set(DS250DFX10_PRBS_EN_DIG_CLK, 1);
+ 	if (ret)
+-		goto do_ds250dfx10_pttchk_start_cleanup;
++		return ret;
+ 
+ 	/* reload seed */
+ 	ret = ds250dfx10_set(DS250DFX10_RELOAD_PRBS_CHKR, 1);
+ 	if (ret)
+-		goto do_ds250dfx10_pttchk_start_cleanup;
++		return ret;
+ 	ret = ds250dfx10_set(DS250DFX10_RELOAD_PRBS_CHKR, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_pttchk_start_cleanup;
++		return ret;
+ 
+ 	/* reset counters */
+ 	ret = ds250dfx10_set(DS250DFX10_RST_PRBS_CNTS, 1);
+ 	if (ret)
+-		goto do_ds250dfx10_pttchk_start_cleanup;
++		return ret;
+ 	ret = ds250dfx10_set(DS250DFX10_RST_PRBS_CNTS, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_pttchk_start_cleanup;
+-
+-do_ds250dfx10_pttchk_start_cleanup:
+-	/* disable access to channel registers */
+-	ds250dfx10_set(DS250DFX10_EN_CH_SMB, 0);
++		return ret;
+ 
+-do_ds250dfx10_pttchk_start_ret:
+ 	return ret;
+ }
+ 
+-static int do_ds250dfx10_pttchk_stop(void)
++static int ds250dfx10_pttchk_disable(void)
+ {
+ 	int ret;
+ 
+-	/* enable access to channel registers */
+-	ret = ds250dfx10_set(DS250DFX10_EN_CH_SMB, 1);
+-	if (ret)
+-		goto do_ds250dfx10_pttchk_stop_ret;
+-
+ 	/* disable prbs clock */
+ 	ret = ds250dfx10_set(DS250DFX10_PRBS_EN_DIG_CLK, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_pttchk_stop_cleanup;
++		return ret;
+ 
+ 	/* disable prbs checker */
+ 	ret = ds250dfx10_set(DS250DFX10_PRBS_CHKR_EN, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_pttchk_stop_cleanup;
++		return ret;
+ 
+ 	/* disable de-serializer */
+-	ret = ds250dfx10_set(DS250DFX10_REG_DES_PD, 1);
++	ret = ds250dfx10_set(DS250DFX10_DES_PD, 1);
+ 	if (ret)
+-		goto do_ds250dfx10_pttchk_stop_cleanup;
+-
+-do_ds250dfx10_pttchk_stop_cleanup:
+-	/* disable access to channel registers */
+-	ds250dfx10_set(DS250DFX10_EN_CH_SMB, 0);
++		return ret;
+ 
+-do_ds250dfx10_pttchk_stop_ret:
+ 	return ret;
+ }
+ 
++static int ds250dfx10_pttchk_get_pattern(enum ds250dfx10_prbs_pattern *const prbs_ptt, bool *const pol_inv)
++{
++	int ret;
++	uint8_t val1;
++
++	/* read detected pattern */
++	ret = ds250dfx10_get(DS250DFX10_PRBS_SEQ_DET, &val1);
++	if (ret)
++		return ret;
++	else if (!(val1 & 0x08))
++		*prbs_ptt = DS250DFX10_PRBS_PATTERN_MAX;
++	else
++		*prbs_ptt = val1 & 0x07;
++
++	/* read polarity */
++	ret = ds250dfx10_get(DS250DFX10_POL_INV_DET, &val1);
++	if (ret)
++		return ret;
++	*pol_inv = !!val1;
++
++	return 0;
++}
++
++static int ds250dfx10_pttchk_get_pattern_wait(enum ds250dfx10_prbs_pattern *const prbs_ptt, bool *const pol_inv, const unsigned long timeout)
++{
++	int ret;
++	const unsigned long start = get_timer(0);
++
++	while (1) {
++		/* read detected pattern */
++		ret = ds250dfx10_pttchk_get_pattern(prbs_ptt, pol_inv);
++		if (ret) {
++			return ret;
++		} else if (*prbs_ptt != DS250DFX10_PRBS_PATTERN_MAX) {
++			return 0;
++		} else if(get_timer(start) > timeout) {
++			return -ETIMEDOUT;
++		} else if (ctrlc()) {
++			puts("<INTERRUPT>\n");
++			return -EINTR;
++		}
++
++		udelay(1);
++		schedule();
++	};
++}
++
++static int ds250dfx10_pttchk_get_errors(uint16_t *const count)
++{
++	int ret;
++	uint16_t val2;
++
++	/* freeze error counter */
++	ret = ds250dfx10_set(DS250DFX10_FREEZE_PRBS_CNTR, 1);
++	if (ret)
++		return ret;
++
++	/* read error counter */
++	ret = ds250dfx10_read(DS250DFX10_PRBS_ERR_CNT_HI, (uint8_t *)&val2, sizeof(val2));
++	if (ret)
++		return ret;
++	val2 &= 0x07FF;
++
++	/* release error counter */
++	ret = ds250dfx10_set(DS250DFX10_FREEZE_PRBS_CNTR, 0);
++	if (ret)
++		return ret;
++
++	*count = le16_to_cpu(val2);
++
++	return 0;
++}
++
++static int do_ds250dfx10_pttchk_detect(const unsigned long timeout)
++{
++	int ret;
++	uint8_t val1;
++	bool pol_inv;
++	enum ds250dfx10_prbs_pattern prbs_ptt;
++
++	/* test if pattern checker is enabled */
++	ret = ds250dfx10_get(DS250DFX10_PRBS_CHKR_EN, &val1);
++	if (ret) {
++		return CMD_RET_FAILURE;
++	} else if (!val1) {
++		puts("pattern checker not started\n");
++		return CMD_RET_FAILURE;
++	}
++
++	/* reset pattern checker */
++	ret = ds250dfx10_pttchk_reset();
++	if (ret)
++		return CMD_RET_FAILURE;
++
++	/* wait for pattern detection */
++	puts("detecting pattern ...");
++	ret = ds250dfx10_pttchk_get_pattern_wait(&prbs_ptt, &pol_inv, timeout);
++	if (ret) {
++		printf(" failed: %d\n", ret);
++		return CMD_RET_FAILURE;
++	}
++
++	puts(" done: ");
++	puts(ds250dfx10_prbs_pattern_str[prbs_ptt]);
++	if (pol_inv)
++		puts(", polarity inverted");
++	putc('\n');
++
++	return CMD_RET_SUCCESS;
++}
++
++/* measure loss over period of time */
++int do_ds250dfx10_pttchk_validate(long duration)
++{
++	int ret;
++	uint8_t val1;
++	uint16_t errors;
++	unsigned long start;
++	const unsigned long pattern_detect_timeout = 1 * 1000; // 1 second
++	const unsigned long duration_ms = duration * 1000;
++
++	/* test if pattern checker is enabled */
++	ret = ds250dfx10_get(DS250DFX10_PRBS_CHKR_EN, &val1);
++	if (ret) {
++		goto do_ds250dfx10_pttchk_validate_ret;
++	} else if (!val1) {
++		puts("pattern checker not started\n");
++		ret = -EINVAL;
++		goto do_ds250dfx10_pttchk_validate_ret;
++	}
++
++	/* test if CDR locked */
++	ret = ds250dfx10_get(DS250DFX10_CDR_LOCK_STATUS, &val1);
++	if (ret) {
++		goto do_ds250dfx10_pttchk_validate_ret;
++	} else if (!val1) {
++		puts("cdr not locked\n");
++		ret = -EIO;
++		goto do_ds250dfx10_pttchk_validate_ret;
++	}
++
++	/* clear cdr lock loss indication */
++	ret = ds250dfx10_get(DS250DFX10_CDR_LOCK_LOSS_INT, &val1);
++	if (ret)
++		goto do_ds250dfx10_pttchk_validate_ret;
++
++	/* enable prbs interrupts */
++	ret = ds250dfx10_set(DS250DFX10_PRBS_INT_EN, 1);
++	if (ret)
++		goto do_ds250dfx10_pttchk_validate_ret;
++
++	/* enable cdr lock loss indication */
++	ret = ds250dfx10_set(DS250DFX10_CDR_LOCK_LOSS_INT_EN, 1);
++	if (ret)
++		goto do_ds250dfx10_pttchk_validate_prbs_int;
++
++	/* reset pattern checker */
++	ret = ds250dfx10_pttchk_reset();
++
++	/* wait for pattern detection */
++	ret = do_ds250dfx10_pttchk_detect(pattern_detect_timeout);
++	if (ret != CMD_RET_SUCCESS)
++		goto do_ds250dfx10_pttchk_validate_cdr_lock_loss_int;
++
++	/* wait <duration> and count errors */
++	printf("waiting %lus ...", duration);
++	start = get_timer(0);
++	while (get_timer(start) < duration_ms) {
++		udelay(1);
++		schedule();
++
++		if (ctrlc()) {
++			puts(" <INTERRUPT>\n");
++			ret = -EINTR;
++			goto do_ds250dfx10_pttchk_validate_cdr_lock_loss_int;
++		}
++
++		/* read cdr lock loss indication */
++		ret = ds250dfx10_get(DS250DFX10_CDR_LOCK_LOSS_INT, &val1);
++		if (ret) {
++			goto do_ds250dfx10_pttchk_validate_cdr_lock_loss_int;
++		} else if (val1) {
++			puts(" failed: lost cdr lock\n");
++			ret = -EIO;
++			goto do_ds250dfx10_pttchk_validate_cdr_lock_loss_int;
++		}
++	};
++
++	/* read error counter */
++	ret = ds250dfx10_pttchk_get_errors(&errors);
++	if (ret)
++		goto do_ds250dfx10_pttchk_validate_cdr_lock_loss_int;
++
++	printf(" done: %u errors\n", errors);
++
++do_ds250dfx10_pttchk_validate_cdr_lock_loss_int:
++	/* disable cdr lock loss indication */
++	ds250dfx10_set(DS250DFX10_CDR_LOCK_LOSS_INT_EN, 0);
++
++do_ds250dfx10_pttchk_validate_prbs_int:
++	/* disable prbs interrupts */
++	ds250dfx10_set(DS250DFX10_PRBS_INT_EN, 0);
++
++do_ds250dfx10_pttchk_validate_ret:
++	return ret ? CMD_RET_FAILURE : CMD_RET_SUCCESS;
++}
++
+ static int do_ds250dfx10_pttchk(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+ {
+ 	int ret;
+@@ -663,19 +851,25 @@ static int do_ds250dfx10_pttchk(struct cmd_tbl *cmdtp, int flag, int argc, char
+ 		return CMD_RET_FAILURE;
+ 	}
+ 
+-	if (argc != 2)
+-		return CMD_RET_USAGE;
++	if (argc == 2 && !strcmp(argv[1], "start")) {
++		ret = ds250dfx10_pttchk_enable();
++		if (ret)
++			return CMD_RET_FAILURE;
+ 
+-	if (!strcmp(argv[1], "show"))
+-		ret = do_ds250dfx10_pttchk_show();
+-	else if (!strcmp(argv[1], "start"))
+-		ret = do_ds250dfx10_pttchk_start();
+-	else if (!strcmp(argv[1], "stop"))
+-		ret = do_ds250dfx10_pttchk_stop();
+-	else
+-		return CMD_RET_USAGE;
++		ret = ds250dfx10_pttchk_reset();
++		if (ret)
++			return CMD_RET_FAILURE;
+ 
+-	return ret ? CMD_RET_FAILURE : CMD_RET_SUCCESS;
++		return CMD_RET_SUCCESS;
++	} else if (argc == 2 && !strcmp(argv[1], "detect")) {
++		return do_ds250dfx10_pttchk_detect(1 * 1000 /* timeout 1 second */);
++	} else if (argc == 3 && !strcmp(argv[1], "validate")) {
++		return do_ds250dfx10_pttchk_validate(simple_strtol(argv[2], NULL, 0));
++	} else if (argc == 2 && !strcmp(argv[1], "stop")) {
++		return ds250dfx10_pttchk_disable() ? CMD_RET_FAILURE : CMD_RET_SUCCESS;
++	} else {
++		return CMD_RET_USAGE;
++	}
+ }
+ 
+ /* read data bytes and dump as csv */
+@@ -784,64 +978,58 @@ static int do_ds250dfx10_eom(struct cmd_tbl *cmdtp, int flag, int argc, char *co
+ 		return CMD_RET_FAILURE;
+ 	}
+ 
+-	/* enable access to channel registers */
+-	ret = ds250dfx10_set(DS250DFX10_EN_CH_SMB, 1);
+-	if (ret)
+-		goto do_ds250dfx10_eom_ret;
+-
+ 	/* test if CDR locked */
+ 	ret = ds250dfx10_get(DS250DFX10_CDR_LOCK_STATUS, &val1);
+ 	if (ret)
+-		goto do_ds250dfx10_eom_cleanup;
++		return ret;
+ 	else if (!val1) {
+ 		puts("cdr not locked, ensure pattern generator is active and connected\n");
+-		ret = -EIO;
+-		goto do_ds250dfx10_eom_cleanup;
++		return -EIO;
+ 	}
+ 
+ 	/* disable lock monitoring */
+ 	ret = ds250dfx10_set(DS250DFX10_HV_LOCKMON_EN, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_eom_cleanup;
++		goto do_ds250dfx10_eom_lockmon;
+ 
+ 	/* disable automatic vertical range scaling */
+ 	ret = ds250dfx10_set(DS250DFX10_VEO_SCALE, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_eom_cleanup;
++		goto do_ds250dfx10_eom_lockmon;
+ 
+ 	/* set vertical range */
+ 	ret = ds250dfx10_set(DS250DFX10_EOM_SEL_VRANGE, vrange);
+ 	if (ret)
+-		goto do_ds250dfx10_eom_cleanup;
++		goto do_ds250dfx10_eom_vrange;
+ 
+ 	/* force enable eom */
+ 	ret = ds250dfx10_set(DS250DFX10_EOM_PD, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_eom_cleanup;
++		goto do_ds250dfx10_eom_vrange;
+ 
+ 	/* enable eom fast mode */
+ 	ret = ds250dfx10_set(DS250DFX10_FAST_EOM, 1);
+ 	if (ret)
+-		goto do_ds250dfx10_eom_cleanup;
++		goto do_ds250dfx10_eom_pd;
+ 
+ 	/* read eye diagram */
+ 	/* (re-)start counter */
+ 	ret = ds250dfx10_set(DS250DFX10_EOM_START, 1);
+ 	if (ret)
+-		goto do_ds250dfx10_eom_cleanup;
++		goto do_ds250dfx10_eom_fast;
+ 
+ 	/* wait for eom capture to complete */
+ 	do {
+ 		ret = ds250dfx10_get(DS250DFX10_EOM_START, &val1);
+ 		if (ret)
+-			goto do_ds250dfx10_eom_cleanup;
++			goto do_ds250dfx10_eom_fast;
+ 	} while (val1);
+ 
+ 	/* skip first 4 invalid data bytes */
+ 	for (int i = 0; i < 4; i++) {
+ 		ret = ds250dfx10_read(DS250DFX10_EOM_DATA_HI, (uint8_t *)&val2, sizeof(val2));
+ 		if (ret)
+-			goto do_ds250dfx10_eom_cleanup;
++			goto do_ds250dfx10_eom_fast;
+ 	}
+ 
+ 	switch (fmt) {
+@@ -856,25 +1044,24 @@ static int do_ds250dfx10_eom(struct cmd_tbl *cmdtp, int flag, int argc, char *co
+ 		break;
+ 	}
+ 	if (ret)
+-		goto do_ds250dfx10_eom_cleanup;
++		goto do_ds250dfx10_eom_fast;
+ 
++do_ds250dfx10_eom_fast:
+ 	/* disable eom fast mode */
+-	ret = ds250dfx10_set(DS250DFX10_FAST_EOM, 0);
++	ds250dfx10_set(DS250DFX10_FAST_EOM, 0);
+ 
++do_ds250dfx10_eom_pd:
+ 	/* return eom to automatic mode */
+-	ret = ds250dfx10_set(DS250DFX10_EOM_PD, 1);
++	ds250dfx10_set(DS250DFX10_EOM_PD, 1);
+ 
++do_ds250dfx10_eom_vrange:
+ 	/* (re-)enable automatic vrange scaling */
+-	ret = ds250dfx10_set(DS250DFX10_VEO_SCALE, 1);
++	ds250dfx10_set(DS250DFX10_VEO_SCALE, 1);
+ 
++do_ds250dfx10_eom_lockmon:
+ 	/* (re-)enable lock monitoring */
+-	ret = ds250dfx10_set(DS250DFX10_HV_LOCKMON_EN, 0);
+-
+-do_ds250dfx10_eom_cleanup:
+-	/* disable access to channel registers */
+-	ds250dfx10_set(DS250DFX10_EN_CH_SMB, 0);
++	ds250dfx10_set(DS250DFX10_HV_LOCKMON_EN, 0);
+ 
+-do_ds250dfx10_eom_ret:
+ 	return ret ? CMD_RET_FAILURE : CMD_RET_SUCCESS;
+ }
+ 
+@@ -896,10 +1083,11 @@ static int do_ds250dfx10_todo(struct cmd_tbl *cmdtp, int flag, int argc, char *c
+  *
+  * => ds250dfx10 dev i2c@2020000 0x18
+  * => ds250dfx10 chan 0
+- * => ds250dfx10 pttgen PRBS7
++ * => ds250dfx10 pttgen PRBS31
+  * => ds250dfx10 chan 1
+  * => ds250dfx10 pttchk start
+- * => ds250dfx10 pttchk show
++ * => ds250dfx10 pttchk detect
++ * => ds250dfx10 pttchk validate 10
+  * => ds250dfx10 eom VTE
+  */
+ 
+@@ -909,8 +1097,9 @@ U_BOOT_LONGHELP(ds250dfx10,
+ 	"ds250dfx10 pttgen <pattern>                       - start pattern generator\n"
+ 	"                                                  - <pattern> is one of [ PRBS7, PRBS9, PRBS11, PRBS15, PRBS23, PRBS31, PRBS58, PRBS63]\n"
+ 	"ds250dfx10 pttgen stop                            - stop pattern generator\n"
+-	"ds250dfx10 pttchk show                            - print pattern checker results\n"
+ 	"ds250dfx10 pttchk start                           - start pattern checker\n"
++	"ds250dfx10 pttchk detect                          - try detect current pattern\n"
++	"ds250dfx10 pttchk validate <duration>              - detect and validate current pattern for <duration> seconds\n"
+ 	"ds250dfx10 pttchk stop                            - stop pattern checker\n"
+ 	"ds250dfx10 eom <format>                           - capture eye diagram\n"
+ 	"                                                    <format> is one of [ CSV, VTE ]\n"
+@@ -922,6 +1111,6 @@ U_BOOT_CMD_WITH_SUBCMDS(ds250dfx10, "DS250DFx10 Retimer", ds250dfx10_help_text,
+ 	U_BOOT_SUBCMD_MKENT(dev, 3, 1, do_ds250dfx10_dev),
+ 	U_BOOT_SUBCMD_MKENT(chan, 2, 1, do_ds250dfx10_chan),
+ 	U_BOOT_SUBCMD_MKENT(pttgen, 2, 1, do_ds250dfx10_pttgen),
+-	U_BOOT_SUBCMD_MKENT(pttchk, 2, 1, do_ds250dfx10_pttchk),
++	U_BOOT_SUBCMD_MKENT(pttchk, 3, 1, do_ds250dfx10_pttchk),
+ 	U_BOOT_SUBCMD_MKENT(eom, 2, 1, do_ds250dfx10_eom),
+ 	U_BOOT_SUBCMD_MKENT(todo, 100, 1, do_ds250dfx10_todo));
+-- 
+2.51.0
+
