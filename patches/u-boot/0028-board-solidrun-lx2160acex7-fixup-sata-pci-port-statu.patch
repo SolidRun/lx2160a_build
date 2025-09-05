@@ -1,0 +1,223 @@
+From e1e67466e4e0ded358895e2fb42693f335227fdf Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 5 Sep 2025 18:22:05 +0200
+Subject: [PATCH] board: solidrun: lx2160acex7: fixup sata/pci port status in
+ OS dtb
+
+Patch status of sata/pcie nodes during ft_board_setup based on runtime
+information. These interfaces depend on selected serdes protocol, and
+vendor kernel forgot to enable the pci port nodes in dtb.
+
+Further change evaluation of protocol converter control registers to
+compare against disabled value (0) to decide on status, as different
+enable values are possible.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ board/solidrun/lx2160acex7/lx2160a.c |   1 +
+ board/solidrun/lx2160acex7/serdes.c  | 112 ++++++++++++++++-----------
+ 2 files changed, 67 insertions(+), 46 deletions(-)
+
+diff --git a/board/solidrun/lx2160acex7/lx2160a.c b/board/solidrun/lx2160acex7/lx2160a.c
+index 6e12f868759..46279351c74 100644
+--- a/board/solidrun/lx2160acex7/lx2160a.c
++++ b/board/solidrun/lx2160acex7/lx2160a.c
+@@ -331,6 +331,7 @@ int ft_board_setup(void *blob, struct bd_info *bd)
+ 	fdt_fixup_board_enet(blob);
+ 	fdt_reserve_mc_mem(blob, 0x4000);
+ #endif
++	board_setup_fdt_serdes_ports(blob);
+ 	fdt_fixup_icid(blob);
+ 
+ 	return 0;
+diff --git a/board/solidrun/lx2160acex7/serdes.c b/board/solidrun/lx2160acex7/serdes.c
+index b4bc78c5d2c..1bc27c7f56d 100644
+--- a/board/solidrun/lx2160acex7/serdes.c
++++ b/board/solidrun/lx2160acex7/serdes.c
+@@ -462,7 +462,7 @@ void board_disable_unused_proto_converters(void) {
+ 			*map[i].pcr &= ~map[i].pcr_dis_mask | map[i].pcr_dis_val;
+ }
+ 
+-#ifdef CONFIG_OF_BOARD_FIXUP
++#if defined(CONFIG_OF_BOARD_FIXUP)
+ 
+ /* fix mac nodes based on serdes protocol */
+ static void board_fix_fdt_macs(void *fdt) {
+@@ -471,24 +471,24 @@ static void board_fix_fdt_macs(void *fdt) {
+ 		const char *status;
+ 		const char *mode;
+ 	} macs[DPMAC_MAX] = {
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@1", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@2", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@3", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@4", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@5", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@6", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@7", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@8", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@9", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@a", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@b", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@c", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@d", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@e", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@f", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@10", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@11", "disabled" },
+-		{ "/fsl-mc@80c000000/dpmacs/dpmac@12", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@1", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@2", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@3", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@4", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@5", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@6", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@7", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@8", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@9", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@a", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@b", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@c", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@d", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@e", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@f", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@10", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@11", "disabled" },
++		{ "/soc/fsl-mc@80c000000/dpmacs/dpmac@12", "disabled" },
+ 	};
+ 
+ 	struct {
+@@ -822,84 +822,104 @@ static void board_fix_fdt_macs(void *fdt) {
+ 	}
+ 
+ 	for (int i = 0; i < ARRAY_SIZE(macs); i++) {
+-		fdt_delprop(fdt, fdt_path_offset(fdt, macs[i].path), "phy-mode");
+-		do_fixup_by_path_string(fdt, macs[i].path, "status", macs[i].status);
+-		do_fixup_by_path_string(fdt, macs[i].path, "phy-connection-type", macs[i].mode);
++		const char *path = macs[i].path;
++
++		if (fdt_path_offset(fdt, path) < 0)
++			/* old vendor kernel dtbs do not use /soc/ prefix, skip */
++			path = &path[4];
++
++		fdt_delprop(fdt, fdt_path_offset(fdt, path), "phy-mode");
++		do_fixup_by_path_string(fdt, path, "status", macs[i].status);
++		do_fixup_by_path_string(fdt, path, "phy-connection-type", macs[i].mode);
+ 	}
+ }
++#endif /* defined(CONFIG_OF_BOARD_FIXUP) */
+ 
++#if defined(CONFIG_OF_BOARD_FIXUP) || defined(CONFIG_OF_BOARD_SETUP)
+ static void board_fix_fdt_pci_sata(void *fdt) {
+ 	struct {
+ 		const u32 __iomem *const pcr;
+ 		const u32 pcr_ena_mask;
+-		const u32 pcr_ena_val;
++		const u32 pcr_dis_val;
+ 		const char *const path;
+ 	} ports[] = {
+ 		{
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC0,
+ 			.pcr_ena_mask = LYNX_28G_PCC0_PEXA_CFG_MASK,
+-			.pcr_ena_val = LYNX_28G_PCC0_PEXA_CFG(1),
+-			.path = "/pcie@3400000",
++			.pcr_dis_val = LYNX_28G_PCC0_PEXA_CFG(0),
++			.path = "/soc/pcie@3400000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC0,
+ 			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG_MASK,
+-			.pcr_ena_val = LYNX_28G_PCC0_PEXB_CFG(1),
+-			.path = "/pcie@3500000",
++			.pcr_dis_val = LYNX_28G_PCC0_PEXB_CFG(0),
++			.path = "/soc/pcie@3500000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC0,
+ 			.pcr_ena_mask = LYNX_28G_PCC0_PEXA_CFG_MASK,
+-			.pcr_ena_val = LYNX_28G_PCC0_PEXA_CFG(1),
+-			.path = "/pcie@3600000",
++			.pcr_dis_val = LYNX_28G_PCC0_PEXA_CFG(0),
++			.path = "/soc/pcie@3600000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC0,
+ 			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG_MASK,
+-			.pcr_ena_val = LYNX_28G_PCC0_PEXB_CFG(1),
+-			.path = "/pcie@3700000",
++			.pcr_dis_val = LYNX_28G_PCC0_PEXB_CFG(0),
++			.path = "/soc/pcie@3700000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(2) + LYNX_28G_PCC0,
+ 			.pcr_ena_mask = LYNX_28G_PCC0_PEXA_CFG_MASK,
+-			.pcr_ena_val = LYNX_28G_PCC0_PEXA_CFG(1),
+-			.path = "/pcie@3800000",
++			.pcr_dis_val = LYNX_28G_PCC0_PEXA_CFG(0),
++			.path = "/soc/pcie@3800000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(2) + LYNX_28G_PCC0,
+ 			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG_MASK,
+-			.pcr_ena_val = LYNX_28G_PCC0_PEXB_CFG(1),
+-			.path = "/pcie@3900000",
++			.pcr_dis_val = LYNX_28G_PCC0_PEXB_CFG(0),
++			.path = "/soc/pcie@3900000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC2,
+ 			.pcr_ena_mask = LYNX_28G_PCC2_SATAA_CFG_MASK,
+-			.pcr_ena_val = LYNX_28G_PCC2_SATAA_CFG(1),
+-			.path = "/sata@3200000",
++			.pcr_dis_val = LYNX_28G_PCC2_SATAA_CFG(0),
++			.path = "/soc/sata@3200000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC2,
+ 			.pcr_ena_mask = LYNX_28G_PCC2_SATAB_CFG_MASK,
+-			.pcr_ena_val = LYNX_28G_PCC2_SATAB_CFG(1),
+-			.path = "/sata@3210000",
++			.pcr_dis_val = LYNX_28G_PCC2_SATAB_CFG(0),
++			.path = "/soc/sata@3210000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC2,
+ 			.pcr_ena_mask = LYNX_28G_PCC2_SATAC_CFG_MASK,
+-			.pcr_ena_val = LYNX_28G_PCC2_SATAC_CFG(1),
+-			.path = "/sata@3220000",
++			.pcr_dis_val = LYNX_28G_PCC2_SATAC_CFG(0),
++			.path = "/soc/sata@3220000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC2,
+ 			.pcr_ena_mask = LYNX_28G_PCC2_SATAD_CFG_MASK,
+-			.pcr_ena_val = LYNX_28G_PCC2_SATAD_CFG(1),
+-			.path = "/sata@3230000",
++			.pcr_dis_val = LYNX_28G_PCC2_SATAD_CFG(0),
++			.path = "/soc/sata@3230000",
+ 		},
+ 	};
+ 
+ 	for (int i = 0; i < ARRAY_SIZE(ports); i++) {
+ 		const char *status = "disabled";
+-		if ((*ports[i].pcr & ports[i].pcr_ena_mask) == ports[i].pcr_ena_val)
++		const char *path = ports[i].path;
++		if ((*ports[i].pcr & ports[i].pcr_ena_mask) != ports[i].pcr_dis_val)
+ 			status = "okay";
+ 
+-		do_fixup_by_path_string(fdt, ports[i].path, "status", status);
++		if (fdt_path_offset(fdt, path) < 0)
++			/* old vendor kernel dtbs do not use /soc/ prefix, skip */
++			path = &path[4];
++
++		do_fixup_by_path_string(fdt, path, "status", status);
+ 	}
+ }
++#endif /* defined(CONFIG_OF_BOARD_FIXUP) || defined(CONFIG_OF_BOARD_SETUP) */
+ 
++#if defined(CONFIG_OF_BOARD_FIXUP)
+ void board_fix_fdt_serdes_ports(void *fdt) {
+ 	board_fix_fdt_pci_sata(fdt);
+ 	board_fix_fdt_macs(fdt);
+ }
++#endif /* defined(CONFIG_OF_BOARD_FIXUP) */
+ 
+-#endif /* CONFIG_OF_BOARD_FIXUP */
++#if defined(CONFIG_OF_BOARD_SETUP)
++void board_setup_fdt_serdes_ports(void *fdt) {
++	board_fix_fdt_pci_sata(fdt);
++}
++#endif /* defined(CONFIG_OF_BOARD_SETUP) */
+-- 
+2.51.0
+
