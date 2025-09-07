@@ -1,0 +1,48 @@
+From d19135f46211140bc88832429e102ead738accc5 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 7 Sep 2025 17:58:03 +0200
+Subject: [PATCH] board: solidrun: lx2160acex7: service watchdog before
+ starting linux
+
+Service the watchdog immediately before starting linux, to ensure there
+is enough time for userspace to start servicing watchdog on its own.
+
+The time of starting linux is subject to user intervention and can
+therefore happen shortly before watchdog expires, leading to unexpected
+boot failures.
+Further it is possible for u-boot initialisation and timeout together
+cause similar issues.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ board/solidrun/lx2160acex7/lx2160a.c | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/board/solidrun/lx2160acex7/lx2160a.c b/board/solidrun/lx2160acex7/lx2160a.c
+index 46279351c74..ba2567d8774 100644
+--- a/board/solidrun/lx2160acex7/lx2160a.c
++++ b/board/solidrun/lx2160acex7/lx2160a.c
+@@ -337,3 +337,20 @@ int ft_board_setup(void *blob, struct bd_info *bd)
+ 	return 0;
+ }
+ #endif
++
++void board_prep_linux(void *) {
++	struct uclass *uc;
++	static struct udevice *dev;
++	int ret;
++
++	ret = uclass_get(UCLASS_WDT, &uc);
++	if (ret)
++		return;
++
++	/* reset any watchdog to give linux sufficient starting time */
++	uclass_foreach_dev(dev, uc) {
++		ret = wdt_reset(dev);
++		if (!ret)
++			printf("serviced %s\n", dev->name);
++	}
++}
+-- 
+2.51.0
+
