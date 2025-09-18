@@ -1,0 +1,65 @@
+From f0529a0748f9476c611a2e26e5ed3edd33e419e0 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 18 Sep 2025 12:50:54 +0200
+Subject: [PATCH] board: solidrun: lx2160acex7: fix secondary pci ports status
+
+Every first pci controller on a serdes block is connected to protocol
+converter A, but every second controller is connected to converter C.
+
+Update the dt patching code so that correct pcie nodes in dt are enabled
+for serdes protocols using onverter C (e.g. SD1 3, SD2 3, SD3 3).
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ board/solidrun/lx2160acex7/serdes.c | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/board/solidrun/lx2160acex7/serdes.c b/board/solidrun/lx2160acex7/serdes.c
+index 1bc27c7f56d..3bfaf852a5a 100644
+--- a/board/solidrun/lx2160acex7/serdes.c
++++ b/board/solidrun/lx2160acex7/serdes.c
+@@ -52,6 +52,8 @@
+ #define LYNX_28G_PCC0_PEXA_CFG(val)		((val << 28) & LYNX_28G_PCC0_PEXA_CFG_MASK)
+ #define LYNX_28G_PCC0_PEXB_CFG_MASK		GENMASK(26, 24)
+ #define LYNX_28G_PCC0_PEXB_CFG(val)		((val << 24) & LYNX_28G_PCC0_PEXB_CFG_MASK)
++#define LYNX_28G_PCC0_PEXC_CFG_MASK		GENMASK(22, 20)
++#define LYNX_28G_PCC0_PEXC_CFG(val)		((val << 20) & LYNX_28G_PCC0_PEXC_CFG_MASK)
+ 
+ /* Protocol Configuration Register 2 */
+ #define LYNX_28G_PCC2				0x1088
+@@ -850,8 +852,8 @@ static void board_fix_fdt_pci_sata(void *fdt) {
+ 			.path = "/soc/pcie@3400000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(0) + LYNX_28G_PCC0,
+-			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG_MASK,
+-			.pcr_dis_val = LYNX_28G_PCC0_PEXB_CFG(0),
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXC_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC0_PEXC_CFG(0),
+ 			.path = "/soc/pcie@3500000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC0,
+@@ -860,8 +862,8 @@ static void board_fix_fdt_pci_sata(void *fdt) {
+ 			.path = "/soc/pcie@3600000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC0,
+-			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG_MASK,
+-			.pcr_dis_val = LYNX_28G_PCC0_PEXB_CFG(0),
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXC_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC0_PEXC_CFG(0),
+ 			.path = "/soc/pcie@3700000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(2) + LYNX_28G_PCC0,
+@@ -870,8 +872,8 @@ static void board_fix_fdt_pci_sata(void *fdt) {
+ 			.path = "/soc/pcie@3800000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(2) + LYNX_28G_PCC0,
+-			.pcr_ena_mask = LYNX_28G_PCC0_PEXB_CFG_MASK,
+-			.pcr_dis_val = LYNX_28G_PCC0_PEXB_CFG(0),
++			.pcr_ena_mask = LYNX_28G_PCC0_PEXC_CFG_MASK,
++			.pcr_dis_val = LYNX_28G_PCC0_PEXC_CFG(0),
+ 			.path = "/soc/pcie@3900000",
+ 		}, {
+ 			.pcr = LYNX_28G_SDn_BASE(1) + LYNX_28G_PCC2,
+-- 
+2.51.0
+
