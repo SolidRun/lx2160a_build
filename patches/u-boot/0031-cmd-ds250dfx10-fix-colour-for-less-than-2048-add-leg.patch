@@ -1,0 +1,61 @@
+From 5f3f3a9a65039e76e8482519c87d80565faabe51 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 23 Sep 2025 19:04:47 +0200
+Subject: [PATCH 31/32] cmd: ds250dfx10: fix colour for less-than-2048, add
+ legend
+
+Improve retimer control command fixing an unintentionally duplicate
+colour, and add  a colour legend below the eye diagram indicating error
+count ranges.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ cmd/ds250dfx10.c | 18 +++++++++++++++++-
+ 1 file changed, 17 insertions(+), 1 deletion(-)
+
+diff --git a/cmd/ds250dfx10.c b/cmd/ds250dfx10.c
+index 149c92476a1..bd1ea5249d1 100644
+--- a/cmd/ds250dfx10.c
++++ b/cmd/ds250dfx10.c
+@@ -909,7 +909,7 @@ static uint8_t eom_vte_colour(uint16_t count)
+ 	else if (count < 1024)
+ 		return 107; // white
+ 	else if (count < 2048)
+-		return 47; // light cyan
++		return 106; // light cyan
+ 	else if (count < 4096)
+ 		return 103; // light yellow
+ 	else if (count < 8192)
+@@ -918,6 +918,21 @@ static uint8_t eom_vte_colour(uint16_t count)
+ 		return 42; // green
+ }
+ 
++static inline void eom_vte_colour_legend(void)
++{
++	printf("\e[%dm\e[%dm\e[%dm                                                                   \e[%dm \e[%dm\n", 104, 91, 1, 104, 0);
++	printf("\e[%dm\e[%dm\e[%dm   \e[%um 0 errors                                                       \e[%dm \e[%dm\n", 104, 91, 1, eom_vte_colour(0), 104, 0);
++	printf("\e[%dm\e[%dm\e[%dm   \e[%um < 128 errors                                                   \e[%dm \e[%dm\n", 104, 91, 1, eom_vte_colour(127), 104, 0);
++	printf("\e[%dm\e[%dm\e[%dm   \e[%um < 256 errors                                                   \e[%dm \e[%dm\n", 104, 91, 1, eom_vte_colour(255), 104, 0);
++	printf("\e[%dm\e[%dm\e[%dm   \e[%um < 512 errors                                                   \e[%dm \e[%dm\n", 104, 91, 1, eom_vte_colour(511), 104, 0);
++	printf("\e[%dm\e[%dm\e[%dm   \e[%um < 1024 errors                                                  \e[%dm \e[%dm\n", 104, 91, 1, eom_vte_colour(1023), 104, 0);
++	printf("\e[%dm\e[%dm\e[%dm   \e[%um < 2048 errors                                                  \e[%dm \e[%dm\n", 104, 91, 1, eom_vte_colour(2047), 104, 0);
++	printf("\e[%dm\e[%dm\e[%dm   \e[%um < 4096 errors                                                  \e[%dm \e[%dm\n", 104, 91, 1, eom_vte_colour(4095), 104, 0);
++	printf("\e[%dm\e[%dm\e[%dm   \e[%um < 8192 errors                                                  \e[%dm \e[%dm\n", 104, 91, 1, eom_vte_colour(8191), 104, 0);
++	printf("\e[%dm\e[%dm\e[%dm   \e[%um more errors                                                    \e[%dm \e[%dm\n", 104, 91, 1, eom_vte_colour(8192), 104, 0);
++	printf("\e[%dm\e[%dm\e[%dm                                                                   \e[%dm \e[%dm\n", 104, 91, 1, 104, 0);
++}
++
+ /* read data bytes and dump to vte 256 colour terminal */
+ static int do_ds250dfx10_eom_vte(enum ds250dfx10_eom_vrange vrange)
+ {
+@@ -944,6 +959,7 @@ static int do_ds250dfx10_eom_vte(enum ds250dfx10_eom_vrange vrange)
+ 		puts("\e[104m\e[91m\e[1m \e[0m\n");
+ 	}
+ 	printf("\e[104m\e[91m\e[1mvoltage (%s)%*s\e[0m\n", ds250dfx10_eom_vrange_str[vrange], 65 - 7 - (int)strlen(ds250dfx10_eom_vrange_str[vrange]), "");
++	eom_vte_colour_legend();
+ 
+ 	return ret;
+ }
+-- 
+2.51.0
+

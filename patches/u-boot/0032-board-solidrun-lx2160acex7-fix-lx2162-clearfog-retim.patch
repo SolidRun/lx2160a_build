@@ -1,0 +1,41 @@
+From 22168674db48bce185de3e76dcadc6b5d0b8510f Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 23 Sep 2025 18:47:13 +0200
+Subject: [PATCH 32/32] board: solidrun: lx2160acex7: fix lx2162-clearfog
+ retimer configuration
+
+Fix compatible string matching in retimer setup code, and add missing
+case for xgmii phy-mode.
+
+This ensures retimer is configured, and configuration for 10G speeds is
+functional.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ board/solidrun/lx2160acex7/retimer.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/board/solidrun/lx2160acex7/retimer.c b/board/solidrun/lx2160acex7/retimer.c
+index 30f9863ce1f..2dd1b9a42c0 100644
+--- a/board/solidrun/lx2160acex7/retimer.c
++++ b/board/solidrun/lx2160acex7/retimer.c
+@@ -177,6 +177,7 @@ static int ds250dfx10_phy_set_mode(struct udevice *dev, uint8_t channel, const p
+ 	case PHY_INTERFACE_MODE_SGMII:
+ 		ds250dfx10_config_1g(dev, channel);
+ 		break;
++	case PHY_INTERFACE_MODE_XGMII:
+ 	case PHY_INTERFACE_MODE_10GBASER:
+ 		ds250dfx10_config_10g(dev, channel);
+ 		break;
+@@ -245,7 +246,7 @@ static const char *const macs[] = {
+ };
+ 
+ static const char *const lx2160a_cex7_clearfog_cx = "solidrun,clearfog-cx";
+-static const char *const lx2162a_som_clearfog = "lx2162a-clearfog";
++static const char *const lx2162a_som_clearfog = "solidrun,lx2162a-clearfog";
+ static const char *const lx2160a_i2c0_cex7_smb = "i2c@2000000->i2c-mux@77->i2c@3";
+ static const char *const lx2160a_i2c2 = "i2c@2020000";
+ 
+-- 
+2.51.0
+
