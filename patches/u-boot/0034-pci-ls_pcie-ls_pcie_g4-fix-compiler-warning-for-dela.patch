@@ -1,0 +1,47 @@
+From 3bc59f770d3706d225481848a9e44982bf324125 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 25 Sep 2025 17:16:10 +0200
+Subject: [PATCH 34/35] pci: ls_pcie/ls_pcie_g4: fix compiler warning for delay
+ function
+
+The 100ms waiting code for link-up uses udelay function which is
+declared by linux/delay.h header file.
+
+Add this missing include directive to fix compiler warning.
+
+Fixes: "pci: ls_pcie: Wait 100ms for Link Up in ls_pcie_probe"
+Fixes: "pci: ls_pcie_g4: Wait 100ms for Link Up in ls_pcie_g4_probe"
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/pci/pcie_layerscape_gen4.c | 1 +
+ drivers/pci/pcie_layerscape_rc.c   | 2 ++
+ 2 files changed, 3 insertions(+)
+
+diff --git a/drivers/pci/pcie_layerscape_gen4.c b/drivers/pci/pcie_layerscape_gen4.c
+index 2fbb507c628..145c37043c3 100644
+--- a/drivers/pci/pcie_layerscape_gen4.c
++++ b/drivers/pci/pcie_layerscape_gen4.c
+@@ -16,6 +16,7 @@
+ #include <malloc.h>
+ #include <dm.h>
+ #include <linux/sizes.h>
++#include <linux/delay.h>
+ 
+ #include "pcie_layerscape_gen4.h"
+ 
+diff --git a/drivers/pci/pcie_layerscape_rc.c b/drivers/pci/pcie_layerscape_rc.c
+index 33bd14ad81a..531fafa46f4 100644
+--- a/drivers/pci/pcie_layerscape_rc.c
++++ b/drivers/pci/pcie_layerscape_rc.c
+@@ -17,6 +17,8 @@
+ 	defined(CONFIG_ARM)
+ #include <asm/arch/clock.h>
+ #endif
++#include <linux/delay.h>
++
+ #include "pcie_layerscape.h"
+ 
+ #define LINK_WAIT_RETRIES	100
+-- 
+2.51.0
+

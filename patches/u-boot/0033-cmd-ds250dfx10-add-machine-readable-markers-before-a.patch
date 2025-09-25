@@ -1,0 +1,57 @@
+From d713d7efb45a047c6c637d2b0af7932b6fb9a55e Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 25 Sep 2025 14:13:50 +0200
+Subject: [PATCH 33/35] cmd: ds250dfx10: add machine-readable markers before
+ and after eom
+
+Wrap printing of eye diagram (vte or csv) with BEGIN and END messages to
+simplify programmatic extraction from terminal capture.
+
+Further increase contrast between individual colours of VTE eye diagram.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ cmd/ds250dfx10.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/cmd/ds250dfx10.c b/cmd/ds250dfx10.c
+index bd1ea5249d1..75ba083c165 100644
+--- a/cmd/ds250dfx10.c
++++ b/cmd/ds250dfx10.c
+@@ -905,15 +905,15 @@ static uint8_t eom_vte_colour(uint16_t count)
+ 	else if (count < 256)
+ 		return 100; // dark gray
+ 	else if (count < 512)
+-		return 47; // light gray
+-	else if (count < 1024)
+ 		return 107; // white
++	else if (count < 1024)
++		return 105; // light magenta
+ 	else if (count < 2048)
+ 		return 106; // light cyan
+ 	else if (count < 4096)
+ 		return 103; // light yellow
+ 	else if (count < 8192)
+-		return 102; // light green
++		return 43; // yellow
+ 	else
+ 		return 42; // green
+ }
+@@ -1050,10 +1050,14 @@ static int do_ds250dfx10_eom(struct cmd_tbl *cmdtp, int flag, int argc, char *co
+ 
+ 	switch (fmt) {
+ 	case DS250DFX10_CSV:
++		puts("BEGIN EOM CSV\n");
+ 		ret = do_ds250dfx10_eom_csv(vrange);
++		puts("END EOM CSV\n");
+ 		break;
+ 	case DS250DFX10_VTE:
++		puts("BEGIN EOM VTE\n");
+ 		ret = do_ds250dfx10_eom_vte(vrange);
++		puts("END EOM VTE\n");
+ 		break;
+ 	default:
+ 		ret = 0;
+-- 
+2.51.0
+
