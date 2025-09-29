@@ -141,7 +141,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{
               "device_type": "lx2162a-solidrun",
-              "image_url": "https://solid-run-images.sos-de-fra-1.exo.io/LX2k/lx2160a_build/images/lx2162a-solidrun-build.img.xz",
+              "image_url": "https://solid-run-images.sos-de-fra-1.exo.io/LX2k/lx2160a_build/ls-5.15.71-2.2.0/2025-08-04_c753228/lx2162a_rev2_som_clearfog_2000_650_2900_18_9_0-c753228.img.xz",
               "compression": "xz",
               "all_devices": false
             }')
