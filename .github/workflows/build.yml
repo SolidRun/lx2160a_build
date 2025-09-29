@@ -117,7 +117,7 @@ jobs:
       - name: Test LAVA API Connection
         run: |
           echo "Testing connection to LAVA API..."
-          LAVA_SERVER="192.168.17.187"
+          LAVA_SERVER="192.168.15.184"
           LAVA_PORT="8001"
           LAVA_URL="http://${LAVA_SERVER}:${LAVA_PORT}"
           
@@ -130,7 +130,7 @@ jobs:
       - name: Submit LAVA Job
         id: submit
         run: |
-          LAVA_SERVER="192.168.17.187"
+          LAVA_SERVER="192.168.15.184"
           LAVA_PORT="8001"
           LAVA_URL="http://${LAVA_SERVER}:${LAVA_PORT}"
           
@@ -160,7 +160,7 @@ jobs:
           
       - name: Wait for LAVA Job Completion
         run: |
-          LAVA_SERVER="192.168.17.187"
+          LAVA_SERVER="192.168.15.184"
           LAVA_PORT="8001"
           LAVA_URL="http://${LAVA_SERVER}:${LAVA_PORT}"
           batch_id="${{ steps.submit.outputs.batch_id }}"
