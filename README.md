@@ -230,17 +230,36 @@ The intended method is as follows:
 
 ## Deploying
 
+The build generates several images serving different purposes:
+
+- `*_emmc_*_*-*.img`:
+
+  Bootloader + RootFS for installation to eMMC data partition.
+
+- `*_multi_*_*-*.img`:
+
+  SD-bootable installation image for deploying to either eMMC or SPI Flash.
+  Embeds `emmc.img` (Bootloader + RootFS) and `xspi.img` (Bootloader only).
+
+- `*_sd_*_*-*.img`:
+
+  Bootloader + RootFS for installation to microSD.
+
+- `*_xspi_*_*-*.img`:
+
+  Bootloader only for installationto SPI Flash.
+
 ### SD Boot
 
-For SD card bootable images, plug in a micro SD into your machine and run the following, where sdX is the location of the SD card got probed into your machine -
+For SD boot, plug in a micro SD into your machine and program `*_sd_*_*-*.img` to it using the commands below (sdX should be replaced to the actual device thatsdcard was recognised as):
 
 `sudo dd if=images/lx2160acex7_rev2_clearfog-cx_2000_700_2900_8_5_2-<HASH>.img of=/dev/sdX`
 
-And then set boot DIP switch on COM to off/on/on/on from numbers 1 to 4 (dip number 5 is not used, notice the marking 'ON' on the DIP switch)
+Finally change boot DIP switch on COM to off/on/on/on from numbers 1 to 4 (dip number 5 is not used. Notice the marking 'ON' on the DIP switch).
 
 ### SPI Boot
 
-For SPI boot, boot thru SD card and then load the `xspi.img` to system memory and flash it using the `sf probe` and `sf update` commands.
+For SPI boot, boot `*_multi_*_*-*.img` from microSD - then load the `xspi.img` to system memory and flash it using the `sf probe` and `sf update` commands:
 
 ```
 load mmc 0:1 $kernel_addr_r xspi.img
@@ -248,30 +267,21 @@ sf probe
 sf update $kernel_addr_r 0 0x4000000
 ```
 
-And then set boot DIP switch on COM to off/off/off/off from numbers 1 to 4 (dip number 5 is not used. Notice the marking 'ON' on the DIP switch)
+Finally change boot DIP switch on COM to off/off/off/off from numbers 1 to 4 (dip number 5 is not used. Notice the marking 'ON' on the DIP switch).
 
 ### eMMC Boot
 
-For eMMC boot (supported only thru LX2160A silicon rev 2 which is LX2160A COM Express type 7 rev 1.5 and newer) -
-
-Either full image including MBR and rootfs:
+For eMMC boot (supported only thru LX2160A silicon rev 2 which is LX2160A COM Express type 7 rev 1.5 and newer), boot `*_multi_*_*-*.img` from microSD - then load the `emmc.img` to system memory and flash it using `mmc` command:
 
 ```
-load mmc 0:1 $kernel_addr_r ubuntu-core.img
+load mmc 0:1 $kernel_addr_r emmc.img
+setexpr filesize 0x$filesize + 0x1ff
+setexpr filesize 0x$filesize / 0x200
 mmc dev 1
 mmc write $kernel_addr_r 0 0xd2000
 ```
 
-OR bootcode only (first 64MB excluding MBR):
-
-```
-load mmc 0:1 $kernel_addr_r ubuntu-core.img
-setexpr mbroffset ${kernel_addr_r} + 0x200
-mmc dev 1
-mmc write 0x${mbroffset} 1 0x1FFFF
-```
-
-And then set boot DIP switch on COM to off/on/on/off from numbers 1 to 4 (dip number 5 is not used, notice the marking 'ON' on the DIP switch)
+Finally change boot DIP switch on COM to off/on/on/off from numbers 1 to 4 (dip number 5 is not used. Notice the marking 'ON' on the DIP switch).
 
 ## Post Install
 

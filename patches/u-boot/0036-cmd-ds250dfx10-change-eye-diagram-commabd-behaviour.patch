@@ -1,0 +1,483 @@
+From b95f2e7d495002049b1a2fc449bb9c1cc7ab8f87 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 30 Sep 2025 14:12:45 +0200
+Subject: [PATCH] cmd: ds250dfx10: change eye diagram commabd behaviour
+
+When capturing eye diagram wait up to 1s for cdr lock, then an extra
+500ms before actually capturing eye diagram.
+
+This avoids invalid results when capturing eye diagram too quick after
+lock.
+
+Further change the command interface so that eye diagram can be captured
+once and then dumped in various formats from the same data.
+
+This allows having both the rendered diagram and the raw data it was
+created from.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ cmd/ds250dfx10.c | 356 ++++++++++++++++++++++++++---------------------
+ 1 file changed, 198 insertions(+), 158 deletions(-)
+
+diff --git a/cmd/ds250dfx10.c b/cmd/ds250dfx10.c
+index 75ba083c165..85054f8e373 100644
+--- a/cmd/ds250dfx10.c
++++ b/cmd/ds250dfx10.c
+@@ -124,32 +124,15 @@ static uint8_t ds250dfx10_channel_count[DS250DFX10_TYPE_MAX] = {
+ 	8,
+ };
+ 
+-enum ds250dfx10_eom_fmt {
+-	DS250DFX10_CSV,
+-	DS250DFX10_VTE,
+-	DS250DFX10_EOM_FMT_MAX,
+-};
+-
+-static const char *const ds250dfx10_eom_fmt_str[DS250DFX10_EOM_FMT_MAX] = {
+-	"CSV",
+-	"VTE",
+-};
+-
+-static enum ds250dfx10_eom_fmt ds250dfx10_eom_fmt_parse(const char *const str)
+-{
+-	for (int i = 0; i < DS250DFX10_EOM_FMT_MAX; i++) {
+-		if (!strcmp(str, ds250dfx10_eom_fmt_str[i]))
+-			return i;
+-	}
+-
+-	return DS250DFX10_EOM_FMT_MAX;
+-}
+-
+ /* internal state */
+ static struct _ds250dfx10_priv {
+ 	struct udevice *dev;
+ 	enum ds250dfx10_type type;
+ 	bool sel_chan_regs;
++	struct {
++		enum ds250dfx10_eom_vrange vrange;
++		uint16_t data[64][64];
++	} eom;
+ } _priv;
+ static struct _ds250dfx10_priv *const priv = &_priv;
+ 
+@@ -159,6 +142,9 @@ static int ds250dfx10_write(const enum ds250dfx10_reg_type type, const uint8_t r
+ static int ds250dfx10_get(enum ds250dfx10_reg_type type, const uint8_t reg, const uint8_t offset, const uint8_t len, uint8_t *const val);
+ static int ds250dfx10_set(enum ds250dfx10_reg_type type, const uint8_t reg, const uint8_t offset, const uint8_t len, const uint8_t val);
+ 
++static inline int ds250dfx10_wait(const unsigned int timeout_ms);
++static inline int ds250dfx10_wait_for_val(enum ds250dfx10_reg_type type, const uint8_t reg, const uint8_t offset, const uint8_t len, const uint8_t val, const unsigned int timeout_ms);
++
+ static inline int ds250dfx10_sel_reg_type(const enum ds250dfx10_reg_type type);
+ 
+ static int ds250dfx10_read(const enum ds250dfx10_reg_type type, const uint8_t reg, const uint8_t, const uint8_t, uint8_t *const buffer, const uint8_t len)
+@@ -224,6 +210,50 @@ static int ds250dfx10_set(enum ds250dfx10_reg_type type, const uint8_t reg, cons
+ 	return ret;
+ }
+ 
++static inline int ds250dfx10_wait(const unsigned int timeout_ms)
++{
++	int ret = 0;
++	unsigned long start = get_timer(0);
++
++	while (get_timer(start) < timeout_ms) {
++		udelay(1);
++		schedule();
++
++		if (ctrlc()) {
++			puts(" <INTERRUPT>\n");
++			break;
++		}
++	};
++
++	return ret;
++}
++
++static inline int ds250dfx10_wait_for_val(enum ds250dfx10_reg_type type, const uint8_t reg, const uint8_t offset, const uint8_t len, const uint8_t val, const unsigned int timeout_ms)
++{
++	int ret;
++	uint8_t _val;
++	unsigned long start = get_timer(0);
++
++	while (get_timer(start) < timeout_ms) {
++		udelay(1);
++		schedule();
++
++		if (ctrlc()) {
++			puts(" <INTERRUPT>\n");
++			return -EINTR;
++		}
++
++		ret = ds250dfx10_get(type, reg, offset, len, &_val);
++		if (ret)
++			return ret;
++
++		if (_val == val)
++			return 0;
++	};
++
++	return -ETIMEDOUT;
++}
++
+ static inline int ds250dfx10_sel_reg_type(const enum ds250dfx10_reg_type type)
+ {
+ 	int ret;
+@@ -872,28 +902,107 @@ static int do_ds250dfx10_pttchk(struct cmd_tbl *cmdtp, int flag, int argc, char
+ 	}
+ }
+ 
+-/* read data bytes and dump as csv */
+-static int do_ds250dfx10_eom_csv(enum ds250dfx10_eom_vrange vrange)
++static int do_ds250dfx10_eom_capture(void)
+ {
+-	int ret = 0;
+-	uint16_t val;
++	int ret;
++	uint8_t val1;
++	uint16_t val2;
++	const enum ds250dfx10_eom_vrange vrange = DS250DFX10_EOM_400MV;
++	const long unsigned int lock_timeout_ms = 1000;
++	const long unsigned int eom_delay_ms = 500;
+ 
+-	/* print labels */
+-	printf("\"phase\",\"voltage (%s)\",\"count\"\r\n", ds250dfx10_eom_vrange_str[vrange]);
++	priv->eom.vrange = DS250DFX10_EOM_VRANGE_MAX;
++
++	/* wait for CDR lock (timeout 1s) */
++	ret = ds250dfx10_wait_for_val(DS250DFX10_CDR_LOCK_STATUS, 1, lock_timeout_ms);
++	if (ret == -ETIMEDOUT)
++		puts("cdr not locked, ensure pattern generator is active and connected\n");
++	if (ret)
++		return ret;
++
++	/* eye capture immediately after cdr lock is unreliable, add artificial delay */
++	printf("waiting %lums ...", eom_delay_ms);
++	ret = ds250dfx10_wait(eom_delay_ms);
++	if (ret)
++		return ret;
++	puts(" starting eye diagram capture ...");
++
++	/* disable lock monitoring */
++	ret = ds250dfx10_set(DS250DFX10_HV_LOCKMON_EN, 0);
++	if (ret)
++		goto do_ds250dfx10_eom_lockmon;
++
++	/* disable automatic vertical range scaling */
++	ret = ds250dfx10_set(DS250DFX10_VEO_SCALE, 0);
++	if (ret)
++		goto do_ds250dfx10_eom_lockmon;
++
++	/* set vertical range */
++	ret = ds250dfx10_set(DS250DFX10_EOM_SEL_VRANGE, vrange);
++	if (ret)
++		goto do_ds250dfx10_eom_vrange;
++	priv->eom.vrange =
++
++	/* force enable eom */
++	ret = ds250dfx10_set(DS250DFX10_EOM_PD, 0);
++	if (ret)
++		goto do_ds250dfx10_eom_vrange;
++
++	/* enable eom fast mode */
++	ret = ds250dfx10_set(DS250DFX10_FAST_EOM, 1);
++	if (ret)
++		goto do_ds250dfx10_eom_pd;
++
++	/* read eye diagram */
++	/* (re-)start counter */
++	ret = ds250dfx10_set(DS250DFX10_EOM_START, 1);
++	if (ret)
++		goto do_ds250dfx10_eom_fast;
++
++	/* wait for eom capture to complete */
++	do {
++		ret = ds250dfx10_get(DS250DFX10_EOM_START, &val1);
++		if (ret)
++			goto do_ds250dfx10_eom_fast;
++	} while (val1);
++
++	/* skip first 4 invalid data bytes */
++	for (int i = 0; i < 4; i++) {
++		ret = ds250dfx10_read(DS250DFX10_EOM_DATA_HI, (uint8_t *)&val2, sizeof(val2));
++		if (ret)
++			goto do_ds250dfx10_eom_fast;
++	}
+ 
+-	/* read and dump data */
+ 	for (int p = 0; p < 64; p++) {
+ 		for (int v = 0; v < 64; v++) {
+-			ret = ds250dfx10_read(DS250DFX10_EOM_DATA_HI, (uint8_t *)&val, sizeof(val));
++			ret = ds250dfx10_read(DS250DFX10_EOM_DATA_HI, (uint8_t *)&val2, sizeof(val2));
+ 			if (ret)
+-				return ret;
+-			val = le16_to_cpu(val);
++				goto do_ds250dfx10_eom_fast;
+ 
+-			printf("%d,%d,%u\r\n", p, v, val);
++			priv->eom.data[p][v] = le16_to_cpu(val2);
+ 		}
+ 	}
++	priv->eom.vrange = vrange;
+ 
+-	return ret;
++	puts(" done.\n");
++
++do_ds250dfx10_eom_fast:
++	/* disable eom fast mode */
++	ds250dfx10_set(DS250DFX10_FAST_EOM, 0);
++
++do_ds250dfx10_eom_pd:
++	/* return eom to automatic mode */
++	ds250dfx10_set(DS250DFX10_EOM_PD, 1);
++
++do_ds250dfx10_eom_vrange:
++	/* (re-)enable automatic vrange scaling */
++	ds250dfx10_set(DS250DFX10_VEO_SCALE, 1);
++
++do_ds250dfx10_eom_lockmon:
++	/* (re-)enable lock monitoring */
++	ds250dfx10_set(DS250DFX10_HV_LOCKMON_EN, 0);
++
++	return ret ? CMD_RET_FAILURE : CMD_RET_SUCCESS;
+ }
+ 
+ static uint8_t eom_vte_colour(uint16_t count)
+@@ -918,8 +1027,30 @@ static uint8_t eom_vte_colour(uint16_t count)
+ 		return 42; // green
+ }
+ 
+-static inline void eom_vte_colour_legend(void)
++/* print to vte 256 colour terminal */
++static int do_ds250dfx10_eom_show(void)
+ {
++	if (priv->eom.vrange == DS250DFX10_EOM_VRANGE_MAX)
++		return -EINVAL;
++
++	puts("BEGIN EOM VTE\n");
++
++	puts("\e[104m\e[91m\e[1m 0------------------------------------------------------------>phase\e[0m\n");
++
++	for (int p = 0; p < 64; p++) {
++		if (p < 63)
++			puts("\e[104m\e[91m\e[1m | \e[0m");
++		else
++			puts("\e[104m\e[91m\e[1m v \e[0m");
++
++		for (int v = 0; v < 64; v++) {
++			printf("\e[%um \e[0m", eom_vte_colour(priv->eom.data[p][v]));
++		}
++
++		puts("\e[104m\e[91m\e[1m \e[0m\n");
++	}
++	printf("\e[104m\e[91m\e[1mvoltage (%s)%*s\e[0m\n", ds250dfx10_eom_vrange_str[priv->eom.vrange], 65 - 7 - (int)strlen(ds250dfx10_eom_vrange_str[priv->eom.vrange]), "");
++
+ 	printf("\e[%dm\e[%dm\e[%dm                                                                   \e[%dm \e[%dm\n", 104, 91, 1, 104, 0);
+ 	printf("\e[%dm\e[%dm\e[%dm   \e[%um 0 errors                                                       \e[%dm \e[%dm\n", 104, 91, 1, eom_vte_colour(0), 104, 0);
+ 	printf("\e[%dm\e[%dm\e[%dm   \e[%um < 128 errors                                                   \e[%dm \e[%dm\n", 104, 91, 1, eom_vte_colour(127), 104, 0);
+@@ -931,46 +1062,38 @@ static inline void eom_vte_colour_legend(void)
+ 	printf("\e[%dm\e[%dm\e[%dm   \e[%um < 8192 errors                                                  \e[%dm \e[%dm\n", 104, 91, 1, eom_vte_colour(8191), 104, 0);
+ 	printf("\e[%dm\e[%dm\e[%dm   \e[%um more errors                                                    \e[%dm \e[%dm\n", 104, 91, 1, eom_vte_colour(8192), 104, 0);
+ 	printf("\e[%dm\e[%dm\e[%dm                                                                   \e[%dm \e[%dm\n", 104, 91, 1, 104, 0);
++
++	puts("END EOM VTE\n");
++
++	return 0;
+ }
+ 
+-/* read data bytes and dump to vte 256 colour terminal */
+-static int do_ds250dfx10_eom_vte(enum ds250dfx10_eom_vrange vrange)
++/* export to console as csv */
++static int do_ds250dfx10_eom_export(void)
+ {
+-	int ret = 0;
+-	uint16_t val;
++	if (priv->eom.vrange == DS250DFX10_EOM_VRANGE_MAX)
++		return -EINVAL;
+ 
+-	puts("\e[104m\e[91m\e[1m 0------------------------------------------------------------>phase\e[0m\n");
++	puts("BEGIN EOM CSV\n");
+ 
+-	for (int p = 0; p < 64; p++) {
+-		if (p < 63)
+-			puts("\e[104m\e[91m\e[1m | \e[0m");
+-		else
+-			puts("\e[104m\e[91m\e[1m v \e[0m");
++	/* print labels */
++	printf("\"phase\",\"voltage (%s)\",\"count\"\r\n", ds250dfx10_eom_vrange_str[priv->eom.vrange]);
+ 
++	/* read and dump data */
++	for (int p = 0; p < 64; p++) {
+ 		for (int v = 0; v < 64; v++) {
+-			ret = ds250dfx10_read(DS250DFX10_EOM_DATA_HI, (uint8_t *)&val, sizeof(val));
+-			if (ret)
+-				return ret;
+-			val = le16_to_cpu(val);
+-
+-			printf("\e[%um \e[0m", eom_vte_colour(val));
++			printf("%d,%d,%u\r\n", p, v, priv->eom.data[p][v]);
+ 		}
+-
+-		puts("\e[104m\e[91m\e[1m \e[0m\n");
+ 	}
+-	printf("\e[104m\e[91m\e[1mvoltage (%s)%*s\e[0m\n", ds250dfx10_eom_vrange_str[vrange], 65 - 7 - (int)strlen(ds250dfx10_eom_vrange_str[vrange]), "");
+-	eom_vte_colour_legend();
+ 
+-	return ret;
++	puts("END EOM CSV\n");
++
++	return 0;
+ }
+ 
+ static int do_ds250dfx10_eom(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+ {
+ 	int ret;
+-	uint8_t val1;
+-	uint16_t val2;
+-	enum ds250dfx10_eom_vrange vrange = DS250DFX10_EOM_400MV;
+-	enum ds250dfx10_eom_fmt fmt;
+ 
+ 	if (!priv->dev) {
+ 		puts("no device selected\n");
+@@ -988,99 +1111,15 @@ static int do_ds250dfx10_eom(struct cmd_tbl *cmdtp, int flag, int argc, char *co
+ 	if (argc != 2)
+ 		return CMD_RET_USAGE;
+ 
+-	fmt = ds250dfx10_eom_fmt_parse(argv[1]);
+-	if (fmt == DS250DFX10_EOM_FMT_MAX) {
+-		printf("unknown format \"%s\"\n", argv[1]);
+-		return CMD_RET_FAILURE;
+-	}
+-
+-	/* test if CDR locked */
+-	ret = ds250dfx10_get(DS250DFX10_CDR_LOCK_STATUS, &val1);
+-	if (ret)
+-		return ret;
+-	else if (!val1) {
+-		puts("cdr not locked, ensure pattern generator is active and connected\n");
+-		return -EIO;
+-	}
+-
+-	/* disable lock monitoring */
+-	ret = ds250dfx10_set(DS250DFX10_HV_LOCKMON_EN, 0);
+-	if (ret)
+-		goto do_ds250dfx10_eom_lockmon;
+-
+-	/* disable automatic vertical range scaling */
+-	ret = ds250dfx10_set(DS250DFX10_VEO_SCALE, 0);
+-	if (ret)
+-		goto do_ds250dfx10_eom_lockmon;
+-
+-	/* set vertical range */
+-	ret = ds250dfx10_set(DS250DFX10_EOM_SEL_VRANGE, vrange);
+-	if (ret)
+-		goto do_ds250dfx10_eom_vrange;
+-
+-	/* force enable eom */
+-	ret = ds250dfx10_set(DS250DFX10_EOM_PD, 0);
+-	if (ret)
+-		goto do_ds250dfx10_eom_vrange;
+-
+-	/* enable eom fast mode */
+-	ret = ds250dfx10_set(DS250DFX10_FAST_EOM, 1);
+-	if (ret)
+-		goto do_ds250dfx10_eom_pd;
+-
+-	/* read eye diagram */
+-	/* (re-)start counter */
+-	ret = ds250dfx10_set(DS250DFX10_EOM_START, 1);
+-	if (ret)
+-		goto do_ds250dfx10_eom_fast;
+-
+-	/* wait for eom capture to complete */
+-	do {
+-		ret = ds250dfx10_get(DS250DFX10_EOM_START, &val1);
+-		if (ret)
+-			goto do_ds250dfx10_eom_fast;
+-	} while (val1);
+-
+-	/* skip first 4 invalid data bytes */
+-	for (int i = 0; i < 4; i++) {
+-		ret = ds250dfx10_read(DS250DFX10_EOM_DATA_HI, (uint8_t *)&val2, sizeof(val2));
+-		if (ret)
+-			goto do_ds250dfx10_eom_fast;
+-	}
+-
+-	switch (fmt) {
+-	case DS250DFX10_CSV:
+-		puts("BEGIN EOM CSV\n");
+-		ret = do_ds250dfx10_eom_csv(vrange);
+-		puts("END EOM CSV\n");
+-		break;
+-	case DS250DFX10_VTE:
+-		puts("BEGIN EOM VTE\n");
+-		ret = do_ds250dfx10_eom_vte(vrange);
+-		puts("END EOM VTE\n");
+-		break;
+-	default:
+-		ret = 0;
+-		break;
++	if (!(strcmp(argv[1], "capture"))) {
++		ret = do_ds250dfx10_eom_capture();
++	} else if (!(strcmp(argv[1], "show"))) {
++		ret = do_ds250dfx10_eom_show();
++	} else if (!(strcmp(argv[1], "export"))) {
++		ret = do_ds250dfx10_eom_export();
++	} else {
++		return CMD_RET_USAGE;
+ 	}
+-	if (ret)
+-		goto do_ds250dfx10_eom_fast;
+-
+-do_ds250dfx10_eom_fast:
+-	/* disable eom fast mode */
+-	ds250dfx10_set(DS250DFX10_FAST_EOM, 0);
+-
+-do_ds250dfx10_eom_pd:
+-	/* return eom to automatic mode */
+-	ds250dfx10_set(DS250DFX10_EOM_PD, 1);
+-
+-do_ds250dfx10_eom_vrange:
+-	/* (re-)enable automatic vrange scaling */
+-	ds250dfx10_set(DS250DFX10_VEO_SCALE, 1);
+-
+-do_ds250dfx10_eom_lockmon:
+-	/* (re-)enable lock monitoring */
+-	ds250dfx10_set(DS250DFX10_HV_LOCKMON_EN, 0);
+ 
+ 	return ret ? CMD_RET_FAILURE : CMD_RET_SUCCESS;
+ }
+@@ -1108,23 +1147,24 @@ static int do_ds250dfx10_todo(struct cmd_tbl *cmdtp, int flag, int argc, char *c
+  * => ds250dfx10 pttchk start
+  * => ds250dfx10 pttchk detect
+  * => ds250dfx10 pttchk validate 10
+- * => ds250dfx10 eom VTE
++ * => ds250dfx10 eom capture
++ * => ds250dfx10 eom show
++ * => ds250dfx10 eom export
+  */
+ 
+ U_BOOT_LONGHELP(ds250dfx10,
+-	"ds250dfx10 dev [<i2c bus name> <i2c bus address>] - select active retimer device\n"
++	"dev [<i2c bus name> <i2c bus address>] - select active retimer device\n"
+ 	"ds250dfx10 chan [<channel>]                       - get/set current retimer channel\n"
+ 	"ds250dfx10 pttgen <pattern>                       - start pattern generator\n"
+ 	"                                                  - <pattern> is one of [ PRBS7, PRBS9, PRBS11, PRBS15, PRBS23, PRBS31, PRBS58, PRBS63]\n"
+ 	"ds250dfx10 pttgen stop                            - stop pattern generator\n"
+ 	"ds250dfx10 pttchk start                           - start pattern checker\n"
+ 	"ds250dfx10 pttchk detect                          - try detect current pattern\n"
+-	"ds250dfx10 pttchk validate <duration>              - detect and validate current pattern for <duration> seconds\n"
++	"ds250dfx10 pttchk validate <duration>             - detect and validate current pattern for <duration> seconds\n"
+ 	"ds250dfx10 pttchk stop                            - stop pattern checker\n"
+-	"ds250dfx10 eom <format>                           - capture eye diagram\n"
+-	"                                                    <format> is one of [ CSV, VTE ]\n"
+-	"                                                    - CSV: comma separated values dumped on terminal\n"
+-	"                                                    - VTE: draw diagram on terminal with colours\n"
++	"ds250dfx10 eom capture                            - capture eye diagram\n"
++	"ds250dfx10 eom show                               - show eye diagram with vte compatible colours\n"
++	"ds250dfx10 eom export                             - export eye diagram in csv format to console\n"
+ 	"ds250dfx10 todo                                   - to be done\n");
+ 
+ U_BOOT_CMD_WITH_SUBCMDS(ds250dfx10, "DS250DFx10 Retimer", ds250dfx10_help_text,
+-- 
+2.51.0
+
