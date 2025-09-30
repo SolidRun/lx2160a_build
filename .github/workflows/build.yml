@@ -74,6 +74,7 @@ jobs:
           echo "build_commit=$build_commit" >> "$GITHUB_OUTPUT"
           echo "Build Tag: $build_tag"
           echo "Build Commit: $build_commit"
+          echo "Source Path: /${{ github.repository_id }}/$build_tag/"
 
       # - name: Build
       #   shell: bash {0}
