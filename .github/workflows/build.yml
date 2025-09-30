@@ -74,7 +74,6 @@ jobs:
           echo "build_commit=$build_commit" >> "$GITHUB_OUTPUT"
           echo "Build Tag: $build_tag"
           echo "Build Commit: $build_commit"
-          echo "Source Path: /${{ github.repository_id }}/$build_tag/"
 
       # - name: Build
       #   shell: bash {0}
@@ -109,6 +108,107 @@ jobs:
       #     source: ./deploy
       #     target: "/${{ github.repository_id }}/${{ steps.tag_step.outputs.build_tag }}"
       #     recursive: true
+
+lava_test:
+      needs: [prepare_container, build_images]
+      runs-on: self-hosted
+      timeout-minutes: 90
+      
+      steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Test LAVA API Connection
+        run: |
+          echo "Testing connection to LAVA API..."
+          LAVA_SERVER="192.168.15.184"
+          LAVA_PORT="8001"
+          LAVA_URL="http://${LAVA_SERVER}:${LAVA_PORT}"
+          
+          curl -s "$LAVA_URL/health" || {
+            echo "ERROR: Cannot reach LAVA API"
+            exit 1
+          }
+          echo "LAVA API is reachable"
+        
+      - name: Submit LAVA Job
+        id: submit
+        run: |
+          LAVA_SERVER="192.168.15.184"
+          LAVA_PORT="8001"
+          LAVA_URL="http://${LAVA_SERVER}:${LAVA_PORT}"
+          
+          MINIO_SERVER="192.168.15.201:8000"
+          BUCKET="cipublish"
+          REPO_ID="${{ github.repository_id }}"
+          BUILD_TAG="${{ needs.build_images.outputs.build_tag }}"
+          BUILD_COMMIT="${{ needs.build_images.outputs.build_commit }}"
+          IMAGE_FILE="lx2162a_rev2_som_clearfog_multi_2000_650_2900_18_9_0-${BUILD_COMMIT}.img.xz"
+          
+          IMAGE_URL="http://${MINIO_SERVER}/${BUCKET}/${REPO_ID}/${BUILD_TAG}/deploy/${IMAGE_FILE}"
+          
+          echo "Full Image URL: $IMAGE_URL"
+          
+          response=$(curl -s -X POST "$LAVA_URL/jobs/submit" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"device_type\": \"lx2162a-solidrun\",
+              \"image_url\": \"$IMAGE_URL\",
+              \"compression\": \"xz\",
+              \"all_devices\": false
+            }")
+          
+          echo "Response: $response"
+          
+          batch_id=$(echo "$response" | jq -r '.batch_id // empty')
+          
+          if [ -z "$batch_id" ]; then
+            echo "ERROR: Failed to submit job"
+            exit 1
+          fi
+          
+          echo "Batch ID: $batch_id"
+          echo "batch_id=$batch_id" >> $GITHUB_OUTPUT
+          
+      - name: Wait for LAVA Job Completion
+        run: |
+          LAVA_SERVER="192.168.15.184"
+          LAVA_PORT="8001"
+          LAVA_URL="http://${LAVA_SERVER}:${LAVA_PORT}"
+          batch_id="${{ steps.submit.outputs.batch_id }}"
+          
+          echo "Waiting for job completion..."
+          echo "Batch ID: $batch_id"
+          
+          timeout=36000
+          start_time=$(date +%s)
+          
+          while true; do
+            elapsed=$(($(date +%s) - start_time))
+            if [ $elapsed -gt $timeout ]; then
+              echo "ERROR: Timeout"
+              exit 1
+            fi
+            
+            status_response=$(curl -s "$LAVA_URL/jobs/$batch_id/status")
+            overall_status=$(echo "$status_response" | jq -r '.overall_status // empty')
+            
+            echo "Status: $overall_status"
+            
+            case "$overall_status" in
+              "success")
+                echo "SUCCESS!"
+                exit 0
+                ;;
+              "failed"|"partial")
+                echo "FAILED!"
+                exit 1
+                ;;
+              "running")
+                sleep 30
+                ;;
+            esac
+          done
 
   # lava_test:
   #     needs: prepare_container
