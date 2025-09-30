@@ -143,7 +143,7 @@ jobs:
             BUCKET="cipublish"
             REPO_ID="${{ github.repository_id }}"
             BUILD_TAG="2025-09-18_8f6ec35"
-            BUILD_COMMIT="${{ needs.build_images.outputs.build_commit }}"
+            BUILD_COMMIT="8f6ec35"
             IMAGE_FILE="lx2162a_rev2_som_clearfog_multi_2000_650_2900_18_9_0-${BUILD_COMMIT}.img.xz"
             
             IMAGE_URL="http://${MINIO_SERVER}/${BUCKET}/${REPO_ID}/${BUILD_TAG}/deploy/${IMAGE_FILE}"
