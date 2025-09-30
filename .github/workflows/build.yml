@@ -121,7 +121,7 @@ jobs:
           
         - name: Test LAVA API Connection
           run: |
-            echo "Testing connection to LAVA API..."
+            echo "Testing connection to LAVA API.."
             LAVA_SERVER="192.168.15.184"
             LAVA_PORT="8001"
             LAVA_URL="http://${LAVA_SERVER}:${LAVA_PORT}"
