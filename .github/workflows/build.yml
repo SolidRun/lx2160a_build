@@ -60,6 +60,7 @@ jobs:
         options: --user "${{ needs.prepare_container.outputs.uid }}:${{ needs.prepare_container.outputs.gid }}"
     outputs:
       build_tag: ${{ steps.tag_step.outputs.build_tag }}
+      build_commit: ${{ steps.tag_step.outputs.build_commit }}
     steps:
       - name: Checkout pull-request version of lx2160a_build
         uses: actions/checkout@v4
@@ -141,7 +142,7 @@ jobs:
             MINIO_SERVER="192.168.15.201:8000"
             BUCKET="cipublish"
             REPO_ID="${{ github.repository_id }}"
-            BUILD_TAG="${{ needs.build_images.outputs.build_tag }}"
+            BUILD_TAG="2025-09-18_8f6ec35"
             BUILD_COMMIT="${{ needs.build_images.outputs.build_commit }}"
             IMAGE_FILE="lx2162a_rev2_som_clearfog_multi_2000_650_2900_18_9_0-${BUILD_COMMIT}.img.xz"
             
