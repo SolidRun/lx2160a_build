@@ -38,6 +38,9 @@ RUN set -e; \
 
 RUN apt-get install -y python3-pyelftools
 
+# HACK: downgrade u-boot package to fix mkimage errors during the build
+RUN apt-get install --allow-downgrades -y u-boot-tools=2021.01+dfsg-5
+
 # build environment
 WORKDIR /work
 COPY shflags /
