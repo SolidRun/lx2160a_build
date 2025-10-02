@@ -1,0 +1,72 @@
+From f00a81cd0104af21a909376b3e2d26bb716464b1 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 2 Oct 2025 13:23:07 +0200
+Subject: [PATCH 39/41] phy: lynx-28g: configure tx adaptive equalization
+ register
+
+Add setting of tx adaptive equalization register (lnatecr1).
+
+Also fix an uninitialized variable leading to invalid register value.
+
+Fixes: "phy: lynx-28g: add support for per lane and protocol eq params"
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index e9a0c9ed0246..f9040dedc051 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -418,6 +418,8 @@ static void lynx_28g_lane_set_sgmii(struct lynx_28g_lane *lane)
+ 	/* Configure the appropriate equalization parameters for the protocol */
+ 	iowrite32(lane->eq_sgmii.lnatecr0,
+ 		  priv->base + LYNX_28G_LNaTECR0(lane->id));
++	iowrite32(lane->eq_sgmii.lnatecr1,
++		  priv->base + LYNX_28G_LNaTECR1(lane->id));
+ 	iowrite32(0x04310000, priv->base + LYNX_28G_LNaRGCR1(lane->id));
+ 	iowrite32(0x9f800000, priv->base + LYNX_28G_LNaRECR0(lane->id));
+ 	iowrite32(0x001f0000, priv->base + LYNX_28G_LNaRECR1(lane->id));
+@@ -452,6 +454,8 @@ static void lynx_28g_lane_set_10gbaser(struct lynx_28g_lane *lane)
+ 	/* Configure the appropriate equalization parameters for the protocol */
+ 	iowrite32(lane->eq_10gbaser.lnatecr0,
+ 		  priv->base + LYNX_28G_LNaTECR0(lane->id));
++	iowrite32(lane->eq_10gbaser.lnatecr1,
++		  priv->base + LYNX_28G_LNaTECR1(lane->id));
+ 	iowrite32(0x10000000, priv->base + LYNX_28G_LNaRGCR1(lane->id));
+ 	iowrite32(0x00000000, priv->base + LYNX_28G_LNaRECR0(lane->id));
+ 	iowrite32(0x001f0000, priv->base + LYNX_28G_LNaRECR1(lane->id));
+@@ -488,6 +492,8 @@ static void lynx_28g_lane_set_25gbaser(struct lynx_28g_lane *lane)
+ 	/* Configure the appropriate equalization parameters for 25GBASE-R */
+ 	iowrite32(lane->eq_25gbaser.lnatecr0,
+ 		  priv->base + LYNX_28G_LNaTECR0(lane->id));
++	iowrite32(lane->eq_25gbaser.lnatecr1,
++		  priv->base + LYNX_28G_LNaTECR1(lane->id));
+ 	iowrite32(0x10000000, priv->base + LYNX_28G_LNaRGCR1(lane->id));
+ 	iowrite32(0x00000085, priv->base + LYNX_28G_LNaRECR0(lane->id));
+ 	iowrite32(0x001f0000, priv->base + LYNX_28G_LNaRECR1(lane->id));
+@@ -826,7 +832,7 @@ static int lynx_28g_parse_eq_reg0(struct device *dev, u32 prot_idx, struct lynx_
+ static int lynx_28g_parse_eq_reg1(struct device *dev, u32 prot_idx, struct lynx_28g_eq *out_eqparams)
+ {
+ 	int ret;
+-	u32 val, lnatecr1;
++	u32 val, lnatecr1 = 0;
+ 
+ 	if (!device_property_present(dev, "fsl,eq-adaptive")) {
+ 		/* no parameter specified, keep defaults */
+@@ -837,8 +843,11 @@ static int lynx_28g_parse_eq_reg1(struct device *dev, u32 prot_idx, struct lynx_
+ 	// TODO: add and use device_property_read_u32_index
+ 	if (ret)
+ 		return ret;
+-	else if (val < 20 || val > 48)
++	else if (val && (val < 20 || val > 48))
+ 		return -ERANGE;
++
++	if (!val)
++		lnatecr1 |= LYNX_28G_LNaTECR1_EQ_ADPT_EQ_DRVR_DIS;
+ 	lnatecr1 |= LYNX_28G_LNaTECR1_EQ_ADPT_EQ(val);
+ 
+ 	out_eqparams->lnatecr1 = lnatecr1;
+-- 
+2.51.0
+
