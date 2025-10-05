@@ -110,7 +110,7 @@ jobs:
       #     target: "/${{ github.repository_id }}/${{ steps.tag_step.outputs.build_tag }}"
       #     recursive: true
 
-lava_test:
+  lava_test:
     needs: [prepare_container, build_images]
     runs-on: self-hosted
     timeout-minutes: 90
