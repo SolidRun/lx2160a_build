@@ -118,6 +118,28 @@ jobs:
         steps:
         - name: Checkout code
           uses: actions/checkout@v4
+
+        - name: git pull LAVA tests locally
+          run: |
+            LAVA_SERVER="192.168.15.184"
+            LAVA_PORT="8001"
+            LAVA_URL="http://${LAVA_SERVER}:${LAVA_PORT}"
+            
+            echo "Updating test definitions repository..."
+            
+            response=$(curl -s -X POST "$LAVA_URL/git/pull")
+            
+            echo "Response: $response"
+            
+            status=$(echo "$response" | jq -r '.status // empty')
+            
+            if [ "$status" = "success" ]; then
+              echo "Test definitions updated successfully"
+            else
+              echo "ERROR: Failed to update test definitions"
+              echo "$response"
+              exit 1
+            fi
           
         - name: Test LAVA API Connection
           run: |
