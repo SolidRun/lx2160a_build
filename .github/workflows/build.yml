@@ -128,15 +128,15 @@ jobs:
 
     - name: Update LAVA Test Definitions
       run: |
-        echo "Updating test definitions repository..."
+        echo "try git pull..."
         response=$(curl -s -X POST "http://${LAVA_SERVER}:${LAVA_PORT}/git/pull")
         echo "Response: $response"
         
         status=$(echo "$response" | jq -r '.status // empty')
         if [ "$status" = "success" ]; then
-          echo "Test definitions updated successfully"
+          echo "git pull done"
         else
-          echo "ERROR: Failed to update test definitions"
+          echo "ERROR: Failed to git pull test definitions"
           echo "$response"
           exit 1
         fi
@@ -148,7 +148,7 @@ jobs:
           echo "ERROR: Cannot reach LAVA API"
           exit 1
         }
-        echo "LAVA API is reachable"
+        echo "LAVA server is reachable"
       
     - name: Submit LAVA Job
       id: submit
@@ -178,7 +178,7 @@ jobs:
         echo "Batch ID: $batch_id"
         echo "batch_id=$batch_id" >> $GITHUB_OUTPUT
         
-    - name: Wait for LAVA Job Completion
+    - name: Poll LAVA job status
       run: |
         batch_id="${{ steps.submit.outputs.batch_id }}"
         echo "Waiting for batch: $batch_id"
