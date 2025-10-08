@@ -1,8 +1,12 @@
 name: build
 
+# on:
+#   push:
+#     branches: [ "develop-ls-5.15.71-2.2.0" ]
 on:
-  push:
-    branches: [ "develop-ls-5.15.71-2.2.0" ]
+  schedule:
+    # Runs at 14:55 UTC (17:55 Israel time during daylight saving)
+    - cron: '55 14 * * *'
   pull_request:
     branches: [ "develop-ls-5.15.71-2.2.0" ]
   # Allows you to run this workflow manually from the Actions tab
