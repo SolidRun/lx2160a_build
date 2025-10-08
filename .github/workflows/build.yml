@@ -143,7 +143,7 @@ jobs:
       
     - name: Test LAVA API Connection
       run: |
-        echo "Testing connection to LAVA API..."
+        echo "Testing connection to LAVA API.."
         curl -s "http://${LAVA_SERVER}:${LAVA_PORT}/health" || {
           echo "ERROR: Cannot reach LAVA API"
           exit 1
