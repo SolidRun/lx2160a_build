@@ -1,0 +1,71 @@
+From 0667d5e2943d1c7f80ef13d4ae5481c483a06805 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 7 Oct 2025 18:40:00 +0200
+Subject: [PATCH 44/45] arm64: dts: lx2162a-clearfog: define serdes 1 tx eq
+ params at 10g net
+
+Define optimised tx equalisation parameters for serdes 1 at 10G networking.
+Paremeters were selected based on retimer captured eye diagram from
+pattern generator passing through a fiber link.
+---
+ .../dts/freescale/fsl-lx2162a-clearfog.dts    | 44 +++++++++++++++++++
+ 1 file changed, 44 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+index 1758e91fdbcf..d3cde97950cc 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+@@ -370,6 +370,50 @@ &serdes_1 {
+ 	status = "okay";
+ };
+ 
++&serdes_1_lane_e {
++	fsl,eq-names = "10gbase-r";
++	fsl,eq-type = "3-tap";
++	fsl,eq-preq-sign = "positive";
++	fsl,eq-preq-rate = "1.00";
++	fsl,eq-post1q-sign = "positive";
++	fsl,eq-post1q-rate = "1.20";
++	fsl,eq-amp-red = "1.100";
++	fsl,eq-adaptive = <45>;
++};
++
++&serdes_1_lane_f {
++	fsl,eq-names = "10gbase-r";
++	fsl,eq-type = "3-tap";
++	fsl,eq-preq-sign = "positive";
++	fsl,eq-preq-rate = "1.00";
++	fsl,eq-post1q-sign = "negative";
++	fsl,eq-post1q-rate = "1.50";
++	fsl,eq-amp-red = "1.100";
++	fsl,eq-adaptive = <40>;
++};
++
++&serdes_1_lane_g {
++	fsl,eq-names = "10gbase-r";
++	fsl,eq-type = "3-tap";
++	fsl,eq-preq-sign = "positive";
++	fsl,eq-preq-rate = "1.04";
++	fsl,eq-post1q-sign = "negative";
++	fsl,eq-post1q-rate = "1.00";
++	fsl,eq-amp-red = "1.100";
++	fsl,eq-adaptive = <40>;
++};
++
++&serdes_1_lane_h {
++	fsl,eq-names = "10gbase-r";
++	fsl,eq-type = "3-tap";
++	fsl,eq-preq-sign = "positive";
++	fsl,eq-preq-rate = "1.09";
++	fsl,eq-post1q-sign = "positive";
++	fsl,eq-post1q-rate = "1.26";
++	fsl,eq-amp-red = "1.100";
++	fsl,eq-adaptive = <47>;
++};
++
+ &serdes_2 {
+ 	status = "okay";
+ };
+-- 
+2.51.0
+

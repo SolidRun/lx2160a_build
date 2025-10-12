@@ -1,0 +1,33 @@
+From a0a749692fd435e21558384771b5e6885d153453 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 12 Oct 2025 23:17:11 +0200
+Subject: [PATCH 43/45] phy: lynx-28g: fix tx adaptive eq amplitude reduction
+ dt parsing
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index f9040dedc051..1db2bd72acc5 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -202,10 +202,10 @@ static const char * const lynx_28g_eq_rates[] = {
+ };
+ 
+ static const char * const lynx_28g_amp_red_rates[] = {
+-	"1.000", "0.917", "0.752", "0.840", NULL, NULL, "0.667", "0.585",
+-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+-	"0.500", "0.485", "0.376", "0.420", NULL, NULL, "0.333", "0.292",
+-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, "0.170",
++	"1.000", "0.917", "0.752", "0.840", "", "", "0.667", "0.585",
++	"", "", "", "", "", "", "", "",
++	"0.500", "0.485", "0.376", "0.420", "", "", "0.333", "0.292",
++	"", "", "", "", "", "", "", "0.170",
+ 	"1.100",
+ };
+ 
+-- 
+2.51.0
+

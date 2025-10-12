@@ -1,0 +1,117 @@
+From 30d7ad3c66c61d76927b6a008d0f56cc8bacfe38 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 2 Oct 2025 13:27:15 +0200
+Subject: [PATCH 45/45] arm64: dts: lx2160a-clearfog-itx: define serdes 1 tx eq
+ params at 10g net
+
+Define optimised tx equalisation parameters for serdes 1 at 10G networking.
+Paremeters were selected based on retimer captured eye diagram from
+pattern generator passing through a fiber link.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../freescale/fsl-lx2160a-clearfog-itx.dtsi   | 88 +++++++++++++++++++
+ 1 file changed, 88 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+index 11a99d4efe93..9075ae98f803 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+@@ -192,6 +192,94 @@ &sata3 {
+ 	status = "okay";
+ };
+ 
++&serdes_1_lane_a {
++	fsl,eq-names = "10gbase-r";
++	fsl,eq-type = "3-tap";
++	fsl,eq-preq-sign = "positive";
++	fsl,eq-preq-rate = "1.14";
++	fsl,eq-post1q-sign = "positive";
++	fsl,eq-post1q-rate = "1.60";
++	fsl,eq-amp-red = "1.100";
++	fsl,eq-adaptive = <44>;
++};
++
++&serdes_1_lane_b {
++	fsl,eq-names = "10gbase-r";
++	fsl,eq-type = "3-tap";
++	fsl,eq-preq-sign = "positive";
++	fsl,eq-preq-rate = "1.04";
++	fsl,eq-post1q-sign = "positive";
++	fsl,eq-post1q-rate = "1.60";
++	fsl,eq-amp-red = "1.100";
++	fsl,eq-adaptive = <48>;
++};
++
++&serdes_1_lane_c {
++	fsl,eq-names = "10gbase-r";
++	fsl,eq-type = "3-tap";
++	fsl,eq-preq-sign = "positive";
++	fsl,eq-preq-rate = "1.00";
++	fsl,eq-post1q-sign = "negative";
++	fsl,eq-post1q-rate = "1.04";
++	fsl,eq-amp-red = "1.100";
++	fsl,eq-adaptive = <23>;
++};
++
++&serdes_1_lane_d {
++	fsl,eq-names = "10gbase-r";
++	fsl,eq-type = "3-tap";
++	fsl,eq-preq-sign = "negative";
++	fsl,eq-preq-rate = "1.14";
++	fsl,eq-post1q-sign = "positive";
++	fsl,eq-post1q-rate = "1.40";
++	fsl,eq-amp-red = "1.100";
++	fsl,eq-adaptive = <44>;
++};
++
++&serdes_1_lane_e {
++	fsl,eq-names = "10gbase-r";
++	fsl,eq-type = "3-tap";
++	fsl,eq-preq-sign = "positive";
++	fsl,eq-preq-rate = "1.04";
++	fsl,eq-post1q-sign = "negative";
++	fsl,eq-post1q-rate = "1.09";
++	fsl,eq-amp-red = "1.100";
++	fsl,eq-adaptive = <48>;
++};
++
++&serdes_1_lane_f {
++	fsl,eq-names = "10gbase-r";
++	fsl,eq-type = "3-tap";
++	fsl,eq-preq-sign = "positive";
++	fsl,eq-preq-rate = "1.00";
++	fsl,eq-post1q-sign = "negative";
++	fsl,eq-post1q-rate = "1.40";
++	fsl,eq-amp-red = "1.100";
++	fsl,eq-adaptive = <48>;
++};
++
++&serdes_1_lane_g {
++	fsl,eq-names = "10gbase-r";
++	fsl,eq-type = "3-tap";
++	fsl,eq-preq-sign = "negative";
++	fsl,eq-preq-rate = "1.00";
++	fsl,eq-post1q-sign = "negative";
++	fsl,eq-post1q-rate = "1.09";
++	fsl,eq-amp-red = "1.000";
++	fsl,eq-adaptive = <48>;
++};
++
++&serdes_1_lane_h {
++	fsl,eq-names = "10gbase-r";
++	fsl,eq-type = "3-tap";
++	fsl,eq-preq-sign = "positive";
++	fsl,eq-preq-rate = "1.04";
++	fsl,eq-post1q-sign = "positive";
++	fsl,eq-post1q-rate = "1.00";
++	fsl,eq-amp-red = "1.100";
++	fsl,eq-adaptive = <46>;
++};
++
+ &uart0 {
+ 	status = "okay";
+ };
+-- 
+2.51.0
+
