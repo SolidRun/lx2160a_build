@@ -133,7 +133,7 @@ jobs:
       env:
         LAVA_SERVER: "192.168.15.184"
         LAVA_PORT: "8001"
-        MINIO_SERVER: "ciserver.ci:8000"
+        MINIO_SERVER: "192.168.15.201:8000"
         BUCKET: "cipublish"
         BUILD_TAG: "${{ needs.build_images.outputs.build_tag }}"
         BUILD_COMMIT: "${{ needs.build_images.outputs.build_commit }}"
