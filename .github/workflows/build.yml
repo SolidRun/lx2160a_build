@@ -178,7 +178,7 @@ jobs:
         echo "Batch ID: $batch_id"
         echo "batch_id=$batch_id" >> $GITHUB_OUTPUT
         
-    - name: Poll LAVA job status
+    - name: Poll LAVA job status...
       run: |
         batch_id="${{ steps.submit.outputs.batch_id }}"
         echo "Waiting for batch: $batch_id"
