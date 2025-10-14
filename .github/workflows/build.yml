@@ -60,6 +60,7 @@ jobs:
         options: --user "${{ needs.prepare_container.outputs.uid }}:${{ needs.prepare_container.outputs.gid }}"
     outputs:
       build_tag: ${{ steps.tag_step.outputs.build_tag }}
+      build_commit: ${{ steps.tag_step.outputs.build_commit }}
     steps:
       - name: Checkout pull-request version of lx2160a_build
         uses: actions/checkout@v4
@@ -70,6 +71,10 @@ jobs:
         run: |
           build_tag=$(date +%Y-%m-%d)_$(git rev-parse --short HEAD)
           echo "build_tag=$build_tag" >> "$GITHUB_OUTPUT"
+          build_commit=$(git rev-parse --short HEAD)
+          echo "build_commit=$build_commit" >> "$GITHUB_OUTPUT"
+          echo "Build Tag: $build_tag"
+          echo "Build Commit: $build_commit"
 
       - name: Build
         shell: bash {0}
@@ -121,29 +126,132 @@ jobs:
           target: "/${{ github.repository_id }}/${{ steps.tag_step.outputs.build_tag }}"
           recursive: true
 
-  publish_images:
-    needs: build_images
-    runs-on: self-hosted
-    if: github.ref == 'refs/heads/develop-ls-6.6.52-2.2.0' && github.event_name != 'pull_request'
-    steps:
-      - name: Download an artifacts from MinIO
-        uses: yakubique/minio-download@v1.1.1
-        with:
-          endpoint: http://ciserver.ci:9000
-          insecure: true
-          access_key: ${{ secrets.CI_CACHE_MINIO_ACCESS }}
-          secret_key: ${{ secrets.CI_CACHE_MINIO_SECRET }}
-          bucket: cipublish
-          source: "/${{ github.repository_id }}/${{ needs.build_images.outputs.build_tag }}/"
-          target: "."
-          recursive: true
+  lava_test:
+      needs: [prepare_container, build_images]
+      runs-on: self-hosted
+      timeout-minutes: 90
+      env:
+        LAVA_SERVER: "192.168.15.184"
+        LAVA_PORT: "8001"
+        MINIO_SERVER: "ciserver.ci:8000"
+        BUCKET: "cipublish"
+        BUILD_TAG: "${{ needs.build_images.outputs.build_tag }}"
+        BUILD_COMMIT: "${{ needs.build_images.outputs.build_commit }}"
+      
+      steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Upload to S3
-        uses: shallwefootball/upload-s3-action@v1.3.3
-        with:
-          aws_key_id: ${{ secrets.IMAGES_S3_ACCESS }}
-          aws_secret_access_key: ${{ secrets.IMAGES_S3_SECRET }}
-          aws_bucket: ${{ secrets.IMAGES_S3_BUCKET }}
-          endpoint: ${{ secrets.IMAGES_S3_HOST }}
-          source_dir: deploy
-          destination_dir: LX2k/lx2160a_build/ls-6.6.52-2.2.0/${{ needs.build_images.outputs.build_tag }}
+      - name: Update LAVA Test Definitions
+        run: |
+          echo "try git pull..."
+          response=$(curl -s -X POST "http://${LAVA_SERVER}:${LAVA_PORT}/git/pull")
+          echo "Response: $response"
+          
+          status=$(echo "$response" | jq -r '.status // empty')
+          if [ "$status" = "success" ]; then
+            echo "git pull done"
+          else
+            echo "ERROR: Failed to git pull test definitions"
+            echo "$response"
+            exit 1
+          fi
+        
+      - name: Test LAVA API Connection
+        run: |
+          echo "Testing connection to LAVA API.."
+          curl -s "http://${LAVA_SERVER}:${LAVA_PORT}/health" || {
+            echo "ERROR: Cannot reach LAVA API"
+            exit 1
+          }
+          echo "LAVA server is reachable"
+        
+      - name: Submit LAVA Job
+        id: submit
+        run: |
+          IMAGE_FILE="lx2162a_rev2_som_clearfog_multi_2000_650_2900_18_9_0-${BUILD_COMMIT}.img.xz"
+          IMAGE_URL="http://${MINIO_SERVER}/${BUCKET}/${{ github.repository_id }}/${BUILD_TAG}/deploy/${IMAGE_FILE}"
+          
+          echo "Image URL: $IMAGE_URL"
+          
+          response=$(curl -s -X POST "http://${LAVA_SERVER}:${LAVA_PORT}/jobs/submit" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"device_type\": \"lx2162a-solidrun\",
+              \"image_url\": \"$IMAGE_URL\",
+              \"compression\": \"xz\",
+              \"all_devices\": false
+            }")
+          
+          echo "Response: $response"
+          
+          batch_id=$(echo "$response" | jq -r '.batch_id // empty')
+          if [ -z "$batch_id" ]; then
+            echo "ERROR: Failed to submit job"
+            exit 1
+          fi
+          
+          echo "Batch ID: $batch_id"
+          echo "batch_id=$batch_id" >> $GITHUB_OUTPUT
+          
+      - name: Poll LAVA job status...
+        run: |
+          batch_id="${{ steps.submit.outputs.batch_id }}"
+          echo "Waiting for batch: $batch_id"
+          
+          timeout=36000
+          start_time=$(date +%s)
+          
+          while true; do
+            elapsed=$(($(date +%s) - start_time))
+            if [ $elapsed -gt $timeout ]; then
+              echo "ERROR: Timeout after 10 hours"
+              exit 1
+            fi
+            
+            status_response=$(curl -s "http://${LAVA_SERVER}:${LAVA_PORT}/jobs/$batch_id/status")
+            overall_status=$(echo "$status_response" | jq -r '.overall_status // empty')
+            
+            echo "Status: $overall_status"
+            
+            case "$overall_status" in
+              "success")
+                echo "All jobs completed successfully!"
+                exit 0
+                ;;
+              "failed"|"partial")
+                echo "Jobs failed or partially completed"
+                exit 1
+                ;;
+              "running")
+                sleep 30
+                ;;
+            esac
+          done
+
+  # publish_images:
+  #   needs: build_images
+  #   runs-on: self-hosted
+  #   if: github.ref == 'refs/heads/develop-ls-6.6.52-2.2.0' && github.event_name != 'pull_request'
+  #   steps:
+  #     - name: Download an artifacts from MinIO
+  #       uses: yakubique/minio-download@v1.1.1
+  #       with:
+  #         endpoint: http://ciserver.ci:9000
+  #         insecure: true
+  #         access_key: ${{ secrets.CI_CACHE_MINIO_ACCESS }}
+  #         secret_key: ${{ secrets.CI_CACHE_MINIO_SECRET }}
+  #         bucket: cipublish
+  #         source: "/${{ github.repository_id }}/${{ needs.build_images.outputs.build_tag }}/"
+  #         target: "."
+  #         recursive: true
+
+  #     - name: Upload to S3
+  #       uses: shallwefootball/upload-s3-action@v1.3.3
+  #       with:
+  #         aws_key_id: ${{ secrets.IMAGES_S3_ACCESS }}
+  #         aws_secret_access_key: ${{ secrets.IMAGES_S3_SECRET }}
+  #         aws_bucket: ${{ secrets.IMAGES_S3_BUCKET }}
+  #         endpoint: ${{ secrets.IMAGES_S3_HOST }}
+  #         source_dir: deploy
+  #         destination_dir: LX2k/lx2160a_build/ls-6.6.52-2.2.0/${{ needs.build_images.outputs.build_tag }}
