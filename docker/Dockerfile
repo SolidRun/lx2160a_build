@@ -15,6 +15,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # install updates
 RUN set -e; \
+	dpkg-architecture --is arm64 || dpkg --add-architecture arm64; \
 	apt-get update; \
 	apt-get upgrade -y; \
 	:
@@ -25,6 +26,7 @@ RUN set -e; \
 	apt-get --no-install-recommends -y install \
 		acpica-tools bc bison build-essential ca-certificates cmake cpio debian-archive-keyring debootstrap device-tree-compiler dosfstools e2tools fakeroot fdisk file flex git kmod libncurses-dev libssl-dev libyaml-dev lzop make meson mtools ninja-build p7zip p7zip-full pandoc parted pkg-config rsync sudo tar u-boot-tools unzip wget xz-utils yamllint; \
 	dpkg-architecture --is arm64 || apt-get --no-install-recommends -y install crossbuild-essential-arm64; \
+	dpkg-architecture --is arm64 || apt-get --no-install-recommends -y install libpcap0.8-dev:arm64; \
 	apt-get --no-install-recommends -t bullseye-backports -y install qemu-system-arm; \
 	:
 

@@ -1,0 +1,78 @@
+From 842c2873f312294088672d3773b67ba5270733f8 Mon Sep 17 00:00:00 2001
+From: Jun Yang <jun.yang@nxp.com>
+Date: Wed, 23 Oct 2024 17:29:14 +0530
+Subject: [PATCH] net/dpaa2: enhance Tx scatter-gather mempool
+
+Create TX SG pool only for primary process and lookup
+this pool in secondary process.
+
+Signed-off-by: Jun Yang <jun.yang@nxp.com>
+Acked-by: Hemant Agrawal <hemant.agrawal@nxp.com>
+---
+ drivers/net/dpaa2/dpaa2_ethdev.c | 46 +++++++++++++++++++++++---------
+ 1 file changed, 33 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/net/dpaa2/dpaa2_ethdev.c b/drivers/net/dpaa2/dpaa2_ethdev.c
+index 469039939c..14cf698c48 100644
+--- a/drivers/net/dpaa2/dpaa2_ethdev.c
++++ b/drivers/net/dpaa2/dpaa2_ethdev.c
+@@ -2912,6 +2912,35 @@ int dpaa2_dev_is_dpaa2(struct rte_eth_dev *dev)
+ 	return dev->device->driver == &rte_dpaa2_pmd.driver;
+ }
+ 
++static int dpaa2_tx_sg_pool_init(void)
++{
++	char name[RTE_MEMZONE_NAMESIZE];
++
++	if (dpaa2_tx_sg_pool)
++		return 0;
++
++	sprintf(name, "dpaa2_mbuf_tx_sg_pool");
++	if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
++		dpaa2_tx_sg_pool = rte_pktmbuf_pool_create(name,
++			DPAA2_POOL_SIZE,
++			DPAA2_POOL_CACHE_SIZE, 0,
++			DPAA2_MAX_SGS * sizeof(struct qbman_sge),
++			rte_socket_id());
++		if (!dpaa2_tx_sg_pool) {
++			DPAA2_PMD_ERR("SG pool creation failed");
++			return -ENOMEM;
++		}
++	} else {
++		dpaa2_tx_sg_pool = rte_mempool_lookup(name);
++		if (!dpaa2_tx_sg_pool) {
++			DPAA2_PMD_ERR("SG pool lookup failed");
++			return -ENOMEM;
++		}
++	}
++
++	return 0;
++}
++
+ static int
+ rte_dpaa2_probe(struct rte_dpaa2_driver *dpaa2_drv,
+ 		struct rte_dpaa2_device *dpaa2_dev)
+@@ -2966,19 +2995,10 @@ rte_dpaa2_probe(struct rte_dpaa2_driver *dpaa2_drv,
+ 
+ 	/* Invoke PMD device initialization function */
+ 	diag = dpaa2_dev_init(eth_dev);
+-	if (diag == 0) {
+-		if (!dpaa2_tx_sg_pool) {
+-			dpaa2_tx_sg_pool =
+-				rte_pktmbuf_pool_create("dpaa2_mbuf_tx_sg_pool",
+-				DPAA2_POOL_SIZE,
+-				DPAA2_POOL_CACHE_SIZE, 0,
+-				DPAA2_MAX_SGS * sizeof(struct qbman_sge),
+-				rte_socket_id());
+-			if (dpaa2_tx_sg_pool == NULL) {
+-				DPAA2_PMD_ERR("SG pool creation failed\n");
+-				return -ENOMEM;
+-			}
+-		}
++	if (!diag) {
++		diag = dpaa2_tx_sg_pool_init();
++		if (diag)
++			return diag;
+ 		rte_eth_dev_probing_finish(eth_dev);
+ 		return 0;
+ 	}
