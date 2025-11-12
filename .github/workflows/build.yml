@@ -144,7 +144,7 @@ jobs:
 
       - name: Update LAVA Test Definitions
         run: |
-          echo "try git pull..."
+          echo "try git pull."
           response=$(curl -s -X POST "http://${LAVA_SERVER}:${LAVA_PORT}/git/pull")
           echo "Response: $response"
           
