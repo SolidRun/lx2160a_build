@@ -1,0 +1,32 @@
+{
+	"name": "lx2160a_build",
+	"build": {
+		"context": "${localWorkspaceFolder}/docker",
+		"dockerfile": "${localWorkspaceFolder}/docker/Dockerfile",
+		"target": "lx2160a_build"
+	},
+	"containerEnv": {
+		"SHELL": "/bin/bash",
+		"HOME": "/tmp/home"
+	},
+	"workspaceFolder": "/work",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/work,type=bind,consistency=cached",
+	"postCreateCommand": "mkdir -p /tmp/home",
+	"runArgs": ["--rm", "--userns=keep-id"],
+	"updateRemoteUserUID": false,
+	"remoteEnv": {
+		"ARCH": "arm64",
+		"CROSS_COMPILE": "aarch64-linux-gnu-"
+	},
+	"userEnvProbe": "loginInteractiveShell",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"github.vscode-github-actions",
+				"ms-azuretools.vscode-containers",
+				"ms-vscode.cpptools",
+				"ms-vscode.cpptools-extension-pack"
+			]
+		}
+	}
+}
