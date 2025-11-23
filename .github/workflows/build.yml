@@ -181,37 +181,10 @@ jobs:
       LAVA_SERVER: 192.168.15.184
       LAVA_PORT: 8001
     steps:
-      - name: LAVA Server-Side Test Definitions Refresh
-        shell: bash {0}
-        run: |
-          echo "try git pull."
-          response=$(curl -s -X POST "http://${LAVA_SERVER}:${LAVA_PORT}/git/pull")
-          echo "Response: $response"
-          
-          status=$(echo "$response" | jq -r '.status // empty')
-          if [ "$status" = "success" ]; then
-            echo "git pull done"
-          else
-            echo "ERROR: Failed to git pull test definitions"
-            echo "$response"
-            exit 1
-          fi
-
-      - name: LAVA Server Health Check
-        shell: bash {0}
-        run: |
-          echo "Testing connection to LAVA API.."
-          curl -s "http://${LAVA_SERVER}:${LAVA_PORT}/health" || {
-            echo "ERROR: Cannot reach LAVA API"
-            exit 1
-          }
-          echo "LAVA server is reachable"
-
       - name: Generate Temporary Image Download URLs
         id: dl_url
         shell: bash {0}
         run: |
-          echo "TBD (https://docs.min.io/enterprise/aistor-object-store/reference/cli/mc-share/mc-share-download/#generate-a-url-to-download-object-s)"
           echo "lx2162_som_multi_url=http://ciserver.ci:8000/cipublish/${{ needs.build_images.outputs.local_artifacts_path }}/lx2162a_rev2_som_clearfog_multi_2000_650_2900_18_9_0-${{ needs.info.outputs.build_rev }}.img.xz" >> "$GITHUB_OUTPUT"
 
       - name: Submit Job (LX2162 Clearfog Multi-Boot Image)
@@ -221,26 +194,35 @@ jobs:
           IMAGE_URL="${{ steps.dl_url.outputs.lx2162_som_multi_url }}"
           
           echo "Image URL: $IMAGE_URL"
-          echo "TODO: this url might be secret in the future"
-          
-          response=$(curl -s -X POST "http://${LAVA_SERVER}:${LAVA_PORT}/jobs/submit" \
+          echo "Submitting to LAVA (includes automatic git pull)..."
+
+          response=$(curl -sf -X POST "http://${LAVA_SERVER}:${LAVA_PORT}/jobs/submit" \
             -H "Content-Type: application/json" \
             -d "{
               \"device_type\": \"lx2162a-solidrun\",
               \"image_url\": \"$IMAGE_URL\",
               \"compression\": \"xz\",
               \"all_devices\": false
-            }")
+            }") || {
+            echo "ERROR: Failed to connect to LAVA API"
+            exit 1
+          }
           
           echo "Response: $response"
-          
+
+          # Check submission status
+          status=$(echo "$response" | jq -r '.status // empty')
           batch_id=$(echo "$response" | jq -r '.batch_id // empty')
-          job_ids=$(echo "$response" | jq -r '[.submitted_jobs | values[]] | join(", ")')
-          if [ -z "$batch_id" ]; then
-            echo "ERROR: Failed to submit job"
+
+          if [ "$status" != "success" ] || [ -z "$batch_id" ]; then
+            echo "ERROR: Job submission failed"
+            echo "$response" | jq '.'
             exit 1
           fi
+
+          job_ids=$(echo "$response" | jq -r '[.submitted_jobs | values[]] | join(", ")')
           
+          echo "Jobs submitted successfully"
           echo "Batch ID: $batch_id"
           echo "Job IDs: $job_ids"
           echo "batch_id=$batch_id" >> $GITHUB_OUTPUT
