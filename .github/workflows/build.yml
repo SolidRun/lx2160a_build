@@ -155,6 +155,13 @@ jobs:
                 "image_url": "https://solid-run-images.sos-de-fra-1.exo.io/LX2k/lx2160a_build/ls-6.6.52-2.2.0/2025-09-30_6e436bb/lx2162a_rev2_som_clearfog_multi_2000_650_2900_18_9_0-6e436bb.img.xz",
                 "compression": "xz",
                 "all_devices": false
+              },
+              {
+                "device_type": "rz",
+                "tags": ["rz_g2l"],
+                "image_url": "http://192.168.15.201:8000/cipublish/541157163/2025-11-30_e27a617/deploy/rzg2l-solidrun-sd-debian-e27a617.img.xz",
+                "compression": "xz",
+                "all_devices": false
               }
             ]
 
