@@ -127,36 +127,36 @@ jobs:
   #         recursive: true
 
   lava_test:
-      needs: [prepare_container]
-      runs-on: self-hosted
-      timeout-minutes: 90
-      
-      steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
+    needs: [prepare_container]
+    runs-on: self-hosted
+    timeout-minutes: 90
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        - name: Checkout LAVA action
-          uses: actions/checkout@v4
-          with:
-            repository: SolidRun/lava-test-definitions
-            path: .github/lava-action
-            token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout LAVA action
+        uses: actions/checkout@v4
+        with:
+          repository: SolidRun/lava-test-definitions
+          path: .lava-action
+          ssh-key: ${{ secrets.LAVA_ACTION_SECRET }}
 
-        - name: Test Images on LAVA
-          uses: ./.github/lava-action/.github/actions/lava-submit
-          with:
-            server: 192.168.15.184
-            port: 8001
-            timeout: 36000
-            jobs: |
-              [
-                {
-                  "device_type": "lx2162a-solidrun",
-                  "image_url": "https://solid-run-images.sos-de-fra-1.exo.io/LX2k/lx2160a_build/ls-6.6.52-2.2.0/2025-09-30_6e436bb/lx2162a_rev2_som_clearfog_multi_2000_650_2900_18_9_0-6e436bb.img.xz",
-                  "compression": "xz",
-                  "all_devices": false
-                }
-              ]
+      - name: Test Images on LAVA
+        uses: ./.lava-action/.github/actions/lava-submit
+        with:
+          server: 192.168.15.184
+          port: 8001
+          timeout: 36000
+          jobs: |
+            [
+              {
+                "device_type": "lx2162a-solidrun",
+                "image_url": "https://solid-run-images.sos-de-fra-1.exo.io/LX2k/lx2160a_build/ls-6.6.52-2.2.0/2025-09-30_6e436bb/lx2162a_rev2_som_clearfog_multi_2000_650_2900_18_9_0-6e436bb.img.xz",
+                "compression": "xz",
+                "all_devices": false
+              }
+            ]
 
   # lava_test:
   #     needs: [prepare_container, build_images]
