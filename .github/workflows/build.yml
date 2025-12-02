@@ -127,31 +127,31 @@ jobs:
           recursive: true
 
   lava_test:
-  needs: [prepare_container, build_images]
-  runs-on: self-hosted
-  timeout-minutes: 90
-  env:
-    BUILD_COMMIT: "${{ needs.build_images.outputs.build_commit }}"
-  
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    needs: [prepare_container, build_images]
+    runs-on: self-hosted
+    timeout-minutes: 90
+    env:
+      BUILD_COMMIT: "${{ needs.build_images.outputs.build_commit }}"
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Test Images on LAVA
-      uses: SolidRun/lava-test-definitions/.github/actions/lava-submit@main
-      with:
-        server: 192.168.15.184
-        port: 8001
-        timeout: 36000
-        jobs: |
-          [
-            {
-              "device_type": "lx2162a-solidrun",
-              "image_url": "https://solid-run-images.sos-de-fra-1.exo.io/LX2k/lx2160a_build/ls-6.6.52-2.2.0/2025-09-30_6e436bb/lx2162a_rev2_som_clearfog_multi_2000_650_2900_18_9_0-6e436bb.img.xz",
-              "compression": "xz",
-              "all_devices": false
-            }
-          ]
+      - name: Test Images on LAVA
+        uses: SolidRun/lava-test-definitions/.github/actions/lava-submit@main
+        with:
+          server: 192.168.15.184
+          port: 8001
+          timeout: 36000
+          jobs: |
+            [
+              {
+                "device_type": "lx2162a-solidrun",
+                "image_url": "https://solid-run-images.sos-de-fra-1.exo.io/LX2k/lx2160a_build/ls-6.6.52-2.2.0/2025-09-30_6e436bb/lx2162a_rev2_som_clearfog_multi_2000_650_2900_18_9_0-6e436bb.img.xz",
+                "compression": "xz",
+                "all_devices": false
+              }
+            ]
 
   # lava_test:
   #     needs: [prepare_container, build_images]
