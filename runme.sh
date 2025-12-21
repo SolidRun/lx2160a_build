@@ -207,6 +207,17 @@ if [ "x$GIT_CONF" == "x" ]; then
 	export GIT_COMMITTER_EMAIL="${GIT_AUTHOR_EMAIL}"
 fi
 
+###############################################################################
+# catch magic interactive shell option
+###############################################################################
+
+if [ $# -ge 1 ] && [ "x$1" = "xshell" ]; then
+	# spawn interactive shell
+	export $(compgen -v)
+	bash
+	exit $?
+fi
+
 echo "Building boot loader"
 cd $ROOTDIR
 
