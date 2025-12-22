@@ -1,0 +1,36 @@
+From 7b3c47ccc59d371aa20d7adadf7d7d2c7268da6f Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 22 Dec 2025 17:26:03 +0100
+Subject: [PATCH] firmware: psci: issue hard reset if poweroff fails
+
+If a platform does not actually implement S5, it is possible for the
+psci call for poweroff to return and continue execution.
+
+In this case print an error message and proceed with hard reset to
+ensure the system won't be stuck.
+
+[   30.072633] reboot: Power down
+[   30.075699] psci: psci poweroff failed, issuing hard reset ...
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/firmware/psci/psci.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/firmware/psci/psci.c b/drivers/firmware/psci/psci.c
+index 2328ca58bba6..4f1abf539fb5 100644
+--- a/drivers/firmware/psci/psci.c
++++ b/drivers/firmware/psci/psci.c
+@@ -331,6 +331,9 @@ static struct notifier_block psci_sys_reset_nb = {
+ static void psci_sys_poweroff(void)
+ {
+ 	invoke_psci_fn(PSCI_0_2_FN_SYSTEM_OFF, 0, 0, 0);
++
++	pr_err("psci poweroff failed, issuing hard reset ...\n");
++	invoke_psci_fn(PSCI_0_2_FN_SYSTEM_RESET, 0, 0, 0);
+ }
+ 
+ static int psci_features(u32 psci_func_id)
+-- 
+2.51.0
+
