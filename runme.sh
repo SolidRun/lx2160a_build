@@ -143,6 +143,7 @@ case "${TARGET}" in
 	LX2162A_SOM_CLEARFOG_0_0_0)
 		# no serdes ports, can be used as base for new configurations
 		ATF_PLATFORM=lx2162asom
+		ATF_DISABLE_S5=1
 		DPC=lx2160a/LX2160A-CEX7/null-s1_0-s2_0-dpc.dtb
 		DPL=lx2160a/LX2160A-CEX7/null-s1_0-s2_0-dpl.dtb
 		DEFAULT_FDT_FILE="freescale/fsl-lx2162a-clearfog.dtb"
@@ -152,6 +153,7 @@ case "${TARGET}" in
 	;;
 	LX2162A_SOM_CLEARFOG_3_9_0|LX2162A_SOM_CLEARFOG_18_9_0)
 		ATF_PLATFORM=lx2162asom
+		ATF_DISABLE_S5=1
 		DPC=clearfog-s1_3-s2_9-dpc.dtb
 		DPL=clearfog-s1_3-s2_9-dpl.dtb
 		DEFAULT_FDT_FILE="freescale/fsl-lx2162a-clearfog.dtb"
@@ -162,6 +164,7 @@ case "${TARGET}" in
 	;;
 	LX2162A_SOM_CLEARFOG_3_7_0|LX2162A_SOM_CLEARFOG_3_11_0|LX2162A_SOM_CLEARFOG_18_7_0|LX2162A_SOM_CLEARFOG_18_11_0)
 		ATF_PLATFORM=lx2162asom
+		ATF_DISABLE_S5=1
 		DPC=clearfog-s1_3-s2_7-dpc.dtb
 		DPL=clearfog-s1_3-s2_7-dpl.dtb
 		DEFAULT_FDT_FILE="freescale/fsl-lx2162a-clearfog.dtb"
