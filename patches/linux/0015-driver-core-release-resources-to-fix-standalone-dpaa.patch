@@ -1,0 +1,67 @@
+From bd607f92d5c33c012711ccd0924a644ff576a6b9 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 22 Dec 2025 15:58:56 +0100
+Subject: [PATCH] driver core: release resources to fix standalone dpaa2 mac
+ driver probe
+
+Due to the way NXP DPAA2 driver does a hand-off between full ethernet
+driver and standalone mac driver for individual dpmac objects, driver
+core can find pre-allocated resources and abort with EBUSY [1].
+
+This happens in particular ahen unbinding dpaa2 driver from a dpni
+object.
+NXP drivers immediately on dpni unbind try attaching the standalone mac
+driver, which defers probe because the dpni object is not yet destroyed.
+
+Deferred probe does not clean up all resources leading to subsequent
+probe attempts (normally after dpni object was destroyed manually) to be
+blocked with EBUSY by the driver core.
+
+Implement a workaround specifically for LX2160A SoC and the down-stream
+DPAA2 standalone MAC driver cleaning up residual resources an allowing
+probe to proceed.
+
+This fixes DPDK for the use-case where at boot-time kernel networking is
+active on all interfaces, and they are dynamically re-assigned for use
+with DPDK by the user - on NXP kernel forks for LX2160A SoC.
+
+[1]
+$ echo dpni.9 > /sys/bus/fsl-mc/drivers/fsl_dpaa2_eth/unbind
+[   72.378986] bus: 'fsl-mc': really_probe: probing driver fsl_dpaa2_mac with device dpmac.5
+[   72.391783] fsl_dpaa2_mac dpmac.5: has peer device from dprc.1
+[   72.397622] fsl_dpaa2_mac dpmac.5: deferring probe
+[   72.402435] fsl-mc dpmac.5: driver_probe_device fsl_dpaa2_mac: 517
+[   72.408632] fsl-mc dpmac.5: bus_for_each_drv __device_attach_driver: 0
+$ restool dpni destroy dpni.9
+dpni.9 is destroyed
+$ echo dpmac.5 > /sys/bus/fsl-mc/drivers/fsl_dpaa2_mac/bind
+[  103.643799] bus: 'fsl-mc': really_probe: probing driver fsl_dpaa2_mac with device dpmac.5
+[  103.652012] fsl-mc dpmac.5: Resources present before probing
+-bash: echo: write error: Device or resource busy
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/base/dd.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/base/dd.c b/drivers/base/dd.c
+index e9c1feaa13ce..91f19e59945a 100644
+--- a/drivers/base/dd.c
++++ b/drivers/base/dd.c
+@@ -624,6 +624,13 @@ static int really_probe(struct device *dev, struct device_driver *drv)
+ 		 drv->bus->name, __func__, drv->name, dev_name(dev));
+ 	if (!list_empty(&dev->devres_head)) {
+ 		dev_crit(dev, "Resources present before probing\n");
++
++		if (drv->name && !strcmp(drv->name, "fsl_dpaa2_mac")) {
++			dev_crit(dev, "clearing residual resources to fix downstream standalone dpaa2 mac driver\n");
++			devres_release_all(dev);
++			goto re_probe;
++		}
++
+ 		ret = -EBUSY;
+ 		goto done;
+ 	}
+-- 
+2.51.0
+
