@@ -1,0 +1,55 @@
+From cc54562b92b2c6960b4cf5fd99ffdf85f642a2d6 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 23 Dec 2025 14:40:08 +0100
+Subject: [PATCH] arm64: dts: lx2162a-clearfog: set sfp connector leds function
+ and source
+
+LX2162A Clearfog has four LEDs attached physically to the 4-port SFP
+connector. They are intended to show information relating to network
+interface status.
+
+Select "netdev" as default trigger for each LED, and link each one to
+the respective dpmac instance as trigger-source.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+index 1758e91fdbcf..a31af7f5cf04 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+@@ -41,21 +41,29 @@ leds {
+ 		led_sfp_at: led-sfp-at {
+ 			gpios = <&gpio2 5 GPIO_ACTIVE_HIGH>; /* PROC_IRQ5 */
+ 			default-state = "off";
++			linux,default-trigger = "netdev";
++			trigger-sources = <&dpmac3>;
+ 		};
+ 
+ 		led_sfp_ab: led-sfp-ab {
+ 			gpios = <&gpio2 11 GPIO_ACTIVE_HIGH>; /* PROC_IRQ11 */
+ 			default-state = "off";
++			linux,default-trigger = "netdev";
++			trigger-sources = <&dpmac4>;
+ 		};
+ 
+ 		led_sfp_bt: led-sfp-bt {
+ 			gpios = <&gpio2 13 GPIO_ACTIVE_HIGH>; /* EVT1_B */
+ 			default-state = "off";
++			linux,default-trigger = "netdev";
++			trigger-sources = <&dpmac5>;
+ 		};
+ 
+ 		led_sfp_bb: led-sfp-bb {
+ 			gpios = <&gpio2 14 GPIO_ACTIVE_HIGH>; /* EVT2_B */
+ 			default-state = "off";
++			linux,default-trigger = "netdev";
++			trigger-sources = <&dpmac6>;
+ 		};
+ 	};
+ 
+-- 
+2.51.0
+

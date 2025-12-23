@@ -864,7 +864,7 @@ for i in `find lib`; do
 	fi
 	if [ -f $i ]; then
 		DIR=`dirname $i`
-		e2cp -G 0 -O 0 -p $ROOTDIR/images/tmp/linux/$i $ROOTDIR/images/tmp/$ROOTFS.ext4:usr/$DIR
+		e2cp -v -G 0 -O 0 -p $ROOTDIR/images/tmp/linux/$i $ROOTDIR/images/tmp/$ROOTFS.ext4:usr/$DIR
 	fi
 done
 cd -
@@ -880,6 +880,9 @@ e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-addni
 e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-addsw
 e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-listmac
 e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-listni
+
+# install udev rules
+find "$ROOTDIR/configs/linux" -type f -iname "*.rules" -printf "%f\0" | e2cp -v -G 0 -O 0 -P 644 -0 -s "$ROOTDIR/configs/linux" -d "$ROOTDIR/images/tmp/$ROOTFS.ext4:/etc/udev/rules.d"
 
 # collect generated images
 declare -a IMAGES
