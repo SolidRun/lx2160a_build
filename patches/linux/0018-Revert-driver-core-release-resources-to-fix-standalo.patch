@@ -1,0 +1,32 @@
+From aa128aa2822c0739d6c84e417882566cebe287de Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 23 Dec 2025 17:35:28 +0100
+Subject: [PATCH 18/20] Revert "driver core: release resources to fix
+ standalone dpaa2 mac driver probe"
+
+This reverts commit bd607f92d5c33c012711ccd0924a644ff576a6b9.
+---
+ drivers/base/dd.c | 7 -------
+ 1 file changed, 7 deletions(-)
+
+diff --git a/drivers/base/dd.c b/drivers/base/dd.c
+index 91f19e59945a..e9c1feaa13ce 100644
+--- a/drivers/base/dd.c
++++ b/drivers/base/dd.c
+@@ -624,13 +624,6 @@ static int really_probe(struct device *dev, struct device_driver *drv)
+ 		 drv->bus->name, __func__, drv->name, dev_name(dev));
+ 	if (!list_empty(&dev->devres_head)) {
+ 		dev_crit(dev, "Resources present before probing\n");
+-
+-		if (drv->name && !strcmp(drv->name, "fsl_dpaa2_mac")) {
+-			dev_crit(dev, "clearing residual resources to fix downstream standalone dpaa2 mac driver\n");
+-			devres_release_all(dev);
+-			goto re_probe;
+-		}
+-
+ 		ret = -EBUSY;
+ 		goto done;
+ 	}
+-- 
+2.51.0
+

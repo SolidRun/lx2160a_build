@@ -1,0 +1,71 @@
+From 722e4bbbe1c696403f60dde32e131f49a026e7eb Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 23 Dec 2025 17:26:46 +0100
+Subject: [PATCH 19/20] driver core: print name of bound resources preventing
+ (re-) probe
+
+really_probe has a check for any residual resources attached to a device
+that, if present, should prevent probe.
+
+For debugging purposes print the name of each such resource.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/base/dd.c      |  3 ++-
+ drivers/base/devres.c  | 13 +++++++++++++
+ include/linux/device.h |  1 +
+ 3 files changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/base/dd.c b/drivers/base/dd.c
+index e9c1feaa13ce..45a2c81e7ce5 100644
+--- a/drivers/base/dd.c
++++ b/drivers/base/dd.c
+@@ -623,7 +623,8 @@ static int really_probe(struct device *dev, struct device_driver *drv)
+ 	pr_debug("bus: '%s': %s: probing driver %s with device %s\n",
+ 		 drv->bus->name, __func__, drv->name, dev_name(dev));
+ 	if (!list_empty(&dev->devres_head)) {
+-		dev_crit(dev, "Resources present before probing\n");
++		dev_crit(dev, "Resources present before probing:\n");
++		devres_for_each_res_print_name(dev);
+ 		ret = -EBUSY;
+ 		goto done;
+ 	}
+diff --git a/drivers/base/devres.c b/drivers/base/devres.c
+index e9b0d94aeabd..a11fdcb9ad40 100644
+--- a/drivers/base/devres.c
++++ b/drivers/base/devres.c
+@@ -214,6 +214,19 @@ void devres_for_each_res(struct device *dev, dr_release_t release,
+ }
+ EXPORT_SYMBOL_GPL(devres_for_each_res);
+ 
++void devres_for_each_res_print_name(struct device *dev)
++{
++	struct devres_node *node;
++	unsigned long flags;
++
++	spin_lock_irqsave(&dev->devres_lock, flags);
++	list_for_each_entry(node, &dev->devres_head, entry) {
++		dev_info(dev, " - %s", node->name);
++	}
++	spin_unlock_irqrestore(&dev->devres_lock, flags);
++}
++EXPORT_SYMBOL_GPL(devres_for_each_res_print_name);
++
+ /**
+  * devres_free - Free device resource data
+  * @res: Pointer to devres data to free
+diff --git a/include/linux/device.h b/include/linux/device.h
+index a070160fbcb8..138dbcb87d2c 100644
+--- a/include/linux/device.h
++++ b/include/linux/device.h
+@@ -282,6 +282,7 @@ void devres_for_each_res(struct device *dev, dr_release_t release,
+ 			 dr_match_t match, void *match_data,
+ 			 void (*fn)(struct device *, void *, void *),
+ 			 void *data);
++void devres_for_each_res_print_name(struct device *dev);
+ void devres_free(void *res);
+ void devres_add(struct device *dev, void *res);
+ void *devres_find(struct device *dev, dr_release_t release,
+-- 
+2.51.0
+

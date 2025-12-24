@@ -1,0 +1,84 @@
+From a2b13a9f4f5779e24dd5fae8cb34c7bf81edcd84 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 23 Dec 2025 17:28:53 +0100
+Subject: [PATCH 20/20] net: dpaa2-mac: fully release dpmac resources on dpni
+ unbind
+
+dpaa2_mac_get_phys and dpaa2_mac_put_phys are designed to be
+counter-parts allocating and cleaning all resources.
+
+The put function however uses phy_exit instead of managed put, delaying
+cleanup till the driver is unbound.
+Meanwhile the array and pointer values are left untouched.
+
+The residual devm ownerships over both the phys array and each
+phy object prevent the standalone mac driver from probing while the
+dpaa2-eth driver is still bound.
+
+The dpaa2-eth driver explicitly tries to attach and detach the
+standalone mac driver during its probe and unbind flows - which leads to
+a deadlock when the dpaa2-eth is still bound, frees some resources of
+the dpmac object and attempts attaching the standalone mac driver.
+
+Driver core detects residual objects (devm allocations) attached to the
+dpmac object and defers probe.
+dpaa2-eth driver does not unbind because attaching the mac driver has
+not completed yet.
+
+Change the dpaa2_mac_put_phys function to explicitly release all
+phy objects with devm_putm and change the phys array allocation to
+explicit kcalloc / kfree.
+
+This fixes standalone dpmac driver probe if dpaa2-eth was previously
+bound.
+
+Note the initial synchronous probe attempt triggered from dpaa2-eth
+driver still fails because the dpni has not been destroyed yet, however
+manual probe succeeds:
+
+$ echo dpni.11 > /sys/bus/fsl-mc/drivers/fsl_dpaa2_eth/unbind
+[   62.855485] fsl-mc dpmac.3: Error in attaching the fsl_dpaa2_mac driver
+$ restool dpni destroy dpni.11
+dpni.11 is destroyed
+$ echo dpmac.3 > /sys/bus/fsl-mc/drivers/fsl_dpaa2_mac/bind
+[   85.456613] phy phy-1ea0000.phy.7: phy_power_on was called before phy_init
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index 495308a11c37..512f4f561ba7 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -386,7 +386,7 @@ static int dpaa2_mac_get_phys(struct dpaa2_mac *mac)
+ 	else
+ 		mac->num_lanes = val;
+ 
+-	mac->phys = devm_kcalloc(dev, mac->num_phys, sizeof(struct phy *),
++	mac->phys = kcalloc(mac->num_phys, sizeof(struct phy *),
+ 				 GFP_KERNEL);
+ 	if (!mac->phys)
+ 		return -ENOMEM;
+@@ -415,10 +415,16 @@ static int dpaa2_mac_get_phys(struct dpaa2_mac *mac)
+ 
+ static void dpaa2_mac_put_phys(struct dpaa2_mac *mac)
+ {
++	struct device *dev = &mac->mc_dev->dev;
+ 	size_t i;
+ 
+-	for (i = mac->num_lanes; i < mac->num_phys; i++)
++	for (i = 0; i < mac->num_phys; i++) {
+ 		phy_exit(mac->phys[i]);
++		devm_phy_put(dev, mac->phys[i]);
++	}
++
++	kfree(mac->phys);
++	mac->phys = NULL;
+ }
+ 
+ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+-- 
+2.51.0
+
