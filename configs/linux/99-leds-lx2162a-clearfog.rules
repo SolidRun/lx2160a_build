@@ -1,0 +1,15 @@
+# LX2162A Clearfog Rules
+PROGRAM!="/bin/sh -c 'grep -Fq solidrun,lx2162a-clearfog /sys/firmware/devicetree/base/compatible 2>/dev/null'", GOTO="lx2162a_clearfog_end"
+# SFP Connector LED Configuration:
+# Linux sets netdev trigger automatically from device-tree, but not the actual netdev source device (netdev name) and function.
+# Configure leds for showing link-status and match netdev names based on dpmac node.
+SUBSYSTEM=="net", ACTION=="add", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs/ethernet@3", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-at/device_name && echo 1 > /sys/class/leds/led-sfp-at/link'"
+SUBSYSTEM=="net", ACTION=="add", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs/ethernet@4", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-ab/device_name && echo 1 > /sys/class/leds/led-sfp-ab/link'"
+SUBSYSTEM=="net", ACTION=="add", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs/ethernet@5", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-bt/device_name && echo 1 > /sys/class/leds/led-sfp-bt/link'"
+SUBSYSTEM=="net", ACTION=="add", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs/ethernet@6", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-bb/device_name && echo 1 > /sys/class/leds/led-sfp-bb/link'"
+
+KERNELS=="dpmac.3", ACTION=="add", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-at/device_name && echo 1 > /sys/class/leds/led-sfp-at/link'"
+KERNELS=="dpmac.4", ACTION=="add", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-ab/device_name && echo 1 > /sys/class/leds/led-sfp-ab/link'"
+KERNELS=="dpmac.5", ACTION=="add", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-bt/device_name && echo 1 > /sys/class/leds/led-sfp-bt/link'"
+KERNELS=="dpmac.6", ACTION=="add", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-bb/device_name && echo 1 > /sys/class/leds/led-sfp-bb/link'"
+LABEL="lx2162a_clearfog_end"
