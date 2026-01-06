@@ -68,7 +68,7 @@ jobs:
           echo "build_date=$build_date" >> "$GITHUB_OUTPUT"
           echo "build_rev=$build_rev" >> "$GITHUB_OUTPUT"
 
-  build_images:
+  build:
     needs:
       - info
       - prepare_container
@@ -144,7 +144,7 @@ jobs:
   publish_images:
     needs:
       - info
-      - build_images
+      - build
     runs-on: self-hosted
     if: github.ref == 'refs/heads/develop-ls-6.6.52-2.2.0' && github.event_name != 'pull_request'
     steps:
@@ -156,7 +156,7 @@ jobs:
           access_key: ${{ secrets.CI_CACHE_MINIO_ACCESS }}
           secret_key: ${{ secrets.CI_CACHE_MINIO_SECRET }}
           bucket: cipublish
-          source: "/${{ needs.build_images.outputs.local_artifacts_path }}/"
+          source: "/${{ needs.build.outputs.local_artifacts_path }}/"
           target: "./deploy"
           recursive: true
 
@@ -171,94 +171,42 @@ jobs:
           destination_dir: LX2k/lx2160a_build/ls-6.6.52-2.2.0/${{ needs.info.outputs.build_tag }}
 
   test_images:
+    name: Test on Hardware
     needs:
       - info
-      - build_images
+      - build
     runs-on: self-hosted
     timeout-minutes: 90
 
-    env:
-      LAVA_SERVER: 192.168.15.184
-      LAVA_PORT: 8001
     steps:
       - name: Generate Temporary Image Download URLs
         id: dl_url
         shell: bash {0}
         run: |
-          echo "lx2162_som_multi_url=http://ciserver.ci:8000/cipublish/${{ needs.build_images.outputs.local_artifacts_path }}/lx2162a_rev2_som_clearfog_multi_2000_650_2900_18_9_0-${{ needs.info.outputs.build_rev }}.img.xz" >> "$GITHUB_OUTPUT"
+          echo "lx2162_som_multi_url=http://ciserver.ci:8000/cipublish/${{ needs.build.outputs.local_artifacts_path }}/lx2162a_rev2_som_clearfog_multi_2000_650_2900_18_9_0-${{ needs.info.outputs.build_rev }}.img.xz" >> "$GITHUB_OUTPUT"
 
-      - name: Submit Job (LX2162 Clearfog Multi-Boot Image)
+      - name: Checkout LAVA action
+        uses: actions/checkout@v4
+        with:
+          repository: SolidRun/lava-test-definitions
+          path: .lava-action
+          ssh-key: ${{ secrets.LAVA_ACTION_SECRET }}
+
+      - name: Test Images on LAVA
         id: submit
-        shell: bash {0}
-        run: |
-          IMAGE_URL="${{ steps.dl_url.outputs.lx2162_som_multi_url }}"
-          
-          echo "Image URL: $IMAGE_URL"
-          echo "Submitting to LAVA (includes automatic git pull)..."
-
-          response=$(curl -sf -X POST "http://${LAVA_SERVER}:${LAVA_PORT}/jobs/submit" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"device_type\": \"lx2162a-solidrun\",
-              \"image_url\": \"$IMAGE_URL\",
-              \"compression\": \"xz\",
-              \"all_devices\": false
-            }") || {
-            echo "ERROR: Failed to connect to LAVA API"
-            exit 1
-          }
-          
-          echo "Response: $response"
-
-          # Check submission status
-          status=$(echo "$response" | jq -r '.status // empty')
-          batch_id=$(echo "$response" | jq -r '.batch_id // empty')
-
-          if [ "$status" != "success" ] || [ -z "$batch_id" ]; then
-            echo "ERROR: Job submission failed"
-            echo "$response" | jq '.'
-            exit 1
-          fi
-
-          job_ids=$(echo "$response" | jq -r '[.submitted_jobs | values[]] | join(", ")')
-          
-          echo "Jobs submitted successfully"
-          echo "Batch ID: $batch_id"
-          echo "Job IDs: $job_ids"
-          echo "batch_id=$batch_id" >> $GITHUB_OUTPUT
-
-      - name: Wait for Job Completion
-        shell: bash {0}
-        run: |
-          batch_id="${{ steps.submit.outputs.batch_id }}"
-          echo "Waiting for batch: $batch_id"
-          
-          timeout=36000
-          start_time=$(date +%s)
-          
-          while true; do
-            elapsed=$(($(date +%s) - start_time))
-            if [ $elapsed -gt $timeout ]; then
-              echo "ERROR: Timeout after 10 hours"
-              exit 1
-            fi
-            
-            status_response=$(curl -s "http://${LAVA_SERVER}:${LAVA_PORT}/jobs/$batch_id/status")
-            overall_status=$(echo "$status_response" | jq -r '.overall_status // empty')
-            
-            echo "Status: $overall_status"
-            
-            case "$overall_status" in
-              "success")
-                echo "All jobs completed successfully!"
-                exit 0
-                ;;
-              "failed"|"partial")
-                echo "Jobs failed or partially completed"
-                exit 1
-                ;;
-              "running")
-                sleep 30
-                ;;
-            esac
-          done
+        uses: ./.lava-action/.github/actions/lava-submit
+        with:
+          server: 192.168.15.184
+          port: 8001
+          timeout: 36000
+          jobs: |
+            [
+              {
+                "device_type": "lx2162a-solidrun",
+                "tags": [],
+                "image_url": "${{ steps.dl_url.outputs.lx2162_som_multi_url }}",
+                "description": "LX2162A Ubuntu - lx2160a_build/${{ needs.info.outputs.build_ref }} (${{ needs.info.outputs.build_rev }})",
+                "compression": "xz",
+                "all_devices": false
+              }
+            ]
