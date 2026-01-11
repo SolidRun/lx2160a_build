@@ -1,0 +1,28 @@
+From dce9c319811b80428153f8801fed0f0360f19772 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 11 Jan 2026 17:35:32 +0200
+Subject: [PATCH 14/14] lx2162asom_rev2: remove duplicate pbi command disabling
+ macs7-10
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2162asom_rev2/include/common_pbi.rcwi | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/lx2162asom_rev2/include/common_pbi.rcwi b/lx2162asom_rev2/include/common_pbi.rcwi
+index c917829..71bf1f3 100644
+--- a/lx2162asom_rev2/include/common_pbi.rcwi
++++ b/lx2162asom_rev2/include/common_pbi.rcwi
+@@ -34,9 +34,6 @@
+ /* USB2 clock disable (not available on LX2162) */
+ #include <../lx2162aqds/disable_usb2.rcw>
+ 
+-/* MAC7 to MAC10 clock disable (not available on LX2162) */
+-#include <../lx2162aqds/disable_mac7_10.rcw>
+-
+ /* DDR2 clock disable*/
+ #include <../lx2162aqds/disable_ddr2.rcw>
+ 
+-- 
+2.43.0
+

@@ -1,0 +1,170 @@
+From de1898e4984ea2652bfa007020f71fb031ec4785 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 11 Jan 2026 15:01:13 +0200
+Subject: [PATCH 13/14] lx2162asom_rev2: generate config for sd1 protocol 3
+ (4x10G)
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ GenerateSRConfigs.sh                          |  2 +-
+ .../rcw_2000_650_2900_3_11_0_auto.rcw         | 31 +++++++++++++++++++
+ .../clearfog/rcw_2000_650_2900_3_7_0_auto.rcw | 31 +++++++++++++++++++
+ .../clearfog/rcw_2000_650_2900_3_9_0_auto.rcw | 31 +++++++++++++++++++
+ lx2162asom_rev2/include/SD1_3.rcwi            | 18 +++++++++++
+ 5 files changed, 112 insertions(+), 1 deletion(-)
+ create mode 100644 lx2162asom_rev2/clearfog/rcw_2000_650_2900_3_11_0_auto.rcw
+ create mode 100644 lx2162asom_rev2/clearfog/rcw_2000_650_2900_3_7_0_auto.rcw
+ create mode 100644 lx2162asom_rev2/clearfog/rcw_2000_650_2900_3_9_0_auto.rcw
+ create mode 100644 lx2162asom_rev2/include/SD1_3.rcwi
+
+diff --git a/GenerateSRConfigs.sh b/GenerateSRConfigs.sh
+index 1729c0f..3189a2a 100755
+--- a/GenerateSRConfigs.sh
++++ b/GenerateSRConfigs.sh
+@@ -64,7 +64,7 @@ for DDR_SPEED in 2400 2600 2666 2900 3200; do
+ done
+ 
+ # generate LX2162A CSoM Clearfog
+-for SD1 in 2 18; do
++for SD1 in 2 3 18; do
+ 	for SD2 in 7 9 11; do
+ 		generate lx2162asom_clearfog.tmpl lx2162asom 2 clearfog 2000 650 2900 ${SD1} ${SD2} 0 auto
+ 	done
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_3_11_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_3_11_0_auto.rcw
+new file mode 100644
+index 0000000..d00a89b
+--- /dev/null
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_3_11_0_auto.rcw
+@@ -0,0 +1,31 @@
++/*
++ * SerDes Protocol 1 -  3
++ * SerDes Protocol 2 -  11
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 650  MHz
++ * DDR      -- 2900 MT/s
++ *
++ * Silicon 2.0
++ * Boot from AUTO
++ */
++
++#define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_650_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2162asom_rev2/include/common.rcwi>
++#include <../lx2162asom_rev2/include/SD1_3.rcwi>
++#include <../lx2162asom_rev2/include/SD2_11.rcwi>
++#include <../lx2160acex7/include/SD3_0.rcwi>
++#include <../lx2162asom_rev2/include/common_pbi.rcwi>
++#include <../lx2160acex7/include/bootlocptr.rcwi>
++
++#if 3 == 18 || 3 == -18
++/* set default serdes lane equalization parameters for 25G */
++#include <../lx2160asi/25g_eq_s1_lane_e.rcw>
++#include <../lx2160asi/25g_eq_s1_lane_f.rcw>
++#endif
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_3_7_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_3_7_0_auto.rcw
+new file mode 100644
+index 0000000..450bc04
+--- /dev/null
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_3_7_0_auto.rcw
+@@ -0,0 +1,31 @@
++/*
++ * SerDes Protocol 1 -  3
++ * SerDes Protocol 2 -  7
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 650  MHz
++ * DDR      -- 2900 MT/s
++ *
++ * Silicon 2.0
++ * Boot from AUTO
++ */
++
++#define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_650_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2162asom_rev2/include/common.rcwi>
++#include <../lx2162asom_rev2/include/SD1_3.rcwi>
++#include <../lx2162asom_rev2/include/SD2_7.rcwi>
++#include <../lx2160acex7/include/SD3_0.rcwi>
++#include <../lx2162asom_rev2/include/common_pbi.rcwi>
++#include <../lx2160acex7/include/bootlocptr.rcwi>
++
++#if 3 == 18 || 3 == -18
++/* set default serdes lane equalization parameters for 25G */
++#include <../lx2160asi/25g_eq_s1_lane_e.rcw>
++#include <../lx2160asi/25g_eq_s1_lane_f.rcw>
++#endif
+diff --git a/lx2162asom_rev2/clearfog/rcw_2000_650_2900_3_9_0_auto.rcw b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_3_9_0_auto.rcw
+new file mode 100644
+index 0000000..526b403
+--- /dev/null
++++ b/lx2162asom_rev2/clearfog/rcw_2000_650_2900_3_9_0_auto.rcw
+@@ -0,0 +1,31 @@
++/*
++ * SerDes Protocol 1 -  3
++ * SerDes Protocol 2 -  9
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 650  MHz
++ * DDR      -- 2900 MT/s
++ *
++ * Silicon 2.0
++ * Boot from AUTO
++ */
++
++#define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_650_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2162asom_rev2/include/common.rcwi>
++#include <../lx2162asom_rev2/include/SD1_3.rcwi>
++#include <../lx2162asom_rev2/include/SD2_9.rcwi>
++#include <../lx2160acex7/include/SD3_0.rcwi>
++#include <../lx2162asom_rev2/include/common_pbi.rcwi>
++#include <../lx2160acex7/include/bootlocptr.rcwi>
++
++#if 3 == 18 || 3 == -18
++/* set default serdes lane equalization parameters for 25G */
++#include <../lx2160asi/25g_eq_s1_lane_e.rcw>
++#include <../lx2160asi/25g_eq_s1_lane_f.rcw>
++#endif
+diff --git a/lx2162asom_rev2/include/SD1_3.rcwi b/lx2162asom_rev2/include/SD1_3.rcwi
+new file mode 100644
+index 0000000..82709ef
+--- /dev/null
++++ b/lx2162asom_rev2/include/SD1_3.rcwi
+@@ -0,0 +1,18 @@
++/* Serdes 1 Protocol 3: 4x10Gbps */
++SRDS_PRTCL_S1=3
++
++/* Disable Serdes 1 PLLF */
++SRDS_PLL_PD_PLL1=1
++
++/* Enable Serdes 1 PLLS */
++SRDS_PLL_PD_PLL2=0
++
++/* Use Serdes 1 PLLF for PLLS (LX2162A has no physical input for PLLS) */
++SRDS_INTRA_REF_CLK_S1=1
++
++/*
++ * Select Serdes 1 PLLF frequency 161.1328125MHz for 25GE mode (don't care): Bit 0 = 0
++ * Select Serdes 1 PLLS frequency 161.1328125MHz for 10GE mode: Bit 1 = 1
++ * (See QorIQ LX2162A Reference Manual, Rev. 1, 12/2021, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 932)
++ */
++SRDS_PLL_REF_CLK_SEL_S1=0
+-- 
+2.43.0
+
