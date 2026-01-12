@@ -297,3 +297,10 @@ Afterwards run update the RTC and update the repository -
 If using a GPU then install the linux-firmware package that contains GPU firmwares -
 
 `apt install linux-firmware`
+
+## Known Issues
+
+### SFP Ports with Retimer can't link up
+
+The 2x 25Gbps ports on LX2162A Clearfog, and the QSFP on Clearfog-CX can't detect link.
+RX direction is not currently functional, no known workaround.
