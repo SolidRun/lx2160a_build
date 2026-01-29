@@ -777,64 +777,103 @@ pkg_dpdk
 ###############################################################################
 # assembling images
 ###############################################################################
-echo "Assembling kernel and rootfs image"
-cd $ROOTDIR
-mkdir -p $ROOTDIR/images/tmp/extlinux/
-cat > $ROOTDIR/images/tmp/extlinux/extlinux.conf << EOF
-  timeout 30
-  default linux
-  menu title linux-lx2160a boot options
-  label primary
+function do_generate_extlinux_conf() {
+	local EXTLINUX=$1
+	local DISKIMAGE=$2
+	local PARTNUMBER=$3
+	local PARTUUID=`blkid -s PTUUID -o value ${DISKIMAGE}`
+	PARTUUID=${PARTUUID}'-0'${PARTNUMBER} # specific partition uuid
+
+	mkdir -p $(dirname ${EXTLINUX})
+
+	cat > ${EXTLINUX} << EOF
+timeout 30
+default linux
+menu title linux-lx2160a boot options
+label primary
     menu label primary kernel
     linux /boot/Image.gz
     fdtdir /boot/
-    APPEND console=ttyAMA0,115200 earlycon=pl011,mmio32,0x21c0000 default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf root=PARTUUID=30303030-01 rw rootwait
+    APPEND console=\${console} earlycon=pl011,mmio32,0x21c0000 default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf root=PARTUUID=$PARTUUID rw rootwait
 EOF
+}
 
-e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:extlinux
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/extlinux/extlinux.conf $ROOTDIR/images/tmp/$ROOTFS.ext4:extlinux/
-e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:boot
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/linux/boot/Image.gz $ROOTDIR/images/tmp/$ROOTFS.ext4:boot/
-e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:boot/freescale
-e2cp -G 0 -O 0 $ROOTDIR/images/tmp/linux/boot/freescale/fsl-lx216*.dtb $ROOTDIR/images/tmp/$ROOTFS.ext4:boot/freescale/
+function do_install_extlinux_conf() {
+	local EXTLINUX="$1"
+	local FSIMG="$2"
 
-# Copy over kernel image
-echo "Copying kernel modules"
-cd $ROOTDIR/images/tmp/linux/
-for i in `find lib`; do
-	if [ -d $i ]; then
-		e2mkdir -G 0 -O 0 $ROOTDIR/images/tmp/$ROOTFS.ext4:usr/$i
-	fi
-	if [ -f $i ]; then
-		DIR=`dirname $i`
-		e2cp -G 0 -O 0 -p $ROOTDIR/images/tmp/linux/$i $ROOTDIR/images/tmp/$ROOTFS.ext4:usr/$DIR
-	fi
-done
-cd -
+	e2mkdir -G 0 -O 0 $FSIMG:extlinux
+	e2cp -G 0 -O 0 $EXTLINUX $FSIMG:extlinux/
+}
 
-# install restool
-echo "Install restool"
-cd $ROOTDIR/
-e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/ls-append-dpl $ROOTDIR/images/tmp/$ROOTFS.ext4:/usr/bin/
-e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/ls-main $ROOTDIR/images/tmp/$ROOTFS.ext4:/usr/bin/
-e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/restool $ROOTDIR/images/tmp/$ROOTFS.ext4:/usr/bin/
-e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-addmux
-e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-addni
-e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-addsw
-e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-listmac
-e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-listni
+function do_install_kernel() {
+	local FSIMG="$1"
+
+	echo "Installing kernel to rootfs"
+	e2mkdir -G 0 -O 0 $FSIMG:boot
+	e2cp -v -G 0 -O 0 $ROOTDIR/images/tmp/linux/boot/Image.gz $FSIMG:boot/
+	e2mkdir -G 0 -O 0 $FSIMG:boot/freescale
+	e2cp -v -G 0 -O 0 $ROOTDIR/images/tmp/linux/boot/freescale/fsl-lx216*.dtb $FSIMG:boot/freescale/
+
+	cd $ROOTDIR/images/tmp/linux/
+	for i in `find lib`; do
+		if [ -d $i ]; then
+			e2mkdir -G 0 -O 0 $FSIMG:usr/$i
+		fi
+		if [ -f $i ]; then
+			DIR=`dirname $i`
+			e2cp -v -G 0 -O 0 -p $ROOTDIR/images/tmp/linux/$i $FSIMG:usr/$DIR
+		fi
+	done
+}
+
+function do_install_restool() {
+	local FSIMG="$1"
+
+	echo "Installing restool to rootfs"
+	cd $ROOTDIR/
+	e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/ls-append-dpl $FSIMG:/usr/bin/
+	e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/ls-main $FSIMG:/usr/bin/
+	e2cp -p -G 0 -O 0 $ROOTDIR/build/restool/install/usr/bin/restool $FSIMG:/usr/bin/
+	e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-addmux
+	e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-addni
+	e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-addsw
+	e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-listmac
+	e2ln images/tmp/$ROOTFS.ext4:/usr/bin/ls-main /usr/bin/ls-listni
+}
+
+function do_install_udev_rules() {
+	local FSIMG="$1"
+
+	find "$ROOTDIR/configs/linux" -type f -iname "*.rules" -printf "%f\0" | e2cp -v -G 0 -O 0 -P 644 -0 -s "$ROOTDIR/configs/linux" -d "$FSIMG:/etc/udev/rules.d"
+}
+
+function do_allocate_disk_image() {
+	local IMAGE="$1"
+	local PART1_SIZE=$2
+
+	rm -f $IMAGE
+	truncate -s 64M $IMAGE
+	truncate -s +$PART1_SIZE $IMAGE
+
+	parted --script $IMAGE mklabel msdos mkpart primary 64MiB $((64*1024*1024+PART1_SIZE-1))B
+}
+
+echo "Assembling rootfs"
+do_install_kernel $ROOTDIR/images/tmp/$ROOTFS.ext4
+do_install_restool $ROOTDIR/images/tmp/$ROOTFS.ext4
+do_install_udev_rules $ROOTDIR/images/tmp/$ROOTFS.ext4
 
 # collect generated images
 declare -a IMAGES
 
-echo "Assembling rootfs Image"
-cd $ROOTDIR/
-truncate -s 64M $ROOTDIR/images/tmp/$ROOTFS.img
-truncate -s +$ROOTFS_SIZE $ROOTDIR/images/tmp/$ROOTFS.img
+echo "Assembling disk images"
+do_allocate_disk_image $ROOTDIR/images/tmp/$ROOTFS.img $ROOTFS_SIZE
 ROOTFS_IMG_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/$ROOTFS.img)
-parted --script $ROOTDIR/images/tmp/$ROOTFS.img mklabel msdos mkpart primary 64MiB $((64*1024*1024+ROOTFS_SIZE-1))B
-# Generate the above partuuid 3030303030 which is the 4 characters of '0' in ascii
-echo "0000" | dd of=$ROOTDIR/images/tmp/$ROOTFS.img bs=1 seek=440 conv=notrunc
+
+# generate extlinux.conf after partition table, to pick up generated random partuuid
+do_generate_extlinux_conf $ROOTDIR/images/tmp/extlinux/extlinux.conf $ROOTDIR/images/tmp/$ROOTFS.img 1
+do_install_extlinux_conf $ROOTDIR/images/tmp/extlinux/extlinux.conf $ROOTDIR/images/tmp/$ROOTFS.ext4
 dd if=$ROOTDIR/images/tmp/$ROOTFS.ext4 of=$ROOTDIR/images/tmp/$ROOTFS.img bs=1M seek=64 conv=notrunc
 IMAGES+=("images/tmp/$ROOTFS.img")
 
@@ -918,9 +957,7 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc* ]]); then
 	# generate boot image
 	IMG=${SOC,,}_rev${CPU_REVISION}_${MODULE,,}_${BOARD,,}_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
 	rm -rf $ROOTDIR/images/${IMG}
-	truncate -s 64M $ROOTDIR/images/${IMG}
-	truncate -s +$BOOTPART_SIZE $ROOTDIR/images/${IMG}
-	parted --script $ROOTDIR/images/${IMG} mklabel msdos mkpart primary 64MiB $((64*1024*1024+BOOTPART_SIZE-1))B
+	do_allocate_disk_image $ROOTDIR/images/${IMG} $BOOTPART_SIZE
 
 	if [ "${BOOTSOURCE}" = "auto" ]; then
 		e2cp -G 0 -O 0 $ROOTDIR/images/${XSPI_IMG} $ROOTDIR/images/tmp/boot.part:/xspi.img
