@@ -227,7 +227,7 @@ cd $ROOTDIR
 ###############################################################################
 # source code cloning
 ###############################################################################
-QORIQ_COMPONENTS="u-boot atf ddr-phy-binary rcw restool mc-utils linux dpdk cst mdio-proxy-module optee_os qoriq-mc-binary"
+QORIQ_COMPONENTS="u-boot atf ddr-phy-binary rcw restool mc-utils linux dpdk cst mdio-proxy-module optee_os qoriq-mc-binary phy-ti-ds250dfx10-module"
 for i in $QORIQ_COMPONENTS; do
 	if [[ ! -d $ROOTDIR/build/$i ]]; then
 
@@ -240,6 +240,10 @@ for i in $QORIQ_COMPONENTS; do
 		linux)
 			CHECKOUT=v7.0-rc2
 			URL=https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
+		;;
+		phy-ti-ds250dfx10-module)
+			CHECKOUT=develop
+			URL=https://github.com/SolidRun/phy-ti-ds250dfx10-module.git
 		;;
 		mc-utils|qoriq-mc-binary)
 			CHECKOUT=mc_release_10.39.0
@@ -500,6 +504,14 @@ if [[ -d ${ROOTDIR}/build/mdio-proxy-module ]]; then
 
 	make -C "${ROOTDIR}/build/linux" CROSS_COMPILE="$CROSS_COMPILE" ARCH=arm64 M="$PWD" modules
 	install -v -m644 -D mdio-proxy.ko "${ROOTDIR}/images/tmp/linux/lib/modules/${KRELEASE}/kernel/extra/mdio-proxy.ko"
+fi
+
+# Build retimer kernel module
+if [[ -d ${ROOTDIR}/build/phy-ti-ds250dfx10-module ]]; then
+	cd "${ROOTDIR}/build/phy-ti-ds250dfx10-module"
+
+	make -C "${ROOTDIR}/build/linux" CROSS_COMPILE="$CROSS_COMPILE" ARCH=arm64 M="$PWD" modules
+	install -v -m644 -D phy-ti-ds250dfx10.ko "${ROOTDIR}/images/tmp/linux/lib/modules/${KRELEASE}/kernel/extra/phy-ti-ds250dfx10.ko"
 fi
 
 # regenerate modules dependencies
