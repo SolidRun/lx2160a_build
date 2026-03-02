@@ -237,6 +237,10 @@ for i in $QORIQ_COMPONENTS; do
 		URL=https://github.com/nxp-qoriq/$i
 
 		case "$i" in
+		linux)
+			CHECKOUT=v7.0-rc2
+			URL=https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
+		;;
 		mc-utils|qoriq-mc-binary)
 			CHECKOUT=mc_release_10.39.0
 		;;
@@ -418,7 +422,7 @@ make -C config/
 
 echo "Building the kernel"
 cd $ROOTDIR/build/linux
-./scripts/kconfig/merge_config.sh arch/arm64/configs/defconfig arch/arm64/configs/lsdk.config $ROOTDIR/configs/linux/lx2k_additions.config
+./scripts/kconfig/merge_config.sh arch/arm64/configs/defconfig $ROOTDIR/configs/linux/lx2k_additions.config
 make olddefconfig
 #make menuconfig
 make -j${PARALLEL} all #Image dtbs
@@ -855,7 +859,7 @@ label primary
     menu label primary kernel
     linux /boot/Image.gz
     fdtdir /boot/
-    APPEND console=\${console} earlycon=pl011,mmio32,0x21c0000 default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf root=PARTUUID=$PARTUUID rw rootwait
+    APPEND console=\${console} earlycon=pl011,mmio32,0x21c0000 arm-smmu.disable_bypass=0 default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf root=PARTUUID=$PARTUUID rw rootwait
 EOF
 }
 
