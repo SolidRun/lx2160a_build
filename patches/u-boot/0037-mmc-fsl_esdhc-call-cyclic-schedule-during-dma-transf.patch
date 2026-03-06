@@ -1,0 +1,39 @@
+From a9521403884034d3361943ec241a97640704ff21 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Fri, 6 Mar 2026 14:51:34 +0100
+Subject: [PATCH] mmc: fsl_esdhc: call cyclic schedule() during dma transfers
+
+Large-size transfers from especially microsd cards can take a long time
+and easily exceed a typical 30s watchdog timer, leading to unexpected
+reset e.g. during load commands.
+
+Add call to the cyclic framework schedule() function to
+esdhc_send_cmd_common to ensure that background tasks such as watchdog
+servicing still take place.
+
+This fixes in particular an issue on LX2160 when loading a large disk
+image from microSD and writing to eMMC would be interrupted because
+expired watchdog reset the system after 30 seconds.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/mmc/fsl_esdhc.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/mmc/fsl_esdhc.c b/drivers/mmc/fsl_esdhc.c
+index 81340cdbcf5..e9393cd8945 100644
+--- a/drivers/mmc/fsl_esdhc.c
++++ b/drivers/mmc/fsl_esdhc.c
+@@ -460,6 +460,9 @@ static int esdhc_send_cmd_common(struct fsl_esdhc_priv *priv, struct mmc *mmc,
+ 					err = -ECOMM;
+ 					goto out;
+ 				}
++
++				/* yield to cyclic framework background tasks */
++				schedule();
+ 			} while ((irqstat & flags) != flags);
+ 
+ 			/*
+-- 
+2.51.0
+

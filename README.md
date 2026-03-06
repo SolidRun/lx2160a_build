@@ -278,7 +278,7 @@ load mmc 0:1 $kernel_addr_r emmc.img
 setexpr filesize 0x$filesize + 0x1ff
 setexpr filesize 0x$filesize / 0x200
 mmc dev 1
-mmc write $kernel_addr_r 0 0xd2000
+mmc write $kernel_addr_r 0 0x$filesize
 ```
 
 Finally change boot DIP switch on COM to off/on/on/off from numbers 1 to 4 (dip number 5 is not used. Notice the marking 'ON' on the DIP switch).
