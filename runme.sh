@@ -327,10 +327,13 @@ echo "Build u-boot"
 cd $ROOTDIR/build/u-boot
 #make distclean
 if [ "x$SECURE" == "xtrue" ]; then
-	make lx2160acex7_tfa_SECURE_BOOT_defconfig
+	UBOOT_DEFCONFIG=lx2160acex7_tfa_SECURE_BOOT_defconfig
 else
-	make lx2160acex7_tfa_defconfig
+	UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
 fi
+./scripts/kconfig/merge_config.sh configs/${UBOOT_DEFCONFIG} $ROOTDIR/configs/u-boot/lx2k_additions.config
+make olddefconfig
+
 if [ -n "${DEFAULT_FDT_FILE}" ]; then
 	printf "CONFIG_DEFAULT_FDT_FILE=\"%s\"\n" "${DEFAULT_FDT_FILE}" >> .config
 fi
