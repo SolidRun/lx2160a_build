@@ -1,0 +1,39 @@
+From cc89dd1d5dec64836d535286dde290d05b6f2026 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 14 Mar 2026 13:05:18 +0100
+Subject: [PATCH 09/12] arm64: dts: lx2160a-cex7: add rtc alias
+
+Add alias for rtc0 ensuring that on-COM RTC is assigned first index.
+
+Note that fsl-lx2160a.dtsi already defines an alias for rtc1 which
+implicitly achieved the same result.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+index 7f6e39e27ce5..90956ffb8ea9 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+@@ -14,6 +14,7 @@ / {
+ 
+ 	aliases {
+ 		crypto = &crypto;
++		rtc0 = &com_rtc;
+ 	};
+ 
+ 	sb_3v3: regulator-sb3v3 {
+@@ -154,7 +155,7 @@ &i2c2 {
+ &i2c4 {
+ 	status = "okay";
+ 
+-	rtc@51 {
++	com_rtc: rtc@51 {
+ 		compatible = "nxp,pcf2129";
+ 		reg = <0x51>;
+ 		interrupts-extended = <&gpio2 8 IRQ_TYPE_LEVEL_LOW>;
+-- 
+2.51.0
+

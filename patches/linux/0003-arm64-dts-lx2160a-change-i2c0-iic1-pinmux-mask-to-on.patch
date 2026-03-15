@@ -1,0 +1,50 @@
+From 62ddcf396cf1c2d102ca6cf98abf8cec7aab2a59 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 14 Mar 2026 13:05:12 +0100
+Subject: [PATCH 03/12] arm64: dts: lx2160a: change i2c0 (iic1) pinmux mask to
+ one bit
+
+LX2160A pinmux is done in groups by various length bitfields within
+configuration registers.
+
+The first i2c bus (called IIC1 in reference manual) is configured
+through field IIC1_PMUX in register RCWSR14 bit 10 which is described in
+the reference manual as a single bit, unlike the other i2c buses.
+
+Change the bitmask for the pinmux nodes from 0x7 to 0x1 to ensure only
+single bit is modified.
+
+Further change the zero in the same line to hexadecimal format for
+consistency.
+
+This change is of cosmetic nature enforcing consistency with
+documentation. There is no known issue when writing the extra two bits
+marked in reference manual as reserved.
+
+Fixes: 8a1365c7bbc1 ("arm64: dts: lx2160a: add pinmux and i2c gpio to support bus recovery")
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+index 50516872d429..2b1329dc209f 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+@@ -1824,11 +1824,11 @@ i2c7_scl_gpio: i2c7-scl-gpio-pins {
+ 			};
+ 
+ 			i2c0_scl: i2c0-scl-pins {
+-				pinctrl-single,bits = <0x8 0 (0x7 << 10)>;
++				pinctrl-single,bits = <0x8 0x0 (0x1 << 10)>;
+ 			};
+ 
+ 			i2c0_scl_gpio: i2c0-scl-gpio-pins {
+-				pinctrl-single,bits = <0x8 (0x1 << 10) (0x7 << 10)>;
++				pinctrl-single,bits = <0x8 (0x1 << 10) (0x1 << 10)>;
+ 			};
+ 		};
+ 
+-- 
+2.51.0
+

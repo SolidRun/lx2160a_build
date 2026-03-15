@@ -1,0 +1,50 @@
+From 485f70e3ee1c8ace1a7ada83de98e210776babdf Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 14 Mar 2026 13:05:19 +0100
+Subject: [PATCH 10/12] arm64: dts: lx2162a-sr-som: add crypto & rtc aliases,
+ model
+
+Add aliases for crypto accelerator and rtc0 ensuring that on-SoM RTC and
+the SoC A72 domain crypto accelerator are assigned first index.
+
+Further set model and compatible strings which are informative but
+overridden by actual boards.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../arm64/boot/dts/freescale/fsl-lx2162a-sr-som.dtsi | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-sr-som.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2162a-sr-som.dtsi
+index e1344942eaae..3ad908d52a18 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-sr-som.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-sr-som.dtsi
+@@ -5,6 +5,16 @@
+ // Copyright 2021 Rabeeh Khoury <rabeeh@solid-run.com>
+ // Copyright 2023 Josua Mayer <josua@solid-run.com>
+ 
++/ {
++	model = "SolidRun LX2162A System on Module";
++	compatible = "solidrun,lx2162a-som", "fsl,lx2160a";
++
++	aliases {
++		crypto = &crypto;
++		rtc0 = &som_rtc;
++	};
++};
++
+ &crypto {
+ 	status = "okay";
+ };
+@@ -77,7 +87,7 @@ variable_eeprom: eeprom@54 {
+ &i2c5 {
+ 	status = "okay";
+ 
+-	rtc@6f {
++	som_rtc: rtc@6f {
+ 		compatible = "microchip,mcp7940x";
+ 		reg = <0x6f>;
+ 	};
+-- 
+2.51.0
+
