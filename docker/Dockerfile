@@ -8,6 +8,9 @@ RUN test -n "$APTPROXY" && printf 'Acquire::http { Proxy "%s"; }\n' $APTPROXY | 
 # prevent dpkg interactive dialogues
 ENV DEBIAN_FRONTEND=noninteractive
 
+# switch sources to debian archive
+RUN sed -i "s;deb\.debian\.org;archive\.debian\.org;g" /etc/apt/sources.list
+
 # update
 RUN set -e; \
 	apt-get update; \
