@@ -1,0 +1,313 @@
+From 1aa9fbab827a292d7fc25c92a8e54fabb4a7b2ea Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 25 Mar 2026 09:22:17 +0100
+Subject: [PATCH] phy: lynx-28g: support overriding per-lane equalization
+ parameters
+
+Add support for configuring serdes lane equalization parameters at
+boot-time from device-tree, and at runtime through sysfs.
+
+The format has been simplified to specifying LNaTECR0 and LNaTECR1
+raw register values, rather than en- and decoding individual values
+between strings and bitmasks.
+
+Parameters can be specified in device-tree, e.g.:
+
+phy@1ea0000 {
+	phy@7 {
+		reg = <7>;
+		fsl,eq-lnatecr0-10gbaser = <0x20848a07>;
+		fsl,eq-lnatecr1-10gbaser = <0x1c000000>;
+	};
+};
+
+In addition parameters can be set from sysfs, e.g.:
+
+cat /sys/devices/platform/soc/1ea0000.phy/phy/phy-1ea0000.phy.7/lnatecr0_10gbaser
+cat /sys/devices/platform/soc/1ea0000.phy/phy/phy-1ea0000.phy.7/lnatecr1_10gbaser
+echo 0x20848a07 > /sys/devices/platform/soc/1ea0000.phy/phy/phy-1ea0000.phy.7/lnatecr0_10gbaser
+echo 0x1c000000 > /sys/devices/platform/soc/1ea0000.phy/phy/phy-1ea0000.phy.7/lnatecr1_10gbaser
+
+Changes are applied only after an interface is changed down/up, i.e.
+ifconfig down, then ifconfig up to apply.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 191 ++++++++++++++++++++++-
+ 1 file changed, 186 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index 2152066f2dbc..583156e67aa1 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -5,6 +5,7 @@
+ #include <linux/phy.h>
+ #include <linux/phy/phy.h>
+ #include <linux/platform_device.h>
++#include <linux/sysfs.h>
+ #include <linux/workqueue.h>
+ #include <linux/workqueue.h>
+ 
+@@ -77,8 +78,12 @@
+ #define LYNX_28G_LNaTGCR0_N_RATE_DOUBLE		0x3000000
+ #define LYNX_28G_LNaTGCR0_N_RATE_MSK		GENMASK(26, 24)
+ 
++/* Lane Tx Equalization Register 0 */
+ #define LYNX_28G_LNaTECR0(lane)			(0x800 + (lane) * 0x100 + 0x30)
+ 
++/* Lane Tx Equalization Register 1 */
++#define LYNX_28G_LNaTECR1(lane)			(0x800 + (lane) * 0x100 + 0x34)
++
+ /* Lane a Rx Reset Control Register */
+ #define LYNX_28G_LNaRRSTCTL(lane)		(0x800 + (lane) * 0x100 + 0x40)
+ #define LYNX_28G_LNaRRSTCTL_HLT_REQ		BIT(27)
+@@ -123,6 +128,11 @@
+ 
+ struct lynx_28g_priv;
+ 
++struct lynx_28g_eq {
++	u32 lnatecr0;
++	u32 lnatecr1;
++};
++
+ struct lynx_28g_pll {
+ 	struct lynx_28g_priv *priv;
+ 	u32 rstctl, cr0, cr1;
+@@ -137,6 +147,7 @@ struct lynx_28g_lane {
+ 	bool init;
+ 	unsigned int id;
+ 	phy_interface_t interface;
++	struct lynx_28g_eq eq_sgmii, eq_10gbaser, eq_25gbaser;
+ };
+ 
+ struct lynx_28g_priv {
+@@ -322,7 +333,8 @@ static void lynx_28g_lane_set_sgmii(struct lynx_28g_lane *lane)
+ 	lynx_28g_lane_rmw(lane, SGMIIaCR1, SGPCS_EN, SGPCS_MSK);
+ 
+ 	/* Configure the appropriate equalization parameters for the protocol */
+-	iowrite32(0x00808006, priv->base + LYNX_28G_LNaTECR0(lane->id));
++	iowrite32(lane->eq_sgmii.lnatecr0, priv->base + LYNX_28G_LNaTECR0(lane->id));
++	iowrite32(lane->eq_sgmii.lnatecr1, priv->base + LYNX_28G_LNaTECR1(lane->id));
+ 	iowrite32(0x04310000, priv->base + LYNX_28G_LNaRGCR1(lane->id));
+ 	iowrite32(0x9f800000, priv->base + LYNX_28G_LNaRECR0(lane->id));
+ 	iowrite32(0x001f0000, priv->base + LYNX_28G_LNaRECR1(lane->id));
+@@ -355,7 +367,8 @@ static void lynx_28g_lane_set_10gbaser(struct lynx_28g_lane *lane)
+ 	lynx_28g_lane_set_nrate(lane, pll, PHY_INTERFACE_MODE_10GBASER);
+ 
+ 	/* Configure the appropriate equalization parameters for the protocol */
+-	iowrite32(0x10808307, priv->base + LYNX_28G_LNaTECR0(lane->id));
++	iowrite32(lane->eq_10gbaser.lnatecr0, priv->base + LYNX_28G_LNaTECR0(lane->id));
++	iowrite32(lane->eq_10gbaser.lnatecr1, priv->base + LYNX_28G_LNaTECR1(lane->id));
+ 	iowrite32(0x10000000, priv->base + LYNX_28G_LNaRGCR1(lane->id));
+ 	iowrite32(0x00000000, priv->base + LYNX_28G_LNaRECR0(lane->id));
+ 	iowrite32(0x001f0000, priv->base + LYNX_28G_LNaRECR1(lane->id));
+@@ -390,7 +403,8 @@ static void lynx_28g_lane_set_25gbaser(struct lynx_28g_lane *lane)
+ 	lynx_28g_lane_set_nrate(lane, pll, PHY_INTERFACE_MODE_25GBASER);
+ 
+ 	/* Configure the appropriate equalization parameters for 25GBASE-R */
+-	iowrite32(0x20828700, priv->base + LYNX_28G_LNaTECR0(lane->id));
++	iowrite32(lane->eq_25gbaser.lnatecr0, priv->base + LYNX_28G_LNaTECR0(lane->id));
++	iowrite32(lane->eq_25gbaser.lnatecr1, priv->base + LYNX_28G_LNaTECR1(lane->id));
+ 	iowrite32(0x10000000, priv->base + LYNX_28G_LNaRGCR1(lane->id));
+ 	iowrite32(0x00000085, priv->base + LYNX_28G_LNaRECR0(lane->id));
+ 	iowrite32(0x001f0000, priv->base + LYNX_28G_LNaRECR1(lane->id));
+@@ -639,11 +653,153 @@ static struct phy *lynx_28g_xlate(struct device *dev,
+ 	return priv->lane[idx].phy;
+ }
+ 
++static ssize_t lynx28g_uint32_store(uint32_t *dest, const char *buf, size_t count)
++{
++	u32 val;
++	int ret;
++
++	ret = kstrtou32(buf, 0, &val);
++	if (ret)
++		return ret;
++
++	*dest = val;
++
++	return count;
++}
++
++static ssize_t lnatecr0_sgmii_show(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	struct lynx_28g_lane *lane = dev_get_drvdata(dev);
++	return sysfs_emit(buf, "%#010x\n", lane->eq_sgmii.lnatecr0);
++}
++
++static ssize_t lnatecr0_sgmii_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++	struct lynx_28g_lane *lane = dev_get_drvdata(dev);
++
++	return lynx28g_uint32_store(&lane->eq_sgmii.lnatecr0, buf, count);
++}
++
++static DEVICE_ATTR_RW(lnatecr0_sgmii);
++
++static ssize_t lnatecr1_sgmii_show(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	struct lynx_28g_lane *lane = dev_get_drvdata(dev);
++	return sysfs_emit(buf, "%#010x\n", lane->eq_sgmii.lnatecr1);
++}
++
++static ssize_t lnatecr1_sgmii_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++	struct lynx_28g_lane *lane = dev_get_drvdata(dev);
++
++	return lynx28g_uint32_store(&lane->eq_sgmii.lnatecr1, buf, count);
++}
++
++static DEVICE_ATTR_RW(lnatecr1_sgmii);
++
++static ssize_t lnatecr0_10gbaser_show(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	struct lynx_28g_lane *lane = dev_get_drvdata(dev);
++	return sysfs_emit(buf, "%#010x\n", lane->eq_10gbaser.lnatecr0);
++}
++
++static ssize_t lnatecr0_10gbaser_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++	struct lynx_28g_lane *lane = dev_get_drvdata(dev);
++
++	return lynx28g_uint32_store(&lane->eq_10gbaser.lnatecr0, buf, count);
++}
++
++static DEVICE_ATTR_RW(lnatecr0_10gbaser);
++
++static ssize_t lnatecr1_10gbaser_show(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	struct lynx_28g_lane *lane = dev_get_drvdata(dev);
++	return sysfs_emit(buf, "%#010x\n", lane->eq_10gbaser.lnatecr1);
++}
++
++static ssize_t lnatecr1_10gbaser_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++	struct lynx_28g_lane *lane = dev_get_drvdata(dev);
++
++	return lynx28g_uint32_store(&lane->eq_10gbaser.lnatecr1, buf, count);
++}
++
++static DEVICE_ATTR_RW(lnatecr1_10gbaser);
++
++static ssize_t lnatecr0_25gbaser_show(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	struct lynx_28g_lane *lane = dev_get_drvdata(dev);
++	return sysfs_emit(buf, "%#010x\n", lane->eq_25gbaser.lnatecr0);
++}
++
++static ssize_t lnatecr0_25gbaser_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++	struct lynx_28g_lane *lane = dev_get_drvdata(dev);
++
++	return lynx28g_uint32_store(&lane->eq_25gbaser.lnatecr0, buf, count);
++}
++
++static DEVICE_ATTR_RW(lnatecr0_25gbaser);
++
++static ssize_t lnatecr1_25gbaser_show(struct device *dev, struct device_attribute *attr, char *buf)
++{
++	struct lynx_28g_lane *lane = dev_get_drvdata(dev);
++	return sysfs_emit(buf, "%#010x\n", lane->eq_25gbaser.lnatecr1);
++}
++
++static ssize_t lnatecr1_25gbaser_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++	struct lynx_28g_lane *lane = dev_get_drvdata(dev);
++
++	return lynx28g_uint32_store(&lane->eq_25gbaser.lnatecr1, buf, count);
++}
++
++static DEVICE_ATTR_RW(lnatecr1_25gbaser);
++
++/* Group the attributes (you can add 10gbaser, 25gbaser, etc., here) */
++static struct attribute *lynx_28g_lane_attrs[] = {
++    &dev_attr_lnatecr0_sgmii.attr,
++    &dev_attr_lnatecr1_sgmii.attr,
++    &dev_attr_lnatecr0_10gbaser.attr,
++    &dev_attr_lnatecr1_10gbaser.attr,
++    &dev_attr_lnatecr0_25gbaser.attr,
++    &dev_attr_lnatecr1_25gbaser.attr,
++    NULL,
++};
++
++static const struct attribute_group lynx_28g_lane_group = {
++    .attrs = lynx_28g_lane_attrs,
++};
++
++static struct device_node *lynx_28g_get_lanephy_node_optional(struct device *dev, int lane)
++{
++	struct device_node *child;
++	u32 val;
++	int ret;
++
++	for_each_available_child_of_node(dev->of_node, child) {
++		ret = of_property_read_u32(child, "reg", &val);
++		if (ret) {
++			dev_warn(dev, "failed to get 'reg' property\n");
++			continue;
++		}
++
++		if (val == lane)
++			return child;
++
++		of_node_put(child);
++	}
++
++	return NULL;
++}
++
+ static int lynx_28g_probe(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct phy_provider *provider;
+ 	struct lynx_28g_priv *priv;
++	struct device_node *lane_np;
+ 	int i;
+ 
+ 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+@@ -663,15 +819,40 @@ static int lynx_28g_probe(struct platform_device *pdev)
+ 
+ 		memset(lane, 0, sizeof(*lane));
+ 
+-		phy = devm_phy_create(&pdev->dev, NULL, &lynx_28g_ops);
+-		if (IS_ERR(phy))
++		lane_np = lynx_28g_get_lanephy_node_optional(dev, i);
++		if (IS_ERR(lane_np))
++			return PTR_ERR(lane_np);
++
++		phy = devm_phy_create(&pdev->dev, lane_np, &lynx_28g_ops);
++		if (IS_ERR(phy)) {
++			of_node_put(lane_np);
+ 			return PTR_ERR(phy);
++		}
+ 
+ 		lane->priv = priv;
+ 		lane->phy = phy;
+ 		lane->id = i;
+ 		phy_set_drvdata(phy, lane);
+ 		lynx_28g_lane_read_configuration(lane);
++
++		lane->eq_sgmii.lnatecr0 = 0x00808006;
++		lane->eq_sgmii.lnatecr1 = 0x30000000;
++		lane->eq_10gbaser.lnatecr0 = 0x10808307;
++		lane->eq_10gbaser.lnatecr1 = 0x30000000;
++		lane->eq_25gbaser.lnatecr0 = 0x20828700;
++		lane->eq_25gbaser.lnatecr1 = 0x30000000;
++
++		if (lane_np) {
++			device_property_read_u32(&phy->dev, "fsl,eq-lnatecr0-sgmii", &lane->eq_sgmii.lnatecr0);
++			device_property_read_u32(&phy->dev, "fsl,eq-lnatecr1-sgmii", &lane->eq_sgmii.lnatecr1);
++			device_property_read_u32(&phy->dev, "fsl,eq-lnatecr0-10gbaser", &lane->eq_10gbaser.lnatecr0);
++			device_property_read_u32(&phy->dev, "fsl,eq-lnatecr1-10gbaser", &lane->eq_10gbaser.lnatecr1);
++			device_property_read_u32(&phy->dev, "fsl,eq-lnatecr0-25gbaser", &lane->eq_25gbaser.lnatecr0);
++			device_property_read_u32(&phy->dev, "fsl,eq-lnatecr1-25gbaser", &lane->eq_25gbaser.lnatecr1);
++		}
++
++		if (sysfs_create_group(&phy->dev.kobj, &lynx_28g_lane_group))
++			dev_warn(&pdev->dev, "failed to create sysfs group for lane %d\n", i);
+ 	}
+ 
+ 	dev_set_drvdata(dev, priv);
+-- 
+2.51.0
+
