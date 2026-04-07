@@ -1,0 +1,53 @@
+From 8d8e15e35720a683294ddfa53a1db7e215cf0972 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 31 Mar 2026 16:41:52 +0200
+Subject: [PATCH] arm64: dts: lx2160a-half-twins: add exp. eq params for sd1
+ lane 7
+
+Define experimental equalization parameters for serdes block 1, lane 7
+(dpmac.3) for 10GBase-R. These are intended to perform better than the
+defaults with a particular radio connected via fiber:
+
+3-TAP Equalization:
+- Pre-Cursor +1.20
+- Post-Cursor +1.71
+- Amplification: 0.585
+- Cursor Taps: 28
+
+Note these parameters are not optimal, and intended for testing
+purposes only.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../boot/dts/freescale/fsl-lx2160a-half-twins.dts | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+index 4ed936d93735..529daf56dbc2 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+@@ -573,6 +573,21 @@ &pcs_mdio18 {
+ 	status = "okay";
+ };
+ 
++&serdes_1 {
++	phy@7 {
++		reg = <7>;
++		/*
++		 * 3-TAP Equalization:
++		 * - Pre-Cursor +1.20
++		 * - Post-Cursor +1.71
++		 * - Amplification: 0.585
++		 */
++		fsl,eq-lnatecr0-10gbaser = <0x20848a07>;
++		/* Cursor Taps: 28 */
++		fsl,eq-lnatecr1-10gbaser = <0x1c000000>;
++	};
++};
++
+ &uart0 {
+ 	status = "okay";
+ };
+-- 
+2.51.0
+
