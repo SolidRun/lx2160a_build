@@ -1,0 +1,44 @@
+From c246a1469d291a63ff3048080b541413fa277a1c Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 13 Apr 2026 14:59:40 +0300
+Subject: [PATCH] arm64: dts: lx2160a-half-twins: update eq params for sd1 lane
+ 7
+
+Apply tested equalization parameters for serdes 1 lane 7 (dpmac.3),
+specifically optimised for fiber links.
+
+Long copper (DAC) will require increasing overall amplification,
+however this increases error rate for fiber transceivers terminating
+the electrical path very short at the sfp connector.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../boot/dts/freescale/fsl-lx2160a-half-twins.dts      | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+index 529daf56dbc2..7476650b3c10 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+@@ -578,13 +578,13 @@ phy@7 {
+ 		reg = <7>;
+ 		/*
+ 		 * 3-TAP Equalization:
+-		 * - Pre-Cursor +1.20
+-		 * - Post-Cursor +1.71
++		 * - Pre-Cursor +1.14
++		 * - Post-Cursor +1.20
+ 		 * - Amplification: 0.585
+ 		 */
+-		fsl,eq-lnatecr0-10gbaser = <0x20848a07>;
+-		/* Cursor Taps: 28 */
+-		fsl,eq-lnatecr1-10gbaser = <0x1c000000>;
++		fsl,eq-lnatecr0-10gbaser = <0x20838407>;
++		/* Cursor Taps: 46 */
++		fsl,eq-lnatecr1-10gbaser = <0x2e000000>;
+ 	};
+ };
+ 
+-- 
+2.51.2
+
