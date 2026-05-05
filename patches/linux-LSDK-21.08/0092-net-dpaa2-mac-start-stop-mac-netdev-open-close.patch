@@ -1,0 +1,49 @@
+From 8f749f459844630cc347035379ec1fd5e8a7eea8 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 5 May 2026 21:35:19 +0200
+Subject: [PATCH 92/94] net: dpaa2: mac: start/stop mac netdev open/close
+
+netdev open and close callbacks are expected to start and stop the mac
+(and by extension any companion phys).
+
+The full dpaa2-eth driver does this by calling dpaa2_mac_start/stop from
+its ndo_open and ndo_stop callbacks.
+
+Add the same calls to the standalone mac-only driver's ndo_open/ndo_stop
+callbacks.
+
+This ensures that with the mac-only driver, mac and serdes phys are
+powered up and down properly, so that link-up succeeds.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index 7ee3c81e5baf..01396e761f32 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -929,8 +929,10 @@ static int dpaa2_mac_netdev_open(struct net_device *net_dev)
+ {
+ 	struct dpaa2_mac *priv = netdev_priv(net_dev);
+ 
+-	if (dpaa2_mac_is_type_phy(priv))
++	if (dpaa2_mac_is_type_phy(priv)) {
++		dpaa2_mac_start(priv);
+ 		phylink_start(priv->phylink);
++	}
+ 
+ 	return 0;
+ }
+@@ -943,6 +945,7 @@ static int dpaa2_mac_netdev_stop(struct net_device *net_dev)
+ 		return 0;
+ 
+ 	phylink_stop(priv->phylink);
++	dpaa2_mac_stop(priv);
+ 
+ 	return 0;
+ }
+-- 
+2.51.0
+

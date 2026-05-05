@@ -1,0 +1,132 @@
+From e97ada5f1aca69327ab3fcec8ea058ddc518ee88 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 5 May 2026 13:43:00 +0200
+Subject: [PATCH 88/94] net: dpaa2: fix serdes/retimer phy reference leaks
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.c  | 47 ++++++++++++++++---
+ 1 file changed, 41 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index 295c62b6ba21..06ebc2284b70 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -516,19 +516,23 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ 	if (phy_count >= 0) {
+ 		for (i = 0; i < phy_count; i++) {
+ 			phy = of_phy_get_by_index(to_of_node(dpmac_node), i);
+-			if (IS_ERR(phy))
+-				return PTR_ERR(phy);
++			if (IS_ERR(phy)) {
++				err = PTR_ERR(phy);
++				goto err_phys_put;
++			}
+ 
+ 			err = of_property_read_string_index(to_of_node(dpmac_node), "phy-names", i, &phy_name);
+ 			if (err || !strcmp("serdes", phy_name)) {
+ 				if (!(mac->features & DPAA2_MAC_FEATURE_PROTOCOL_CHANGE)
+ 					|| phy_interface_mode_is_rgmii(mac->if_mode)) {
+ 					printk("dpaa2_mac_connect: should maybe not enable serdes phy?\n");
++					of_phy_put(phy);
+ 					continue;
+ 				}
+ 
+ 				if (mac->serdes_phy) {
+ 					netdev_warn(net_dev, "unsupported number of serdes phys\n");
++					of_phy_put(phy);
+ 					continue;
+ 				}
+ 
+@@ -537,6 +541,7 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ 			} else if (!strcmp("retimer", phy_name)) {
+ 				if (retimer_phy_count >= sizeof(mac->retimer_phys)/sizeof(mac->retimer_phys[0])) {
+ 					netdev_warn(net_dev, "unsupported number of retimer phys\n");
++					of_phy_put(phy);
+ 					continue;
+ 				}
+ 
+@@ -544,6 +549,7 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ 				mac->retimer_phys[retimer_phy_count++] = phy;
+ 			} else {
+ 				netdev_warn(net_dev, "unsupported phy \"%s\"\n", phy_name);
++				of_phy_put(phy);
+ 			}
+ 		}
+ 	}
+@@ -557,7 +563,8 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ 	     mac->if_mode == PHY_INTERFACE_MODE_RGMII_RXID ||
+ 	     mac->if_mode == PHY_INTERFACE_MODE_RGMII_TXID)) {
+ 		netdev_err(net_dev, "RGMII delay not supported\n");
+-		return -EINVAL;
++		err = -EINVAL;
++		goto err_phys_put;
+ 	}
+ 
+ 	if ((mac->attr.link_type == DPMAC_LINK_TYPE_PHY &&
+@@ -565,7 +572,7 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ 	    mac->attr.link_type == DPMAC_LINK_TYPE_BACKPLANE) {
+ 		err = dpaa2_pcs_create(mac, dpmac_node, mac->attr.id);
+ 		if (err)
+-			return err;
++			goto err_phys_put;
+ 	}
+ 
+ 	mac->phylink_config.dev = &net_dev->dev;
+@@ -595,14 +602,31 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ 
+ err_phylink_destroy:
+ 	phylink_destroy(mac->phylink);
++	mac->phylink = NULL;
+ err_pcs_destroy:
+ 	dpaa2_pcs_destroy(mac);
++err_phys_put:
++	if (mac->serdes_phy) {
++		phy_exit(mac->serdes_phy);
++		of_phy_put(mac->serdes_phy);
++		mac->serdes_phy = NULL;
++	}
++	for (i = 0; i < ARRAY_SIZE(mac->retimer_phys); i++) {
++		if (!mac->retimer_phys[i])
++			continue;
++
++		phy_exit(mac->retimer_phys[i]);
++		of_phy_put(mac->retimer_phys[i]);
++		mac->retimer_phys[i] = NULL;
++	}
+ 
+ 	return err;
+ }
+ 
+ void dpaa2_mac_disconnect(struct dpaa2_mac *mac)
+ {
++	int i;
++
+ 	if (!mac->phylink)
+ 		return;
+ 
+@@ -611,8 +635,19 @@ void dpaa2_mac_disconnect(struct dpaa2_mac *mac)
+ 	rtnl_unlock();
+ 	phylink_destroy(mac->phylink);
+ 	dpaa2_pcs_destroy(mac);
+-	of_phy_put(mac->serdes_phy);
+-	mac->serdes_phy = NULL;
++	if (mac->serdes_phy) {
++		phy_exit(mac->serdes_phy);
++		of_phy_put(mac->serdes_phy);
++		mac->serdes_phy = NULL;
++	}
++	for (i = 0; i < ARRAY_SIZE(mac->retimer_phys); i++) {
++		if (!mac->retimer_phys[i])
++			continue;
++
++		phy_exit(mac->retimer_phys[i]);
++		of_phy_put(mac->retimer_phys[i]);
++		mac->retimer_phys[i] = NULL;
++	}
+ }
+ 
+ int dpaa2_mac_open(struct dpaa2_mac *mac)
+-- 
+2.51.0
+

@@ -1,0 +1,41 @@
+From e0dbe520ab9acb7a3f3d5d2c41cfc654d7b6766f Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 5 May 2026 18:23:49 +0200
+Subject: [PATCH 90/94] net: dpaa2: add reverse if_mode translation for
+ 1000base-x
+
+The dpmac_eth_if_mode function can translate between a phy-mode and a
+dpaa2 interface mode, tranlating in particular
+PHY_INTERFACE_MODE_1000BASEX to DPMAC_ETH_IF_1000BASEX.
+
+Extend phy_mode function to handle the reverse translation from
+DPMAC_ETH_IF_1000BASEX. to PHY_INTERFACE_MODE_1000BASEX.
+
+This fixes dpaa2-eth driver probe under certain conditions, resolving
+below kernel errors:
+
+fsl_dpaa2_eth dpni.14 (unnamed net_device) (uninitialized): dpaa2_mac_get_if_mode failed: -22
+fsl_dpaa2_eth dpni.14 (unnamed net_device) (uninitialized): Error connecting to the MAC endpoint
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index 06ebc2284b70..20dda4316aa6 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -71,6 +71,9 @@ static int phy_mode(enum dpmac_eth_if eth_if, phy_interface_t *if_mode)
+ 	case DPMAC_ETH_IF_XFI:
+ 		*if_mode = PHY_INTERFACE_MODE_10GBASER;
+ 		break;
++	case DPMAC_ETH_IF_1000BASEX:
++		*if_mode = PHY_INTERFACE_MODE_1000BASEX;
++		break;
+ 	case DPMAC_ETH_IF_CAUI:
+ 		*if_mode = PHY_INTERFACE_MODE_25GBASER;
+ 		break;
+-- 
+2.51.0
+

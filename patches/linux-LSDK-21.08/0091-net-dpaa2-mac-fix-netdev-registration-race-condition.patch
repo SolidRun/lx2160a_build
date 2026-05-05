@@ -1,0 +1,170 @@
+From 831e2476e399aa120722e45ec89535d541fed477 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 4 May 2026 12:57:57 +0200
+Subject: [PATCH 91/94] net: dpaa2: mac: fix netdev registration race condition
+
+The standalone DPAA2 MAC driver registers the netdev during probe before
+allocating the MC portal. In the remove path, it unregisters the netdev
+only after freeing the portal.
+
+This creates a race condition where netdev_ops or phylink workers can
+attempt to access the portal (mc_io) during the windows when the netdev
+is visible but the portal is NULL or invalid.
+
+This issue is specifically exposed on PREEMPT_RT kernels, where threaded
+interrupt handlers and workqueues (like phylink_resolve) can be scheduled
+to run immediately after registration or just before unregistration
+finishes, leading to a NULL pointer dereference.
+
+Reorder the registration to be the last step in probe and the
+unregistration to be the first step in remove. This ensures that the
+communication portal is fully established before the netdev is visible
+and remains valid until the netdev is fully unregistered.
+
+[   56.971459] Unable to handle kernel NULL pointer dereference at virtual address 0000000000000008
+[   56.971465] Mem abort info:
+[   56.971466]   ESR = 0x0000000096000044
+[   56.971469]   EC = 0x25: DABT (current EL), IL = 32 bits
+[   56.971472]   SET = 0, FnV = 0
+[   56.971474]   EA = 0, S1PTW = 0
+[   56.971475]   FSC = 0x04: level 0 translation fault
+[   56.971477] Data abort info:
+[   56.971479]   ISV = 0, ISS = 0x00000044, ISS2 = 0x00000000
+[   56.971481]   CM = 0, WnR = 1, TnD = 0, TagAccess = 0
+[   56.971483]   GCS = 0, Overlay = 0, DirtyBit = 0, Xs = 0
+[   56.971486] user pgtable: 4k pages, 48-bit VAs, pgdp=000000208849d000
+[   56.971489] [0000000000000008] pgd=0000000000000000, p4d=0000000000000000
+[   56.971495] Internal error: Oops: 0000000096000044 [#1] PREEMPT_RT SMP
+[   56.971499] Modules linked in: fsl_jr_uio caam_jr dpaa2_caam caamkeyblob_desc caamhash_desc caamalg_desc crypto_engine onboard_usb_hub crct10dif_ce libdes nvme nvme_core lm90 at24 pci_endpoint_test rtc_pcf2127 caam error rtc_fsl_ftm_alarm nvmem_layerscape_sfp layerscape_edac_mod cfg80211 rfkill dm_mod nfnetlink ip_tables
+[   56.971534] CPU: 6 PID: 147 Comm: kworker/u36:0 Not tainted 6.6.52+ #2
+[   56.971539] Hardware name: SolidRun LX2160A Clearfog CX (DT)
+[   56.971541] Workqueue: events_power_efficient phylink_resolve
+[   56.971550] pstate: 40000005 (nZcv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[   56.971554] pc : mc_send_command+0x78/0x1ec
+[   56.971560] lr : mc_send_command+0x68/0x1ec
+[   56.971564] sp : ffff80008088bc00
+[   56.971566] x29: ffff80008088bc00 x28: 0000000000000000 x27: 0000000000000000
+[   56.971572] x26: ffff6f3080cd0828 x25: ffff6f3080d401c0 x24: ffff6f3080c92c0d
+[   56.971577] x23: ffff6f3084cd4738 x22: 0000000000000000 x21: ffff6f3080fe37a8
+[   56.971582] x20: ffff6f3080fe3780 x19: ffff80008088bc58 x18: 0000000000000000
+[   56.971587] x17: 0000000000000002 x16: 0000000000000000 x15: 0000000000000000
+[   56.971591] x14: ffff6f3080b7e580 x13: 00000000000000b7 x12: 0000000000000002
+[   56.971596] x11: fffffffffa123000 x10: 0000000000000400 x9 : 0000000ac132feda
+[   56.971601] x8 : ffff80008088bc98 x7 : 0000000000000001 x6 : 0000000000002710
+[   56.971605] x5 : 0000000000000000 x4 : ffff6f3080fe37c0 x3 : 0000000000000000
+[   56.971610] x2 : 0000000000000008 x1 : 0000000000000001 x0 : 0000000000000008
+[   56.971614] Call trace:
+[   56.971616]  mc_send_command+0x78/0x1ec
+[   56.971621]  dpmac_set_link_state+0xa0/0xd4
+[   56.971627]  dpaa2_mac_link_down+0x30/0x68
+[   56.971631]  phylink_link_down+0x34/0xa8
+[   56.971637]  phylink_resolve+0xa8/0x604
+[   56.971640]  process_one_work+0x138/0x25c
+[   56.971646]  worker_thread+0x330/0x454
+[   56.971650]  kthread+0x110/0x114
+[   56.971654]  ret_from_fork+0x10/0x20
+[   56.971659] Code: f9400e83 d2800100 f8606a61 8b000062 (f9000041)
+[   56.971662] ---[ end trace 0000000000000000 ]---
+
+Fixes: f7f5b243f552 ("dpaa2-mac: probe standalone DPMAC objects")
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.c  | 46 ++++++++++---------
+ 1 file changed, 24 insertions(+), 22 deletions(-)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index 20dda4316aa6..7ee3c81e5baf 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -1068,20 +1068,6 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
+ 
+ 	SET_NETDEV_DEV(net_dev, dev);
+ 
+-#ifdef CONFIG_FSL_DPAA2_MAC_NETDEVS
+-	snprintf(net_dev->name, IFNAMSIZ, "mac%d", mc_dev->obj_desc.id);
+-
+-	/* register netdev just to make it visible to the user */
+-	net_dev->netdev_ops = &dpaa2_mac_ndo_ops;
+-	net_dev->ethtool_ops = &dpaa2_mac_ethtool_ops;
+-
+-	err = register_netdev(net_dev);
+-	if (err) {
+-		dev_err(dev, "register_netdev error %d\n", err);
+-		goto free_netdev;
+-	}
+-#endif
+-
+ 	dev_set_drvdata(dev, net_dev);
+ 
+ 	err = fsl_mc_portal_allocate(mc_dev, 0, &mc_dev->mc_io);
+@@ -1090,7 +1076,7 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
+ 			err = -EPROBE_DEFER;
+ 		else
+ 			dev_err(dev, "fsl_mc_portal_allocate err %d\n", err);
+-		goto unregister_netdev;
++		goto free_netdev;
+ 	}
+ 	priv->mc_io = mc_dev->mc_io;
+ 
+@@ -1165,18 +1151,33 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
+ 		led_set_brightness(priv->link_status_led, LED_OFF);
+ 	}
+ 
++#ifdef CONFIG_FSL_DPAA2_MAC_NETDEVS
++	snprintf(net_dev->name, IFNAMSIZ, "mac%d", mc_dev->obj_desc.id);
++
++	/* register netdev just to make it visible to the user */
++	net_dev->netdev_ops = &dpaa2_mac_ndo_ops;
++	net_dev->ethtool_ops = &dpaa2_mac_ethtool_ops;
++
++	err = register_netdev(net_dev);
++	if (err) {
++		dev_err(dev, "register_netdev error %d\n", err);
++		goto disconnect_mac;
++	}
++#endif
++
+ 	return 0;
++#ifdef CONFIG_FSL_DPAA2_MAC_NETDEVS
++disconnect_mac:
++	if (dpaa2_mac_is_type_phy(priv))
++		dpaa2_mac_disconnect(priv);
++#endif
+ free_irqs:
+ 	fsl_mc_free_irqs(mc_dev);
+ free_dpmac:
+ 	dpaa2_mac_close(priv);
+ free_portal:
+ 	fsl_mc_portal_free(mc_dev->mc_io);
+-unregister_netdev:
+-#ifdef CONFIG_FSL_DPAA2_MAC_NETDEVS
+-	unregister_netdev(net_dev);
+ free_netdev:
+-#endif
+ 	free_netdev(net_dev);
+ 
+ 	return err;
+@@ -1188,6 +1189,10 @@ static int dpaa2_mac_remove(struct fsl_mc_device *mc_dev)
+ 	struct net_device *net_dev = dev_get_drvdata(dev);
+ 	struct dpaa2_mac *priv = netdev_priv(net_dev);
+ 
++#ifdef CONFIG_FSL_DPAA2_MAC_NETDEVS
++	unregister_netdev(net_dev);
++#endif
++
+ 	if (priv->link_status_led) {
+ 		/* re-enable sysfs interface */
+ 		mutex_lock(&priv->link_status_led->led_access);
+@@ -1204,9 +1209,6 @@ static int dpaa2_mac_remove(struct fsl_mc_device *mc_dev)
+ 
+ 	fsl_mc_portal_free(mc_dev->mc_io);
+ 	dev_set_drvdata(dev, NULL);
+-#ifdef CONFIG_FSL_DPAA2_MAC_NETDEVS
+-	unregister_netdev(net_dev);
+-#endif
+ 	free_netdev(net_dev);
+ 
+ 	return 0;
+-- 
+2.51.0
+

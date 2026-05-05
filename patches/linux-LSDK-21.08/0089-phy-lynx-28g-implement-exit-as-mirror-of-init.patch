@@ -1,0 +1,58 @@
+From a8c3d531d0116abb8c12be2d6733b7792ca76e71 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 5 May 2026 17:39:42 +0200
+Subject: [PATCH 89/94] phy: lynx-28g: implement exit as mirror of init
+
+Lynx SerDes PHY driver init function expects to find the serdes lane in
+powerered up state after boot, and powers it down.
+
+The Hardware has no register bit to reliably determine whether a lane is
+in halted or stopped state, and driver must track state internally.
+
+Trying to power off a lane that is already powered off fails quietly.
+
+In case of unbinding and rebinding the dpaa2-eth driver it is possible
+for device-managed phy resources to cause phy_exit() and phy_init()
+calls, leading eventually to a second phy_init call after boot, which un
+turn tries to power off the lane unconditionally.
+
+Implement exit function to restore a lane into its expected powered-on
+state.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index f8d21d686206..0eb4616f6673 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -542,8 +542,24 @@ static int lynx_28g_init(struct phy *phy)
+ 	return 0;
+ }
+ 
++static int lynx_28g_exit(struct phy *phy)
++{
++	struct lynx_28g_lane *lane = phy_get_drvdata(phy);
++
++	/* .init expects lanes in powered on state, before explicitly
++	 * powering of. Return lane to powered-up state.
++	 */
++	lynx_28g_power_on(phy);
++
++	/* mark lane was ot init */
++	lane->init = false;
++
++	return 0;
++}
++
+ static const struct phy_ops lynx_28g_ops = {
+ 	.init		= lynx_28g_init,
++	.exit		= lynx_28g_exit,
+ 	.power_on	= lynx_28g_power_on,
+ 	.power_off	= lynx_28g_power_off,
+ 	.set_mode	= lynx_28g_set_mode,
+-- 
+2.51.0
+

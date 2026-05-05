@@ -1,0 +1,81 @@
+From 040ed5b0a61816ffdf9dd24b34f4cfd8113c8217 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 5 May 2026 21:41:35 +0200
+Subject: [PATCH 94/94] Revert "net: dpaa2: never power-off serdes phy"
+
+This reverts commit bcac3d13f6e8c81c59092f681f0c4a1088a8e1fe.
+
+The mentioned commit caused unbalanced calls to phy_power_on/off,
+causing phylink power_count under- and overflows depending on state.
+
+Most notable it caused an imbalance when standalone mac driver was
+removed, and the serdes phy references were dropped with phy_exit.
+
+As a consequence successive calls of phy_power_on after switching to
+kernel netdev driver thought the phy was still powered on, and skipped
+calling into it. This lead to kernel driver not being able to link up,
+after taking over from an active enabled standalone mac netdev.
+
+The initial workaroudn was intended to simplify workign with DPDK.
+After the revert, for DPDK ports to link up it is now REQUIRED to set
+the special mac-only driver netdevs (mac[0-9]+) ifconfig up.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.c  | 28 +------------------
+ 1 file changed, 1 insertion(+), 27 deletions(-)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index 8f04d88e67c9..e42a5b0534b8 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -397,37 +397,11 @@ static void dpaa2_mac_link_down(struct phylink_config *config,
+ 		led_set_brightness(mac->link_status_led, LED_OFF);
+ }
+ 
+-static int dpaa2_mac_prepare(struct phylink_config *config, unsigned int mode,
+-			     phy_interface_t interface)
+-{
+-	struct dpaa2_mac *mac = phylink_to_dpaa2_mac(config);
+-
+-	dpaa2_mac_link_down(config, mode, interface);
+-
+-	if (mac->serdes_phy)
+-		phy_power_on(mac->serdes_phy);
+-
+-	return 0;
+-}
+-
+-static int dpaa2_mac_finish(struct phylink_config *config, unsigned int mode,
+-			    phy_interface_t interface)
+-{
+-	struct dpaa2_mac *mac = phylink_to_dpaa2_mac(config);
+-
+-	if (mac->serdes_phy)
+-		phy_power_on(mac->serdes_phy);
+-
+-	return 0;
+-}
+-
+ static const struct phylink_mac_ops dpaa2_mac_phylink_ops = {
+ 	.validate = dpaa2_mac_validate,
+ 	.mac_config = dpaa2_mac_config,
+ 	.mac_link_up = dpaa2_mac_link_up,
+ 	.mac_link_down = dpaa2_mac_link_down,
+-	.mac_prepare = dpaa2_mac_prepare,
+-	.mac_finish = dpaa2_mac_finish,
+ };
+ 
+ static int dpaa2_pcs_create(struct dpaa2_mac *mac,
+@@ -486,7 +460,7 @@ void dpaa2_mac_start(struct dpaa2_mac *mac)
+ void dpaa2_mac_stop(struct dpaa2_mac *mac)
+ {
+ 	if (mac->serdes_phy)
+-		phy_power_on(mac->serdes_phy);
++		phy_power_off(mac->serdes_phy);
+ }
+ 
+ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+-- 
+2.51.0
+
