@@ -238,7 +238,7 @@ for i in $QORIQ_COMPONENTS; do
 
 		case "$i" in
 		linux)
-			CHECKOUT=v7.0-rc2
+			CHECKOUT=v7.1-rc1
 			URL=https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 		;;
 		phy-ti-ds250dfx10-module)

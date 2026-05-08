@@ -1,7 +1,7 @@
-From 951a9f0890c5060df73c1b236c71d194fb414148 Mon Sep 17 00:00:00 2001
+From b24becd03eaa5f7a602a6465816c3c4bab0f855f Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Thu, 21 Mar 2024 16:13:19 +0100
-Subject: [PATCH 01/12] arm64: dts: lx2160a: extend 32-bit, and add 16 & 64-bit
+Subject: [PATCH 1/5] arm64: dts: lx2160a: extend 32-bit, and add 16 & 64-bit
  pci regions
 
 LX2160 SoC pci-e controller supports 64-bit memory regions up to 16GB,
@@ -100,10 +100,10 @@ Signed-off-by: Josua Mayer <josua@solid-run.com>
  1 file changed, 36 insertions(+), 6 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
-index 853b01452813..5b48de0c853a 100644
+index 479982948ee5..cdc839827302 100644
 --- a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
 +++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
-@@ -1185,7 +1185,12 @@ pcie1: pcie@3400000 {
+@@ -1193,7 +1193,12 @@ pcie1: pcie@3400000 {
  			apio-wins = <8>;
  			ppio-wins = <8>;
  			bus-range = <0x0 0xff>;
@@ -117,7 +117,7 @@ index 853b01452813..5b48de0c853a 100644
  			msi-parent = <&its 0>;
  			#interrupt-cells = <1>;
  			interrupt-map-mask = <0 0 0 7>;
-@@ -1213,7 +1218,12 @@ pcie2: pcie@3500000 {
+@@ -1221,7 +1226,12 @@ pcie2: pcie@3500000 {
  			apio-wins = <8>;
  			ppio-wins = <8>;
  			bus-range = <0x0 0xff>;
@@ -131,7 +131,7 @@ index 853b01452813..5b48de0c853a 100644
  			msi-parent = <&its 0>;
  			#interrupt-cells = <1>;
  			interrupt-map-mask = <0 0 0 7>;
-@@ -1241,7 +1251,12 @@ pcie3: pcie@3600000 {
+@@ -1249,7 +1259,12 @@ pcie3: pcie@3600000 {
  			apio-wins = <256>;
  			ppio-wins = <24>;
  			bus-range = <0x0 0xff>;
@@ -145,7 +145,7 @@ index 853b01452813..5b48de0c853a 100644
  			msi-parent = <&its 0>;
  			#interrupt-cells = <1>;
  			interrupt-map-mask = <0 0 0 7>;
-@@ -1269,7 +1284,12 @@ pcie4: pcie@3700000 {
+@@ -1277,7 +1292,12 @@ pcie4: pcie@3700000 {
  			apio-wins = <8>;
  			ppio-wins = <8>;
  			bus-range = <0x0 0xff>;
@@ -159,7 +159,7 @@ index 853b01452813..5b48de0c853a 100644
  			msi-parent = <&its 0>;
  			#interrupt-cells = <1>;
  			interrupt-map-mask = <0 0 0 7>;
-@@ -1297,7 +1317,12 @@ pcie5: pcie@3800000 {
+@@ -1305,7 +1325,12 @@ pcie5: pcie@3800000 {
  			apio-wins = <256>;
  			ppio-wins = <24>;
  			bus-range = <0x0 0xff>;
@@ -173,7 +173,7 @@ index 853b01452813..5b48de0c853a 100644
  			msi-parent = <&its 0>;
  			#interrupt-cells = <1>;
  			interrupt-map-mask = <0 0 0 7>;
-@@ -1325,7 +1350,12 @@ pcie6: pcie@3900000 {
+@@ -1333,7 +1358,12 @@ pcie6: pcie@3900000 {
  			apio-wins = <8>;
  			ppio-wins = <8>;
  			bus-range = <0x0 0xff>;
