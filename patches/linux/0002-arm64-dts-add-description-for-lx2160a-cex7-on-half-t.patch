@@ -1,7 +1,7 @@
-From 84d0c6898837d9dbbe0fe4aed807ccda445b78d2 Mon Sep 17 00:00:00 2001
+From 7e41183c2ab771419d5e3658a76c2c9aeebdc44f Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Mon, 29 Dec 2025 16:47:41 +0100
-Subject: [PATCH 2/5] arm64: dts: add description for lx2160a cex7 on
+Subject: [PATCH 2/7] arm64: dts: add description for lx2160a cex7 on
  half-twins board
 
 Signed-off-by: Josua Mayer <josua@solid-run.com>
@@ -748,7 +748,7 @@ index 000000000000..a43fed3bceaf
 +	status = "okay";
 +};
 diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
-index cdc839827302..2fba1b5314b0 100644
+index 3f63fbf2485e..e2de7e596d2b 100644
 --- a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
 +++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
 @@ -499,13 +499,13 @@ ddr-ctrl5-thermal {

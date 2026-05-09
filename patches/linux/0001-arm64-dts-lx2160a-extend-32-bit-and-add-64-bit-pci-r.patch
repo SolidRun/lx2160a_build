@@ -1,0 +1,251 @@
+From 2d1ec1fa4b3dd2f165a163dc4d39d0ab9cd55acc Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 9 May 2026 16:29:24 +0200
+Subject: [PATCH 1/7] arm64: dts: lx2160a: extend 32-bit, and add 64-bit pci
+ regions
+
+LX2160 SoC pci-e controller supports 64-bit memory regions up to 16GB,
+32-bit regions up to 3GB and 16-bit regions up to 64k.
+
+For each pci-e controller:
+- extend the existing 32-bit regions to 3GB size
+- drop IORESOURCE_BUSY flag
+- add 64-bit region
+See [1] amd [2] for boot messages showing ranges before and after.
+
+IORESOURCE_BUSY is dropped since it has no effect when specified in dts.
+
+For LX2160A Silicon revision 1, the 16GB 64-bit area is split into 4
+pieces, because the layerscape pcie driver fails to program atu for
+larger ranges [3].
+
+Similar memory allocation with similar flags was tested with UEFI and ACPI
+on pcie3 and pcie5, on a variety of nxp vendor fork versions.
+
+This patch was tested on Linux v7.1-rc1 and u-boot, with two pcie cards:
+- pcie5: Radeon Pro WX2100
+- pcie3: ADATA NVME
+
+This fixes allocation of large, and 64-bit BARs as requested by many pci
+cards - especially graphics processors or AI accelerators, e.g.:
+
+[    2.941187] pci 0000:01:00.0: BAR 0: no space for [mem size 0x200000000 64bit pref]
+[    2.948834] pci 0000:01:00.0: BAR 0: failed to assign [mem size 0x200000000 64bit pref]
+
+[1] example of new allocations (pcie5):
+[    1.182745] layerscape-pcie 3800000.pcie: host bridge /soc/pcie@3800000 ranges:
+[    1.182760] layerscape-pcie 3800000.pcie:      MEM 0xa400000000..0xa7ffffffff -> 0xa400000000
+[    1.182771] layerscape-pcie 3800000.pcie:      MEM 0xa040000000..0xa0ffffffff -> 0x0040000000
+[    1.182778] layerscape-pcie 3800000.pcie:       IO 0xa000010000..0xa00001ffff -> 0x0000000000
+[    1.183642] layerscape-pcie 3800000.pcie: iATU: unroll F, 256 ob, 24 ib, align 4K, limit 4G
+[    1.385429] layerscape-pcie 3800000.pcie: PCIe Gen.3 x8 link up
+[    1.385481] layerscape-pcie 3800000.pcie: PCI host bridge to bus 0001:00
+[    1.385484] pci_bus 0001:00: root bus resource [bus 00-ff]
+[    1.385488] pci_bus 0001:00: root bus resource [mem 0xa400000000-0xa7ffffffff pref]
+[    1.385491] pci_bus 0001:00: root bus resource [mem 0xa040000000-0xa0ffffffff] (bus address [0x40000000-0xffffffff])
+[    1.385494] pci_bus 0001:00: root bus resource [io  0x10000-0x1ffff] (bus address [0x0000-0xffff])
+[    1.385516] pci 0001:00:00.0: [1957:8d80] type 01 class 0x060400 PCIe Root Port
+[    1.385538] pci 0001:00:00.0: PCI bridge to [bus 01-ff]
+[    1.385544] pci 0001:00:00.0:   bridge window [io  0x11000-0x11fff]
+[    1.385548] pci 0001:00:00.0:   bridge window [mem 0xa040000000-0xa0502fffff]
+[    1.385605] pci 0001:00:00.0: supports D1 D2
+[    1.385607] pci 0001:00:00.0: PME# supported from D0 D1 D2 D3hot
+[    1.386778] pci 0001:01:00.0: [1002:6995] type 00 class 0x030000 PCIe Legacy Endpoint
+[    1.387336] pci 0001:01:00.0: BAR 0 [mem 0xa040000000-0xa04fffffff 64bit pref]
+[    1.387368] pci 0001:01:00.0: BAR 2 [mem 0xa050000000-0xa0501fffff 64bit pref]
+[    1.387385] pci 0001:01:00.0: BAR 4 [io  0x11000-0x110ff]
+[    1.387402] pci 0001:01:00.0: BAR 5 [mem 0xa050200000-0xa05023ffff]
+[    1.387418] pci 0001:01:00.0: ROM [mem 0xa050240000-0xa05025ffff pref]
+[    1.387493] pci 0001:01:00.0: enabling Extended Tags
+[    1.388960] pci 0001:01:00.0: supports D1 D2
+
+[2] example of previous allocations (pcie5):
+[    1.716744] layerscape-pcie 3800000.pcie: host bridge /soc/pcie@3800000 ranges:
+[    1.724060] layerscape-pcie 3800000.pcie:      MEM 0xa040000000..0xa07fffffff -> 0x0040000000
+[    1.733277] layerscape-pcie 3800000.pcie: iATU: unroll F, 256 ob, 24 ib, align 4K, limit 4G
+[    1.836220] layerscape-pcie 3800000.pcie: PCIe Gen.3 x8 link up
+[    1.842186] layerscape-pcie 3800000.pcie: PCI host bridge to bus 0001:00
+[    1.848883] pci_bus 0001:00: root bus resource [bus 00-ff]
+[    1.854363] pci_bus 0001:00: root bus resource [mem 0xa040000000-0xa07fffffff] (bus address [0x40000000-0x7fffffff])
+[    1.864892] pci 0001:00:00.0: [1957:8d80] type 01 class 0x060400 PCIe Root Port
+[    1.872216] pci 0001:00:00.0: PCI bridge to [bus 01-ff]
+[    1.877438] pci 0001:00:00.0:   bridge window [io  0x1000-0x1fff]
+[    1.883526] pci 0001:00:00.0:   bridge window [mem 0xa040000000-0xa0502fffff]
+
+[3] error programming atu beyond 4GB:
+[    1.716762] layerscape-pcie 3800000.pcie: host bridge /soc/pcie@3800000 ranges:
+[    1.724080] layerscape-pcie 3800000.pcie:      MEM 0xa400000000..0xa7ffffffff -> 0xa400000000
+[    1.732615] layerscape-pcie 3800000.pcie:      MEM 0xa040000000..0xa0ffffffff -> 0x0040000000
+[    1.741142] layerscape-pcie 3800000.pcie:       IO 0xa010000000..0xa01000ffff -> 0x0000000000
+[    1.750379] layerscape-pcie 3800000.pcie: iATU: unroll F, 256 ob, 24 ib, align 4K, limit 4G
+[    1.759089] layerscape-pcie 3800000.pcie: Failed to set MEM range [mem 0xa400000000-0xa7ffffffff flags 0x2200]
+[    1.769089] layerscape-pcie 3800000.pcie: probe with driver layerscape-pcie failed with error -22
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../boot/dts/freescale/fsl-lx2160a-rev2.dtsi  | 30 +++++++++------
+ .../arm64/boot/dts/freescale/fsl-lx2160a.dtsi | 37 ++++++++++++++++---
+ 2 files changed, 49 insertions(+), 18 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-rev2.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-rev2.dtsi
+index f54005e37924..318210ad5bec 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-rev2.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-rev2.dtsi
+@@ -14,8 +14,9 @@ &pcie1 {
+ 	      0x80 0x00000000 0x0 0x00002000>; /* configuration space */
+ 	reg-names = "regs", "config";
+ 
+-	ranges = <0x81000000 0x0 0x00000000 0x80 0x00010000 0x0 0x00010000
+-		  0x82000000 0x0 0x40000000 0x80 0x40000000 0x0 0x40000000>;
++	ranges = <0x42000000 0x84 0x00000000 0x84 0x00000000 0x04 0x00000000>, /* 64-Bit - prefetchable - 16GB */
++		 <0x02000000 0x00 0x40000000 0x80 0x40000000 0x00 0xc0000000>, /* 32-Bit - non-prefetchable */
++		 <0x01000000 0x00 0x00000000 0x80 0x00010000 0x00 0x00010000>; /* 16-Bit IO Window */
+ 
+ 	interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>;
+ 	interrupt-names = "intr";
+@@ -30,8 +31,9 @@ &pcie2 {
+ 	       0x88 0x00000000 0x0 0x00002000>; /* configuration space */
+ 	reg-names = "regs", "config";
+ 
+-	ranges = <0x81000000 0x0 0x00000000 0x88 0x00010000 0x0 0x00010000
+-		  0x82000000 0x0 0x40000000 0x88 0x40000000 0x0 0x40000000>;
++	ranges = <0x42000000 0x8c 0x00000000 0x8c 0x00000000 0x04 0x00000000>, /* 64-Bit - prefetchable - 16GB */
++		 <0x02000000 0x00 0x40000000 0x88 0x40000000 0x00 0xc0000000>, /* 32-Bit - non-prefetchable */
++		 <0x01000000 0x00 0x00000000 0x88 0x00010000 0x00 0x00010000>; /* 16-Bit IO Window */
+ 
+ 	interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>;
+ 	interrupt-names = "intr";
+@@ -46,8 +48,9 @@ &pcie3 {
+ 	       0x90 0x00000000 0x0 0x00002000>; /* configuration space */
+ 	reg-names = "regs", "config";
+ 
+-	ranges = <0x81000000 0x0 0x00000000 0x90 0x00010000 0x0 0x00010000
+-		  0x82000000 0x0 0x40000000 0x90 0x40000000 0x0 0x40000000>;
++	ranges = <0x42000000 0x94 0x00000000 0x94 0x00000000 0x04 0x00000000>, /* 64-Bit - prefetchable - 16GB */
++		 <0x02000000 0x00 0x40000000 0x90 0x40000000 0x00 0xc0000000>, /* 32-Bit - non-prefetchable */
++		 <0x01000000 0x00 0x00000000 0x90 0x00010000 0x00 0x00010000>; /* 16-Bit IO Window */
+ 
+ 	interrupts = <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>;
+ 	interrupt-names = "intr";
+@@ -63,8 +66,9 @@ &pcie4 {
+ 	       0x98 0x00000000 0x0 0x00002000>; /* configuration space */
+ 	reg-names = "regs", "config";
+ 
+-	ranges = <0x81000000 0x0 0x00000000 0x98 0x00010000 0x0 0x00010000
+-		  0x82000000 0x0 0x40000000 0x98 0x40000000 0x0 0x40000000>;
++	ranges = <0x42000000 0x9c 0x00000000 0x9c 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 16GB */
++		 <0x02000000 0x00 0x40000000 0x98 0x40000000 0x00 0xc0000000>, /* 32-Bit - non-prefetchable */
++		 <0x01000000 0x00 0x00000000 0x98 0x00010000 0x00 0x00010000>; /* 16-Bit IO Window */
+ 
+ 	interrupts = <GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>;
+ 	interrupt-names = "intr";
+@@ -79,8 +83,9 @@ &pcie5 {
+ 	       0xa0 0x00000000 0x0 0x00002000>; /* configuration space */
+ 	reg-names = "regs", "config";
+ 
+-	ranges = <0x81000000 0x0 0x00000000 0xa0 0x00010000 0x0 0x00010000
+-		  0x82000000 0x0 0x40000000 0xa0 0x40000000 0x0 0x40000000>;
++	ranges = <0x42000000 0xa4 0x00000000 0xa4 0x00000000 0x04 0x00000000>, /* 64-Bit - prefetchable - 16GB */
++		 <0x02000000 0x00 0x40000000 0xa0 0x40000000 0x00 0xc0000000>, /* 32-Bit - non-prefetchable */
++		 <0x01000000 0x00 0x00000000 0xa0 0x00010000 0x00 0x00010000>; /* 16-Bit IO Window */
+ 
+ 	interrupts = <GIC_SPI 128 IRQ_TYPE_LEVEL_HIGH>;
+ 	interrupt-names = "intr";
+@@ -95,8 +100,9 @@ &pcie6 {
+ 	       0xa8 0x00000000 0x0 0x00002000>; /* configuration space */
+ 	reg-names = "regs", "config";
+ 
+-	ranges = <0x81000000 0x0 0x00000000 0xa8 0x00010000 0x0 0x00010000
+-		  0x82000000 0x0 0x40000000 0xa8 0x40000000 0x0 0x40000000>;
++	ranges = <0x42000000 0xac 0x00000000 0xac 0x00000000 0x04 0x00000000>, /* 64-Bit - prefetchable - 16GB */
++		 <0x02000000 0x00 0x40000000 0xa8 0x40000000 0x00 0xc0000000>, /* 32-Bit - non-prefetchable */
++		 <0x01000000 0x00 0x00000000 0xa8 0x00010000 0x00 0x00010000>; /* 16-Bit IO Window */
+ 
+ 	interrupts = <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>;
+ 	interrupt-names = "intr";
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+index 479982948ee5..3f63fbf2485e 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a.dtsi
+@@ -1193,7 +1193,12 @@ pcie1: pcie@3400000 {
+ 			apio-wins = <8>;
+ 			ppio-wins = <8>;
+ 			bus-range = <0x0 0xff>;
+-			ranges = <0x82000000 0x0 0x40000000 0x80 0x40000000 0x0 0x40000000>; /* non-prefetchable memory */
++			ranges = <0x42000000 0x87 0x00000000 0x87 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0x86 0x00000000 0x86 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0x85 0x00000000 0x85 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0x84 0x00000000 0x84 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x02000000 0x00 0x40000000 0x80 0x40000000 0x00 0xc0000000>; /* 32-Bit - non-prefetchable */
++
+ 			msi-parent = <&its 0>;
+ 			#interrupt-cells = <1>;
+ 			interrupt-map-mask = <0 0 0 7>;
+@@ -1221,7 +1226,11 @@ pcie2: pcie@3500000 {
+ 			apio-wins = <8>;
+ 			ppio-wins = <8>;
+ 			bus-range = <0x0 0xff>;
+-			ranges = <0x82000000 0x0 0x40000000 0x88 0x40000000 0x0 0x40000000>; /* non-prefetchable memory */
++			ranges = <0x42000000 0x8f 0x00000000 0x8f 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0x8e 0x00000000 0x8e 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0x8d 0x00000000 0x8d 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0x8c 0x00000000 0x8c 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x02000000 0x00 0x40000000 0x88 0x40000000 0x00 0xc0000000>; /* 32-Bit - non-prefetchable */
+ 			msi-parent = <&its 0>;
+ 			#interrupt-cells = <1>;
+ 			interrupt-map-mask = <0 0 0 7>;
+@@ -1249,7 +1258,11 @@ pcie3: pcie@3600000 {
+ 			apio-wins = <256>;
+ 			ppio-wins = <24>;
+ 			bus-range = <0x0 0xff>;
+-			ranges = <0x82000000 0x0 0x40000000 0x90 0x40000000 0x0 0x40000000>; /* non-prefetchable memory */
++			ranges = <0x42000000 0x97 0x00000000 0x97 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0x96 0x00000000 0x96 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0x95 0x00000000 0x95 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0x94 0x00000000 0x94 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x02000000 0x00 0x40000000 0x90 0x40000000 0x00 0xc0000000>; /* 32-Bit - non-prefetchable */
+ 			msi-parent = <&its 0>;
+ 			#interrupt-cells = <1>;
+ 			interrupt-map-mask = <0 0 0 7>;
+@@ -1277,7 +1290,11 @@ pcie4: pcie@3700000 {
+ 			apio-wins = <8>;
+ 			ppio-wins = <8>;
+ 			bus-range = <0x0 0xff>;
+-			ranges = <0x82000000 0x0 0x40000000 0x98 0x40000000 0x0 0x40000000>; /* non-prefetchable memory */
++			ranges = <0x42000000 0x9f 0x00000000 0x9f 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0x9e 0x00000000 0x9e 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0x9d 0x00000000 0x9d 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0x9c 0x00000000 0x9c 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x02000000 0x00 0x40000000 0x98 0x40000000 0x00 0xc0000000>; /* 32-Bit - non-prefetchable */
+ 			msi-parent = <&its 0>;
+ 			#interrupt-cells = <1>;
+ 			interrupt-map-mask = <0 0 0 7>;
+@@ -1305,7 +1322,11 @@ pcie5: pcie@3800000 {
+ 			apio-wins = <256>;
+ 			ppio-wins = <24>;
+ 			bus-range = <0x0 0xff>;
+-			ranges = <0x82000000 0x0 0x40000000 0xa0 0x40000000 0x0 0x40000000>; /* non-prefetchable memory */
++			ranges = <0x42000000 0xa7 0x00000000 0xa7 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0xa6 0x00000000 0xa6 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0xa5 0x00000000 0xa5 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0xa4 0x00000000 0xa4 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x02000000 0x00 0x40000000 0xa0 0x40000000 0x00 0xc0000000>; /* 32-Bit - non-prefetchable */
+ 			msi-parent = <&its 0>;
+ 			#interrupt-cells = <1>;
+ 			interrupt-map-mask = <0 0 0 7>;
+@@ -1333,7 +1354,11 @@ pcie6: pcie@3900000 {
+ 			apio-wins = <8>;
+ 			ppio-wins = <8>;
+ 			bus-range = <0x0 0xff>;
+-			ranges = <0x82000000 0x0 0x40000000 0xa8 0x40000000 0x0 0x40000000>; /* non-prefetchable memory */
++			ranges = <0x42000000 0xaf 0x00000000 0xaf 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0xae 0x00000000 0xae 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0xad 0x00000000 0xad 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x42000000 0xac 0x00000000 0xac 0x00000000 0x01 0x00000000>, /* 64-Bit - prefetchable - 4GB chunk */
++				 <0x02000000 0x00 0x40000000 0xa8 0x40000000 0x00 0xc0000000>; /* 32-Bit - non-prefetchable */
+ 			msi-parent = <&its 0>;
+ 			#interrupt-cells = <1>;
+ 			interrupt-map-mask = <0 0 0 7>;
+-- 
+2.51.0
+
