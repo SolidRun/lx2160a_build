@@ -1,0 +1,46 @@
+From e00945d64b0fe97b9661ccc197f1d5e193cb89bf Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 9 May 2026 15:19:05 +0200
+Subject: [PATCH 06/14] arm64: dts: lx2160a-clearfog-itx: remove redundant dts
+ version tag
+
+The dts version tag should only appear in the top level dts file.
+
+Since the cex-7 module and clearfog-itx are shared code intended for
+inclusion, drop their dts version tags.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi         | 2 --
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi | 2 --
+ 2 files changed, 4 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+index 90956ffb8ea9..56b74837ddd4 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+@@ -4,8 +4,6 @@
+ //
+ // Copyright 2019 SolidRun Ltd.
+ 
+-/dts-v1/;
+-
+ #include "fsl-lx2160a.dtsi"
+ 
+ / {
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+index 580ee9b3026e..6388bd60ffdf 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+@@ -5,8 +5,6 @@
+ //
+ // Copyright 2019 SolidRun Ltd.
+ 
+-/dts-v1/;
+-
+ #include "fsl-lx2160a-cex7.dtsi"
+ #include <dt-bindings/input/linux-event-codes.h>
+ 
+-- 
+2.51.0
+

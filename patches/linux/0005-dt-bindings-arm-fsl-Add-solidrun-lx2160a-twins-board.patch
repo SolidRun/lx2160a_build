@@ -1,0 +1,32 @@
+From bcaced9696b53e1917473371063e110830442153 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 9 May 2026 13:53:08 +0200
+Subject: [PATCH 05/14] dt-bindings: arm: fsl: Add solidrun lx2160a twins board
+
+The SolidRun LX2160A Twins board supports two configurations, one with
+with a sinle CEX-7 module, and one with two (dual).
+
+The dual configuration was not yet tested.
+
+Add binding for the single variant only.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ Documentation/devicetree/bindings/arm/fsl.yaml | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/arm/fsl.yaml b/Documentation/devicetree/bindings/arm/fsl.yaml
+index 0023cd126807..1f11c1208c24 100644
+--- a/Documentation/devicetree/bindings/arm/fsl.yaml
++++ b/Documentation/devicetree/bindings/arm/fsl.yaml
+@@ -1868,6 +1868,7 @@ properties:
+           - enum:
+               - solidrun,clearfog-cx
+               - solidrun,honeycomb
++              - solidrun,twins-single
+           - const: solidrun,lx2160a-cex7
+           - const: fsl,lx2160a
+ 
+-- 
+2.51.0
+

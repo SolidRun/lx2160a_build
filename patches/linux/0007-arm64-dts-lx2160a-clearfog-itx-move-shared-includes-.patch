@@ -1,0 +1,80 @@
+From fcb9db3e0060128bfdb972222074779725c77a72 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 9 May 2026 15:26:21 +0200
+Subject: [PATCH 07/14] arm64: dts: lx2160a-clearfog-itx: move shared includes
+ to dts
+
+Originally includes were defined hierarchically:
+- CEX-7 Module includes SoC
+- Clearfog-CX & Honeycomb common parts include CEX-7 Module
+- Boards include common parts
+
+This makes it difficult to modify the includes on a per-board level,
+e.g. when adding a new board based on CEX-7 module but revision 2 SoC
+(which now has its own soc dtsi).
+
+Move includes of both SoC and CEX-7 module out of common parts and into
+each board dts.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi         | 2 --
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-cx.dts   | 2 ++
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi | 1 -
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-honeycomb.dts     | 2 ++
+ 4 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+index 56b74837ddd4..7df93bb37d13 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+@@ -4,8 +4,6 @@
+ //
+ // Copyright 2019 SolidRun Ltd.
+ 
+-#include "fsl-lx2160a.dtsi"
+-
+ / {
+ 	model = "SolidRun LX2160A COM Express Type 7 module";
+ 	compatible = "solidrun,lx2160a-cex7", "fsl,lx2160a";
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-cx.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-cx.dts
+index 86a9b771428d..802d7611c647 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-cx.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-cx.dts
+@@ -6,6 +6,8 @@
+ 
+ /dts-v1/;
+ 
++#include "fsl-lx2160a.dtsi"
++#include "fsl-lx2160a-cex7.dtsi"
+ #include "fsl-lx2160a-clearfog-itx.dtsi"
+ 
+ / {
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+index 6388bd60ffdf..170e5b0034f1 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-clearfog-itx.dtsi
+@@ -5,7 +5,6 @@
+ //
+ // Copyright 2019 SolidRun Ltd.
+ 
+-#include "fsl-lx2160a-cex7.dtsi"
+ #include <dt-bindings/input/linux-event-codes.h>
+ 
+ / {
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-honeycomb.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-honeycomb.dts
+index fe19f3009ea5..2b1e13053422 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-honeycomb.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-honeycomb.dts
+@@ -6,6 +6,8 @@
+ 
+ /dts-v1/;
+ 
++#include "fsl-lx2160a.dtsi"
++#include "fsl-lx2160a-cex7.dtsi"
+ #include "fsl-lx2160a-clearfog-itx.dtsi"
+ 
+ / {
+-- 
+2.51.0
+

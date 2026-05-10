@@ -1,0 +1,71 @@
+From cd349b43657eb1e48ca7a0d6acf309979e40c935 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 10 May 2026 14:56:01 +0200
+Subject: [PATCH 04/14] arm64: dts: lx2162a-clearfog: specify sfp ports led
+ colour and function
+
+The LX2162A Clearfog board has a green LED on each of four SFP ports.
+
+Describe in device-tree that their colour is green and function "lan".
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../boot/dts/freescale/fsl-lx2162a-clearfog.dts    | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+index 6fd85a5cac94..99ee2b1c0f13 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+@@ -6,6 +6,8 @@
+ 
+ /dts-v1/;
+ 
++#include <dt-bindings/leds/common.h>
++
+ #include "fsl-lx2160a-rev2.dtsi"
+ #include "fsl-lx2162a-sr-som.dtsi"
+ 
+@@ -38,6 +40,9 @@ leds {
+ 		compatible = "gpio-leds";
+ 
+ 		led_sfp_at: led-sfp-at {
++			color = <LED_COLOR_ID_GREEN>;
++			function = LED_FUNCTION_LAN;
++			function-enumerator = <1>;
+ 			gpios = <&gpio2 5 GPIO_ACTIVE_HIGH>; /* PROC_IRQ5 */
+ 			default-state = "off";
+ 			linux,default-trigger = "netdev";
+@@ -45,6 +50,9 @@ led_sfp_at: led-sfp-at {
+ 		};
+ 
+ 		led_sfp_ab: led-sfp-ab {
++			color = <LED_COLOR_ID_GREEN>;
++			function = LED_FUNCTION_LAN;
++			function-enumerator = <2>;
+ 			gpios = <&gpio2 11 GPIO_ACTIVE_HIGH>; /* PROC_IRQ11 */
+ 			default-state = "off";
+ 			linux,default-trigger = "netdev";
+@@ -52,6 +60,9 @@ led_sfp_ab: led-sfp-ab {
+ 		};
+ 
+ 		led_sfp_bt: led-sfp-bt {
++			color = <LED_COLOR_ID_GREEN>;
++			function = LED_FUNCTION_LAN;
++			function-enumerator = <3>;
+ 			gpios = <&gpio2 13 GPIO_ACTIVE_HIGH>; /* EVT1_B */
+ 			default-state = "off";
+ 			linux,default-trigger = "netdev";
+@@ -59,6 +70,9 @@ led_sfp_bt: led-sfp-bt {
+ 		};
+ 
+ 		led_sfp_bb: led-sfp-bb {
++			color = <LED_COLOR_ID_GREEN>;
++			function = LED_FUNCTION_LAN;
++			function-enumerator = <4>;
+ 			gpios = <&gpio2 14 GPIO_ACTIVE_HIGH>; /* EVT2_B */
+ 			default-state = "off";
+ 			linux,default-trigger = "netdev";
+-- 
+2.51.0
+

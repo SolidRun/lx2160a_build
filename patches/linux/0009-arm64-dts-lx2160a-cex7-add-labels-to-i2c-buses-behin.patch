@@ -1,0 +1,60 @@
+From 5204138a2bd1e8a1122fa591b95cb7710f50f318 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 9 May 2026 14:20:28 +0200
+Subject: [PATCH 09/14] arm64: dts: lx2160a-cex7: add labels to i2c buses
+ behind mux
+
+The LX2160 CEX-7 module integrates in i2c bus multiplexer. Some of its
+channel nodes have labels, others do not.
+
+Add descriptive labels to the unlabeled channels, allowing other board
+dts to reference them for example in aliases.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+index 7df93bb37d13..ce63545abb6e 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-cex7.dtsi
+@@ -58,7 +58,7 @@ i2c-mux@77 {
+ 		#size-cells = <0>;
+ 		reg = <0x77>;
+ 
+-		i2c@0 {
++		ddr_i2c: i2c@0 {
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 			reg = <0>;
+@@ -84,7 +84,7 @@ eeprom@57 {
+ 			};
+ 		};
+ 
+-		i2c@1 {
++		fan_i2c: i2c@1 {
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 			reg = <1>;
+@@ -95,7 +95,7 @@ fan-temperature-ctrlr@18 {
+ 			};
+ 		};
+ 
+-		i2c@2 {
++		power_i2c: i2c@2 {
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 			reg = <2>;
+@@ -106,7 +106,7 @@ regulator@5c {
+ 			};
+ 		};
+ 
+-		i2c@3 {
++		i2c_smb: i2c@3 {
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 			reg = <3>;
+-- 
+2.51.0
+

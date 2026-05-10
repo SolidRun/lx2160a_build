@@ -1,7 +1,7 @@
-From 2d1ec1fa4b3dd2f165a163dc4d39d0ab9cd55acc Mon Sep 17 00:00:00 2001
+From ca0688fc3e058c25bd40c8289e2000eb518cdb50 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
-Date: Sat, 9 May 2026 16:29:24 +0200
-Subject: [PATCH 1/7] arm64: dts: lx2160a: extend 32-bit, and add 64-bit pci
+Date: Thu, 21 Mar 2024 16:13:19 +0100
+Subject: [PATCH 01/14] arm64: dts: lx2160a: extend 32-bit, and add 64-bit pci
  regions
 
 LX2160 SoC pci-e controller supports 64-bit memory regions up to 16GB,
@@ -11,7 +11,7 @@ For each pci-e controller:
 - extend the existing 32-bit regions to 3GB size
 - drop IORESOURCE_BUSY flag
 - add 64-bit region
-See [1] amd [2] for boot messages showing ranges before and after.
+See [1] and [2] for boot messages showing ranges before and after.
 
 IORESOURCE_BUSY is dropped since it has no effect when specified in dts.
 

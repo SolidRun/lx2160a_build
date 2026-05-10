@@ -1,7 +1,7 @@
-From 898db6dc7329272bcf8eb630cfdc7f27241e738c Mon Sep 17 00:00:00 2001
+From 0c13b3785f1e859af0db018a1f9c9cf510a995eb Mon Sep 17 00:00:00 2001
 From: Ioana Ciornei <ioana.ciornei@nxp.com>
 Date: Wed, 5 Apr 2023 16:33:54 +0300
-Subject: [PATCH 3/7] phy: lynx-28g: add support for 25GBASER
+Subject: [PATCH 12/14] phy: lynx-28g: add support for 25GBASER
 
 Add support for 25GBASE-R in the Lynx 28G SerDes PHY driver.
 This mainly means being able to determine if a PLL is able to support

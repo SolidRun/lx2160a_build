@@ -1,0 +1,34 @@
+From d4ffdf7abca9c8f16201deadcc0d2723b75d147c Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 10 May 2026 12:27:11 +0200
+Subject: [PATCH 11/14] iommu: fix error propagation when attaching domain
+ fails
+
+Fix the error return condition in iommu_map_nosync after
+__iommu_map_domain_pgtbl. The condition wrongly checked for zero instead
+of != zero.
+
+This fixes smmu errors leading to stall during boot on SolidRun LX2160A
+Clearfo-CX board.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/iommu/iommu.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/iommu/iommu.c b/drivers/iommu/iommu.c
+index 61c12ba78206..6e53cfad5dc0 100644
+--- a/drivers/iommu/iommu.c
++++ b/drivers/iommu/iommu.c
+@@ -2669,7 +2669,7 @@ int iommu_map_nosync(struct iommu_domain *domain, unsigned long iova,
+ 		return 0;
+ 	}
+ 	ret = __iommu_map_domain_pgtbl(domain, iova, paddr, size, prot, gfp);
+-	if (!ret)
++	if (ret)
+ 		return ret;
+ 
+ 	trace_map(iova, paddr, size);
+-- 
+2.51.0
+

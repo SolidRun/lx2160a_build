@@ -1,7 +1,7 @@
-From ab983f69926e3b1cb9aeca4fd9c4a43c65021dee Mon Sep 17 00:00:00 2001
+From 1770409d1266d86b5a3da043392a838654691ec5 Mon Sep 17 00:00:00 2001
 From: Ioana Ciornei <ioana.ciornei@nxp.com>
 Date: Wed, 5 Apr 2023 15:33:13 +0300
-Subject: [PATCH 4/7] net: phylink: extend phylink_mii_c45_pcs_get_state also
+Subject: [PATCH 13/14] net: phylink: extend phylink_mii_c45_pcs_get_state also
  for PHY_INTERFACE_MODE_25GBASER
 
 Extend the phylink_mii_c45_pcs_get_state() to also support
