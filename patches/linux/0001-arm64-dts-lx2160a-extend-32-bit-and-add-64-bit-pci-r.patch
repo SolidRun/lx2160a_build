@@ -1,7 +1,7 @@
 From ca0688fc3e058c25bd40c8289e2000eb518cdb50 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Thu, 21 Mar 2024 16:13:19 +0100
-Subject: [PATCH 01/14] arm64: dts: lx2160a: extend 32-bit, and add 64-bit pci
+Subject: [PATCH 01/26] arm64: dts: lx2160a: extend 32-bit, and add 64-bit pci
  regions
 
 LX2160 SoC pci-e controller supports 64-bit memory regions up to 16GB,

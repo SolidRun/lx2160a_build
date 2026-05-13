@@ -1,7 +1,7 @@
 From cd349b43657eb1e48ca7a0d6acf309979e40c935 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sun, 10 May 2026 14:56:01 +0200
-Subject: [PATCH 04/14] arm64: dts: lx2162a-clearfog: specify sfp ports led
+Subject: [PATCH 04/26] arm64: dts: lx2162a-clearfog: specify sfp ports led
  colour and function
 
 The LX2162A Clearfog board has a green LED on each of four SFP ports.

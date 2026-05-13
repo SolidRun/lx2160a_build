@@ -1,0 +1,174 @@
+From ea22205616f8424b3b4223ef697f059b9fc01347 Mon Sep 17 00:00:00 2001
+From: Vladimir Oltean <vladimir.oltean@nxp.com>
+Date: Sat, 21 Mar 2026 03:14:49 +0200
+Subject: [PATCH 16/26] phy: lynx-28g: use timeouts when waiting for lane halt
+ and reset
+
+There are various circumstances in which a lane halt, or a lane reset,
+will fail to complete. If this happens, it will hang the kernel, which
+only implements a busy loop with no timeout.
+
+The circumstances in which this will happen are all bugs in nature:
+- if we try to power off a powered off lane
+- if we try to power off a lane that uses a PLL locked onto the wrong
+  refclk frequency (wrong RCW, but SoC boots anyway)
+
+Actually, unbounded loops in the kernel are a bad practice, so let's use
+read_poll_timeout() with a custom function that reads both LNaTRSTCTL
+(lane transmit control register) and LNaRRSTCTL (lane receive control
+register) and returns true when the request is done in both directions.
+
+The HLT_REQ bit has to clear, whereas the RST_DONE bit has to get set.
+
+Any time such an error happens, it is catastrophic and there is no point
+in trying to propagate it to our callers:
+- if lynx_28g_set_mode() -> lynx_28g_power_on() times out, we have
+  already reconfigured the lane, but returning an error would tell the
+  caller that we didn't
+- if lynx_28g_power_off() times out, again not much for the consumer to
+  do to help get out of this situation - the phy_power_off() call is
+  probably made from a context that the consumer can't cancel, or it is
+  making it to return to a known state from a previous failure.
+
+So just print an error if timeouts happen and let the driver control
+flow continue. The entire point is just to not let the kernel freeze.
+
+Suggested-by: Josua Mayer <josua@solid-run.com>
+Link: https://lore.kernel.org/lkml/d0c8bbf8-a0c5-469f-a148-de2235948c0f@solid-run.com/
+Signed-off-by: Vladimir Oltean <vladimir.oltean@nxp.com>
+Reviewed-by: Andrew Lunn <andrew@lunn.ch>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 72 ++++++++++++++++++------
+ 1 file changed, 56 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index 63427fc34e26..a9ab92e3d1a9 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -249,6 +249,12 @@
+ 
+ #define CR(x)					((x) * 4)
+ 
++#define LYNX_28G_LANE_HALT_SLEEP_US		100
++#define LYNX_28G_LANE_HALT_TIMEOUT_US		1000000
++
++#define LYNX_28G_LANE_RESET_SLEEP_US		100
++#define LYNX_28G_LANE_RESET_TIMEOUT_US		1000000
++
+ enum lynx_28g_eq_type {
+ 	EQ_TYPE_NO_EQ = 0,
+ 	EQ_TYPE_2TAP = 1,
+@@ -600,10 +606,29 @@ static void lynx_28g_lane_set_pll(struct lynx_28g_lane *lane,
+ 	}
+ }
+ 
++static bool lynx_28g_lane_halt_done(struct lynx_28g_lane *lane)
++{
++	u32 trstctl = lynx_28g_lane_read(lane, LNaTRSTCTL);
++	u32 rrstctl = lynx_28g_lane_read(lane, LNaRRSTCTL);
++
++	return !(trstctl & LNaTRSTCTL_HLT_REQ) &&
++	       !(rrstctl & LNaRRSTCTL_HLT_REQ);
++}
++
++static bool lynx_28g_lane_reset_done(struct lynx_28g_lane *lane)
++{
++	u32 trstctl = lynx_28g_lane_read(lane, LNaTRSTCTL);
++	u32 rrstctl = lynx_28g_lane_read(lane, LNaRRSTCTL);
++
++	return (trstctl & LNaTRSTCTL_RST_DONE) &&
++	       (rrstctl & LNaRRSTCTL_RST_DONE);
++}
++
+ static int lynx_28g_power_off(struct phy *phy)
+ {
+ 	struct lynx_28g_lane *lane = phy_get_drvdata(phy);
+-	u32 trstctl, rrstctl;
++	bool done;
++	int err;
+ 
+ 	if (!lane->powered_up)
+ 		return 0;
+@@ -615,11 +640,14 @@ static int lynx_28g_power_off(struct phy *phy)
+ 			  LNaRRSTCTL_HLT_REQ);
+ 
+ 	/* Wait until the halting process is complete */
+-	do {
+-		trstctl = lynx_28g_lane_read(lane, LNaTRSTCTL);
+-		rrstctl = lynx_28g_lane_read(lane, LNaRRSTCTL);
+-	} while ((trstctl & LNaTRSTCTL_HLT_REQ) ||
+-		 (rrstctl & LNaRRSTCTL_HLT_REQ));
++	err = read_poll_timeout(lynx_28g_lane_halt_done, done, done,
++				LYNX_28G_LANE_HALT_SLEEP_US,
++				LYNX_28G_LANE_HALT_TIMEOUT_US,
++				false, lane);
++	if (err) {
++		dev_err(&phy->dev, "Lane %c halt failed: %pe\n",
++			'A' + lane->id, ERR_PTR(err));
++	}
+ 
+ 	lane->powered_up = false;
+ 
+@@ -629,7 +657,8 @@ static int lynx_28g_power_off(struct phy *phy)
+ static int lynx_28g_power_on(struct phy *phy)
+ {
+ 	struct lynx_28g_lane *lane = phy_get_drvdata(phy);
+-	u32 trstctl, rrstctl;
++	bool done;
++	int err;
+ 
+ 	if (lane->powered_up)
+ 		return 0;
+@@ -641,11 +670,14 @@ static int lynx_28g_power_on(struct phy *phy)
+ 			  LNaRRSTCTL_RST_REQ);
+ 
+ 	/* Wait until the reset sequence is completed */
+-	do {
+-		trstctl = lynx_28g_lane_read(lane, LNaTRSTCTL);
+-		rrstctl = lynx_28g_lane_read(lane, LNaRRSTCTL);
+-	} while (!(trstctl & LNaTRSTCTL_RST_DONE) ||
+-		 !(rrstctl & LNaRRSTCTL_RST_DONE));
++	err = read_poll_timeout(lynx_28g_lane_reset_done, done, done,
++				LYNX_28G_LANE_RESET_SLEEP_US,
++				LYNX_28G_LANE_RESET_TIMEOUT_US,
++				false, lane);
++	if (err) {
++		dev_err(&phy->dev, "Lane %c reset failed: %pe\n",
++			'A' + lane->id, ERR_PTR(err));
++	}
+ 
+ 	lane->powered_up = true;
+ 
+@@ -1065,7 +1097,7 @@ static void lynx_28g_cdr_lock_check(struct work_struct *work)
+ 	struct lynx_28g_priv *priv = work_to_lynx(work);
+ 	struct lynx_28g_lane *lane;
+ 	u32 rrstctl;
+-	int i;
++	int err, i;
+ 
+ 	for (i = 0; i < LYNX_28G_NUM_LANE; i++) {
+ 		lane = &priv->lane[i];
+@@ -1083,9 +1115,17 @@ static void lynx_28g_cdr_lock_check(struct work_struct *work)
+ 		if (!(rrstctl & LNaRRSTCTL_CDR_LOCK)) {
+ 			lynx_28g_lane_rmw(lane, LNaRRSTCTL, LNaRRSTCTL_RST_REQ,
+ 					  LNaRRSTCTL_RST_REQ);
+-			do {
+-				rrstctl = lynx_28g_lane_read(lane, LNaRRSTCTL);
+-			} while (!(rrstctl & LNaRRSTCTL_RST_DONE));
++
++			err = read_poll_timeout(lynx_28g_lane_read, rrstctl,
++						!!(rrstctl & LNaRRSTCTL_RST_DONE),
++						LYNX_28G_LANE_RESET_SLEEP_US,
++						LYNX_28G_LANE_RESET_TIMEOUT_US,
++						false, lane, LNaRRSTCTL);
++			if (err) {
++				dev_warn_once(&lane->phy->dev,
++					      "Lane %c receiver reset failed: %pe\n",
++					      'A' + lane->id, ERR_PTR(err));
++			}
+ 		}
+ 
+ 		mutex_unlock(&lane->phy->mutex);
+-- 
+2.51.0
+

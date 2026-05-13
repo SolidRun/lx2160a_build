@@ -1,7 +1,7 @@
 From d5608d732091ccf7a5503a3d5016bf215a77d17d Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 9 May 2026 12:51:36 +0200
-Subject: [PATCH 03/14] arm64: dts: lx2162a-clearfog: cleanup superfluous
+Subject: [PATCH 03/26] arm64: dts: lx2162a-clearfog: cleanup superfluous
  status properties
 
 The SoC dtsi has always enabled serdes block 1, enabled dpmac and

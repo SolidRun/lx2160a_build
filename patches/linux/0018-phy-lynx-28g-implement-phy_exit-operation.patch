@@ -1,0 +1,101 @@
+From d0ee98a5a15585d1d6aaae8435079da8bf16bad1 Mon Sep 17 00:00:00 2001
+From: Vladimir Oltean <vladimir.oltean@nxp.com>
+Date: Sat, 21 Mar 2026 03:14:51 +0200
+Subject: [PATCH 18/26] phy: lynx-28g: implement phy_exit() operation
+
+On Layerscape, some Lynx SerDes consumers go through the PHY framework
+(we call these 'managed' for the sake of this discussion; they are some
+Ethernet lanes), and some consumers don't go through the PHY framework
+(we call these 'unmanaged'; they are some unconverted Ethernet lanes,
+plus all SATA and PCIe controllers).
+
+A lane is initially unmanaged, and becomes managed when phy_init() is
+called on it. Similarly, it becomes unmanaged again when phy_exit() is
+called.
+
+Managed lanes are supposed to have power management through
+phy_power_on() and phy_power_off().
+
+The lynx-28g SerDes driver, when it probes, probes on all lanes, but
+needs to be careful to keep the unmanaged lanes powered on, because
+those might be in use by consumers unaware that they need to call
+phy_init() and phy_power_on(). This also applies after phy_exit() is
+called - no guarantee is made about how the port may be used
+afterwards - may be DPDK, may be something else which is unaware of
+the PHY framework.
+
+Given this state table:
+
+ State  | Consumer calls phy_exit()? | Provider implements phy_exit()?
+ -------+----------------------------+--------------------------------
+ (a)    | no                         | no
+ (b)    | no                         | yes
+ (c)    | yes                        | no
+ (d)    | yes                        | yes
+
+we are currently in state (a). This has the problem that when the
+consumer fails to probe with -EPROBE_DEFER or is otherwise unbound,
+the phy->init_count remains elevated and the lane never returns to the
+unmanaged state (temporarily or not) as it should. Furthermore, the
+second and subsequent phy_init() consumer calls are never passed on to
+the provider driver.
+
+We solve the above problem by implementing phy_exit() in the consumer,
+and that moves us to state (c). But this creates the problem that a
+balanced set of phy_init() and phy_exit() calls from the consumer will
+effectively result in multiple lynx_28g_init() calls as seen by the
+SerDes and nothing else - as the optional phy_ops :: exit() is not
+implemented. But that actually doesn't work - the 28G Lynx SerDes can't
+power down a lane which is already powered down; that call sequence
+would time out and fail.
+
+So actually we want to be in state (d), where both the provider and the
+consumer implement phy_exit(). But we can only do that safely through
+intermediary state (b), where the provider implements it first. This
+effectively behaves just like (a), except it offers a safe migration
+path for the consumer to call phy_exit() as mandated by the Generic PHY
+API.
+
+Extra development notes: ignoring the lynx_28g_power_on() error in
+lynx_28g_exit() is a deliberate decision. The consumer can't deal with a
+teardown path that is not error-free. Ignoring the error is not silent:
+lynx_28g_power_on() -> lynx_28g_lane_reset() will print on failure.
+
+Signed-off-by: Vladimir Oltean <vladimir.oltean@nxp.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index 1e2302799f8f..4ec3fb7a0d69 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -1113,8 +1113,25 @@ static int lynx_28g_init(struct phy *phy)
+ 	return 0;
+ }
+ 
++static int lynx_28g_exit(struct phy *phy)
++{
++	struct lynx_28g_lane *lane = phy_get_drvdata(phy);
++
++	/* The lane returns to the state where it isn't managed by the
++	 * consumer, so we must treat is as if it isn't initialized, and
++	 * always powered on.
++	 */
++	lane->init = false;
++	lane->powered_up = false;
++
++	lynx_28g_power_on(phy);
++
++	return 0;
++}
++
+ static const struct phy_ops lynx_28g_ops = {
+ 	.init		= lynx_28g_init,
++	.exit		= lynx_28g_exit,
+ 	.power_on	= lynx_28g_power_on,
+ 	.power_off	= lynx_28g_power_off,
+ 	.set_mode	= lynx_28g_set_mode,
+-- 
+2.51.0
+

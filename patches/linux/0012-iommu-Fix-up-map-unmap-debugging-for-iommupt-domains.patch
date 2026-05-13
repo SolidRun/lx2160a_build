@@ -1,0 +1,130 @@
+From ef84a1d1668c10edd922712d458752ebba1507fa Mon Sep 17 00:00:00 2001
+From: Jason Gunthorpe <jgg@nvidia.com>
+Date: Tue, 12 May 2026 13:46:14 -0300
+Subject: [PATCH 12/26] iommu: Fix up map/unmap debugging for iommupt domains
+
+Sashiko noticed a few issues in this path, and a few more were
+found on review. Tidy them up further. These are intertwined
+because the debug code depends on some of the WARN_ONs to function
+right:
+
+Lift into iommu_map_nosync():
+- The might_sleep_if()
+- 0 pgsize_bitmap WARN_ON
+- Promote the illegal domain->type to a WARN_ON
+- WARN_ON for illegal gfp flags
+
+Then remove the return 0 since it is now safe to call
+iommu_debug_map().
+
+Lift into __iommu_unmap():
+- 0 pgsize_bitmap WARN_ON
+- Promote the illegal domain->type to a WARN_ON
+- iommu_debug_unmap_begin()
+
+This now pairs with the unconditional iommu_debug_map() on the
+mapping side. Thus iommu debugging now works for iommupt along
+with some of the other debugging features.
+
+Fixes: 99fb8afa16ad ("iommupt: Directly call iommupt's unmap_range()")
+Fixes: d6c65b0fd621 ("iommupt: Avoid rewalking during map")
+Signed-off-by: Jason Gunthorpe <jgg@nvidia.com>
+---
+ drivers/iommu/iommu.c | 43 ++++++++++++++++++++++---------------------
+ 1 file changed, 22 insertions(+), 21 deletions(-)
+
+diff --git a/drivers/iommu/iommu.c b/drivers/iommu/iommu.c
+index 6e53cfad5dc0..e334588a2476 100644
+--- a/drivers/iommu/iommu.c
++++ b/drivers/iommu/iommu.c
+@@ -2583,19 +2583,9 @@ static int __iommu_map_domain_pgtbl(struct iommu_domain *domain,
+ 	size_t orig_size = size;
+ 	int ret = 0;
+ 
+-	might_sleep_if(gfpflags_allow_blocking(gfp));
+-
+-	if (unlikely(!(domain->type & __IOMMU_DOMAIN_PAGING)))
+-		return -EINVAL;
+-
+-	if (WARN_ON(!ops->map_pages || domain->pgsize_bitmap == 0UL))
++	if (WARN_ON(!ops->map_pages))
+ 		return -ENODEV;
+ 
+-	/* Discourage passing strange GFP flags */
+-	if (WARN_ON_ONCE(gfp & (__GFP_COMP | __GFP_DMA | __GFP_DMA32 |
+-				__GFP_HIGHMEM)))
+-		return -EINVAL;
+-
+ 	/* find out the minimum page size supported */
+ 	min_pagesz = 1 << __ffs(domain->pgsize_bitmap);
+ 
+@@ -2657,6 +2647,15 @@ int iommu_map_nosync(struct iommu_domain *domain, unsigned long iova,
+ 	struct pt_iommu *pt = iommupt_from_domain(domain);
+ 	int ret;
+ 
++	might_sleep_if(gfpflags_allow_blocking(gfp));
++
++	/* Discourage passing strange GFP flags or illegal domains */
++	if (WARN_ON_ONCE(!(domain->type & __IOMMU_DOMAIN_PAGING) ||
++			 !domain->pgsize_bitmap ||
++			 (gfp & (__GFP_COMP | __GFP_DMA | __GFP_DMA32 |
++				 __GFP_HIGHMEM))))
++		return -EINVAL;
++
+ 	if (pt) {
+ 		size_t mapped = 0;
+ 
+@@ -2666,11 +2665,12 @@ int iommu_map_nosync(struct iommu_domain *domain, unsigned long iova,
+ 			iommu_unmap(domain, iova, mapped);
+ 			return ret;
+ 		}
+-		return 0;
++	} else {
++		ret = __iommu_map_domain_pgtbl(domain, iova, paddr, size, prot,
++					       gfp);
++		if (ret)
++			return ret;
+ 	}
+-	ret = __iommu_map_domain_pgtbl(domain, iova, paddr, size, prot, gfp);
+-	if (ret)
+-		return ret;
+ 
+ 	trace_map(iova, paddr, size);
+ 	iommu_debug_map(domain, paddr, size);
+@@ -2702,10 +2702,7 @@ __iommu_unmap_domain_pgtbl(struct iommu_domain *domain, unsigned long iova,
+ 	size_t unmapped_page, unmapped = 0;
+ 	unsigned int min_pagesz;
+ 
+-	if (unlikely(!(domain->type & __IOMMU_DOMAIN_PAGING)))
+-		return 0;
+-
+-	if (WARN_ON(!ops->unmap_pages || domain->pgsize_bitmap == 0UL))
++	if (WARN_ON(!ops->unmap_pages))
+ 		return 0;
+ 
+ 	/* find out the minimum page size supported */
+@@ -2724,8 +2721,6 @@ __iommu_unmap_domain_pgtbl(struct iommu_domain *domain, unsigned long iova,
+ 
+ 	pr_debug("unmap this: iova 0x%lx size 0x%zx\n", iova, size);
+ 
+-	iommu_debug_unmap_begin(domain, iova, size);
+-
+ 	/*
+ 	 * Keep iterating until we either unmap 'size' bytes (or more)
+ 	 * or we hit an area that isn't mapped.
+@@ -2761,6 +2756,12 @@ static size_t __iommu_unmap(struct iommu_domain *domain, unsigned long iova,
+ 	struct pt_iommu *pt = iommupt_from_domain(domain);
+ 	size_t unmapped;
+ 
++	if (WARN_ON_ONCE(!(domain->type & __IOMMU_DOMAIN_PAGING) ||
++			 !domain->pgsize_bitmap))
++		return 0;
++
++	iommu_debug_unmap_begin(domain, iova, size);
++
+ 	if (pt)
+ 		unmapped = pt->ops->unmap_range(pt, iova, size, iotlb_gather);
+ 	else
+-- 
+2.51.0
+

@@ -1,0 +1,42 @@
+From ac00b9d085b0b3d67ff575cf4767b3889091715d Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 13 May 2026 16:34:17 +0200
+Subject: [PATCH 26/26] arm64: dts: freescale: lx2162a-clearfog: update serdes
+ block compatible
+
+NXP LX2160A and LX2160A share the same silicon but with subtle
+differences affecting in particular feature-set of the serdes blocks.
+
+Commit "dt-bindings: phy: lynx-28g: add compatible strings per SerDes
+and instantiation" has added per-soc compatible strings.
+
+Update the LX2162A Clearfog board description setting its serdes blocks
+compatible strings accordingly for LX2162A.
+
+This unlocks in particular 25Gbps networking on serdes block 1.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+index 99ee2b1c0f13..de22bea16d1b 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2162a-clearfog.dts
+@@ -367,7 +367,12 @@ &pcs_mdio18 {
+ 	status = "okay";
+ };
+ 
++&serdes_1 {
++	compatible = "fsl,lx2162a-serdes1", "fsl,lynx-28g";
++};
++
+ &serdes_2 {
++	compatible = "fsl,lx2162a-serdes2", "fsl,lynx-28g";
+ 	status = "okay";
+ };
+ 
+-- 
+2.51.0
+

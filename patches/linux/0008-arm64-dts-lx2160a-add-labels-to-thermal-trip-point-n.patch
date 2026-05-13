@@ -1,7 +1,7 @@
 From 05d847cfdbb730b10593e93bab8b5ebe225e9d0b Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 9 May 2026 14:28:23 +0200
-Subject: [PATCH 08/14] arm64: dts: lx2160a: add labels to thermal trip-point
+Subject: [PATCH 08/26] arm64: dts: lx2160a: add labels to thermal trip-point
  nodes
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

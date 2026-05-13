@@ -1,7 +1,7 @@
 From b4ea85788188c1a25a470deff042af97b86cab77 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 9 May 2026 12:35:54 +0200
-Subject: [PATCH 02/14] arm64: dts: lx2162a-clearfog: use rev2 SoC dtsi
+Subject: [PATCH 02/26] arm64: dts: lx2162a-clearfog: use rev2 SoC dtsi
 
 LX2160A and LX2162A are different pakages of the same silicon.
 While LX2160A had two revisions, LX2162A was released later based on

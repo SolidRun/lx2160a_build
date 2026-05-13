@@ -1,0 +1,253 @@
+From 5f493f9322f64e31a89f00743510877f86d8592c Mon Sep 17 00:00:00 2001
+From: Ioana Ciornei <ioana.ciornei@nxp.com>
+Date: Mon, 11 May 2026 18:00:23 +0300
+Subject: [PATCH 23/26] phy: lynx-28g: add support for 25GBASER
+
+Add support for 25GBASE-R in the Lynx 28G SerDes PHY driver. This will
+be used by the dpaa2-mac consumer on LX2160A with:
+- phy_validate(phy, PHY_MODE_ETHERNET, PHY_INTERFACE_MODE_25GBASER) to
+  detect support.
+- phy_set_mode_ext(phy, PHY_MODE_ETHERNET, PHY_INTERFACE_MODE_25GBASER)
+  to reconfigure the lane for this protocol.
+
+The intended use case for dynamic protocol switching to 25GBase-R is
+with SFP28 modules, and protocol switching is triggered by the SFP
+module insertion. There also exists a 25GBase-KR use case, where the
+protocol switching is covered by IEEE 802.3 clause 73 auto-negotiation.
+However, that is not handled here; it merely needs the support added
+here as basic ground work.
+
+The lane frequency for 25GbE is sourced from a clock net frequency of
+12.890625 GHz, as produced by PLLF or PLLS, further multiplied by the
+lane by 2. The clock net frequencies produced by the PLLs are treated as
+read-only by the driver, so the absence of a PLL provisioned for the
+right clock net frequency implies absence of 25GbE support, even though
+a lane might have the appropriate protocol converter for it.
+
+In terms of implementation, the change consists of:
+- determining at probe time if any PLL was preconfigured for the
+  required clock net frequency for 25GbE
+- adding the default lane parameters for reconfiguring a lane to 25GbE
+  irrespective of the original protocol
+- allowing this operating mode only on supported lanes, i.e. all lanes
+  of LX2162A SerDes #1, and LX2160A SerDes lanes 0-1, 4-7.
+
+Signed-off-by: Ioana Ciornei <ioana.ciornei@nxp.com>
+Signed-off-by: Vladimir Oltean <vladimir.oltean@nxp.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 90 +++++++++++++++++++++++-
+ 1 file changed, 88 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index 5eddc2723e78..92bfc5f65e0b 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -57,6 +57,7 @@
+ #define PLLnCR1_FRATE_5G_10GVCO			0x0
+ #define PLLnCR1_FRATE_5G_25GVCO			0x10
+ #define PLLnCR1_FRATE_10G_20GVCO		0x6
++#define PLLnCR1_FRATE_12G_25GVCO		0x16
+ 
+ /* Per SerDes lane registers */
+ /* Lane a General Control Register */
+@@ -64,9 +65,11 @@
+ #define LNaGCR0_PROTO_SEL			GENMASK(7, 3)
+ #define LNaGCR0_PROTO_SEL_SGMII			0x1
+ #define LNaGCR0_PROTO_SEL_XFI			0xa
++#define LNaGCR0_PROTO_SEL_25G			0x1a
+ #define LNaGCR0_IF_WIDTH			GENMASK(2, 0)
+ #define LNaGCR0_IF_WIDTH_10_BIT			0x0
+ #define LNaGCR0_IF_WIDTH_20_BIT			0x2
++#define LNaGCR0_IF_WIDTH_40_BIT			0x4
+ 
+ /* Lane a Tx Reset Control Register */
+ #define LNaTRSTCTL(lane)			(0x800 + (lane) * 0x100 + 0x20)
+@@ -85,6 +88,7 @@
+ #define LNaTGCR0_N_RATE_FULL			0x0
+ #define LNaTGCR0_N_RATE_HALF			0x1
+ #define LNaTGCR0_N_RATE_QUARTER			0x2
++#define LNaTGCR0_N_RATE_DOUBLE			0x3
+ 
+ #define LNaTECR0(lane)				(0x800 + (lane) * 0x100 + 0x30)
+ #define LNaTECR0_EQ_TYPE			GENMASK(30, 28)
+@@ -116,6 +120,7 @@
+ #define LNaRGCR0_N_RATE_FULL			0x0
+ #define LNaRGCR0_N_RATE_HALF			0x1
+ #define LNaRGCR0_N_RATE_QUARTER			0x2
++#define LNaRGCR0_N_RATE_DOUBLE			0x3
+ 
+ #define LNaRGCR1(lane)				(0x800 + (lane) * 0x100 + 0x48)
+ #define LNaRGCR1_RX_ORD_ELECIDLE		BIT(31)
+@@ -282,6 +287,7 @@ enum lynx_lane_mode {
+ 	LANE_MODE_1000BASEX_SGMII,
+ 	LANE_MODE_10GBASER,
+ 	LANE_MODE_USXGMII,
++	LANE_MODE_25GBASER,
+ 	LANE_MODE_MAX,
+ };
+ 
+@@ -420,6 +426,41 @@ static const struct lynx_28g_proto_conf lynx_28g_proto_conf[LANE_MODE_MAX] = {
+ 		.ttlcr0 = LNaTTLCR0_TTL_SLO_PM_BYP |
+ 			  LNaTTLCR0_DATA_IN_SSC,
+ 	},
++	[LANE_MODE_25GBASER] = {
++		.proto_sel = LNaGCR0_PROTO_SEL_25G,
++		.if_width = LNaGCR0_IF_WIDTH_40_BIT,
++		.teq_type = EQ_TYPE_3TAP,
++		.sgn_preq = 1,
++		.ratio_preq = 2,
++		.sgn_post1q = 1,
++		.ratio_post1q = 7,
++		.amp_red = 0,
++		.adpt_eq = 48,
++		.enter_idle_flt_sel = 0,
++		.exit_idle_flt_sel = 0,
++		.data_lost_th_sel = 0,
++		.gk2ovd = 0,
++		.gk3ovd = 0,
++		.gk4ovd = 5,
++		.gk2ovd_en = 0,
++		.gk3ovd_en = 0,
++		.gk4ovd_en = 1,
++		.eq_offset_ovd = 0x1f,
++		.eq_offset_ovd_en = 0,
++		.eq_offset_rng_dbl = 1,
++		.eq_blw_sel = 1,
++		.eq_boost = 2,
++		.spare_in = 3,
++		.smp_autoz_d1r = 2,
++		.smp_autoz_eg1r = 2,
++		.rccr0 = LNaRCCR0_CAL_EN |
++			 LNaRCCR0_CAL_DC3_DIS |
++			 LNaRCCR0_CAL_DC2_DIS |
++			 LNaRCCR0_CAL_DC1_DIS |
++			 LNaRCCR0_CAL_DC0_DIS,
++		.ttlcr0 = LNaTTLCR0_DATA_IN_SSC |
++			  FIELD_PREP_CONST(LNaTTLCR0_CDR_MIN_SMP_ON, 1),
++	},
+ };
+ 
+ struct lynx_pccr {
+@@ -499,6 +540,8 @@ static const char *lynx_lane_mode_str(enum lynx_lane_mode lane_mode)
+ 		return "10GBase-R";
+ 	case LANE_MODE_USXGMII:
+ 		return "USXGMII";
++	case LANE_MODE_25GBASER:
++		return "25GBase-R";
+ 	default:
+ 		return "unknown";
+ 	}
+@@ -514,6 +557,8 @@ static enum lynx_lane_mode phy_interface_to_lane_mode(phy_interface_t intf)
+ 		return LANE_MODE_10GBASER;
+ 	case PHY_INTERFACE_MODE_USXGMII:
+ 		return LANE_MODE_USXGMII;
++	case PHY_INTERFACE_MODE_25GBASER:
++		return LANE_MODE_25GBASER;
+ 	default:
+ 		return LANE_MODE_UNKNOWN;
+ 	}
+@@ -601,6 +646,20 @@ static void lynx_28g_lane_set_nrate(struct lynx_28g_lane *lane,
+ 			break;
+ 		}
+ 		break;
++	case PLLnCR1_FRATE_12G_25GVCO:
++		switch (lane_mode) {
++		case LANE_MODE_25GBASER:
++			lynx_28g_lane_rmw(lane, LNaTGCR0,
++					  FIELD_PREP(LNaTGCR0_N_RATE, LNaTGCR0_N_RATE_DOUBLE),
++					  LNaTGCR0_N_RATE);
++			lynx_28g_lane_rmw(lane, LNaRGCR0,
++					  FIELD_PREP(LNaRGCR0_N_RATE, LNaRGCR0_N_RATE_DOUBLE),
++					  LNaRGCR0_N_RATE);
++			break;
++		default:
++			break;
++		}
++		break;
+ 	default:
+ 		break;
+ 	}
+@@ -761,6 +820,11 @@ static int lynx_28g_power_on(struct phy *phy)
+ 	return 0;
+ }
+ 
++static int lynx_28g_e25g_pcvt(int lane)
++{
++	return 7 - lane;
++}
++
+ static int lynx_28g_get_pccr(enum lynx_lane_mode lane_mode, int lane,
+ 			     struct lynx_pccr *pccr)
+ {
+@@ -776,6 +840,11 @@ static int lynx_28g_get_pccr(enum lynx_lane_mode lane_mode, int lane,
+ 		pccr->width = 4;
+ 		pccr->shift = SXGMII_CFG(lane);
+ 		break;
++	case LANE_MODE_25GBASER:
++		pccr->offset = PCCD;
++		pccr->width = 4;
++		pccr->shift = E25G_CFG(lynx_28g_e25g_pcvt(lane));
++		break;
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
+@@ -791,6 +860,8 @@ static int lynx_28g_get_pcvt_offset(int lane, enum lynx_lane_mode lane_mode)
+ 	case LANE_MODE_USXGMII:
+ 	case LANE_MODE_10GBASER:
+ 		return SXGMIIaCR0(lane);
++	case LANE_MODE_25GBASER:
++		return E25GaCR0(lynx_28g_e25g_pcvt(lane));
+ 	default:
+ 		return -EOPNOTSUPP;
+ 	}
+@@ -799,7 +870,12 @@ static int lynx_28g_get_pcvt_offset(int lane, enum lynx_lane_mode lane_mode)
+ static bool lx2160a_serdes1_lane_supports_mode(int lane,
+ 					       enum lynx_lane_mode mode)
+ {
+-	return true;
++	switch (mode) {
++	case LANE_MODE_25GBASER:
++		return lane != 2 && lane != 3;
++	default:
++		return true;
++	}
+ }
+ 
+ static bool lx2160a_serdes2_lane_supports_mode(int lane,
+@@ -1115,6 +1191,9 @@ static int lynx_28g_lane_enable_pcvt(struct lynx_28g_lane *lane,
+ 	case LANE_MODE_USXGMII:
+ 		val |= PCCC_SXGMIIn_CFG;
+ 		break;
++	case LANE_MODE_25GBASER:
++		val |= PCCD_E25Gn_CFG;
++		break;
+ 	default:
+ 		break;
+ 	}
+@@ -1259,8 +1338,12 @@ static void lynx_28g_pll_read_configuration(struct lynx_28g_priv *priv)
+ 			__set_bit(LANE_MODE_10GBASER, pll->supported);
+ 			__set_bit(LANE_MODE_USXGMII, pll->supported);
+ 			break;
++		case PLLnCR1_FRATE_12G_25GVCO:
++			/* 12.890625GHz clock net */
++			__set_bit(LANE_MODE_25GBASER, pll->supported);
++			break;
+ 		default:
+-			/* 6GHz, 12.890625GHz, 8GHz */
++			/* 6GHz, 8GHz */
+ 			break;
+ 		}
+ 	}
+@@ -1327,6 +1410,9 @@ static void lynx_28g_lane_read_configuration(struct lynx_28g_lane *lane)
+ 		else
+ 			lane->mode = LANE_MODE_USXGMII;
+ 		break;
++	case LNaPSS_TYPE_25G:
++		lane->mode = LANE_MODE_25GBASER;
++		break;
+ 	default:
+ 		lane->mode = LANE_MODE_UNKNOWN;
+ 	}
+-- 
+2.51.0
+

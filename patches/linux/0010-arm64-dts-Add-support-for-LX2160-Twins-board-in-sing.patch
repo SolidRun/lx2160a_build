@@ -1,7 +1,7 @@
 From 2edf2649307d207f6b288f7d0c27a9afc64d0de0 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Mon, 29 Dec 2025 16:47:41 +0100
-Subject: [PATCH 10/14] arm64: dts: Add support for LX2160 Twins board in
+Subject: [PATCH 10/26] arm64: dts: Add support for LX2160 Twins board in
  single configuration
 
 Add support for the SolidRun LX2160A Twins board in its single cpu

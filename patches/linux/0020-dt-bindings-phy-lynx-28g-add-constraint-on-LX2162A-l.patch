@@ -1,0 +1,47 @@
+From f859532d4f212741007889e0d11e1c0a7fe51ed4 Mon Sep 17 00:00:00 2001
+From: Vladimir Oltean <vladimir.oltean@nxp.com>
+Date: Mon, 11 May 2026 18:00:20 +0300
+Subject: [PATCH 20/26] dt-bindings: phy: lynx-28g: add constraint on LX2162A
+ lane indices
+
+The SerDes 1 of LX2162A has fewer lanes than all other instances, and
+strangely, their indices are not 0-3, but 4-7.
+
+This is a best-effort constraint, since we can only impose it when using
+per-SoC compatible string and per-lane OF nodes.
+
+Signed-off-by: Vladimir Oltean <vladimir.oltean@nxp.com>
+Acked-by: Conor Dooley <conor.dooley@microchip.com>
+---
+ .../devicetree/bindings/phy/fsl,lynx-28g.yaml     | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/phy/fsl,lynx-28g.yaml b/Documentation/devicetree/bindings/phy/fsl,lynx-28g.yaml
+index 8375bca810cc..d73591315d4b 100644
+--- a/Documentation/devicetree/bindings/phy/fsl,lynx-28g.yaml
++++ b/Documentation/devicetree/bindings/phy/fsl,lynx-28g.yaml
+@@ -78,6 +78,21 @@ required:
+   - reg
+   - "#phy-cells"
+ 
++allOf:
++  # LX2162A SerDes 1 has fewer lanes than the others
++  - if:
++      properties:
++        compatible:
++          contains:
++            const: fsl,lx2162a-serdes1
++    then:
++      patternProperties:
++        "^phy@[0-7]$":
++          properties:
++            reg:
++              minimum: 4
++              maximum: 7
++
+ additionalProperties: false
+ 
+ examples:
+-- 
+2.51.0
+

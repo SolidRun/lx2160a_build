@@ -1,7 +1,7 @@
 From fcb9db3e0060128bfdb972222074779725c77a72 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 9 May 2026 15:26:21 +0200
-Subject: [PATCH 07/14] arm64: dts: lx2160a-clearfog-itx: move shared includes
+Subject: [PATCH 07/26] arm64: dts: lx2160a-clearfog-itx: move shared includes
  to dts
 
 Originally includes were defined hierarchically:

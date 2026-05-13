@@ -1,7 +1,7 @@
 From 5204138a2bd1e8a1122fa591b95cb7710f50f318 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 9 May 2026 14:20:28 +0200
-Subject: [PATCH 09/14] arm64: dts: lx2160a-cex7: add labels to i2c buses
+Subject: [PATCH 09/26] arm64: dts: lx2160a-cex7: add labels to i2c buses
  behind mux
 
 The LX2160 CEX-7 module integrates in i2c bus multiplexer. Some of its

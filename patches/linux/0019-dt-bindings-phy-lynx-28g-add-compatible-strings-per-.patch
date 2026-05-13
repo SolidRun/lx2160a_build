@@ -1,0 +1,110 @@
+From e0b8ed51a0c11dfe4205f64acbdec9e2866583d9 Mon Sep 17 00:00:00 2001
+From: Vladimir Oltean <vladimir.oltean@nxp.com>
+Date: Mon, 11 May 2026 18:00:19 +0300
+Subject: [PATCH 19/26] dt-bindings: phy: lynx-28g: add compatible strings per
+ SerDes and instantiation
+
+The 28G Lynx SerDes is instantiated 3 times in the NXP LX2160A SoC and
+twice in the NXP LX2162A. All these instances share the same register
+map, but the number of lanes and the protocols supported by each lane
+differs in a way that isn't detectable by the programming model.
+
+For example, not all lanes of all SerDes block instantiations support
+25GbE.
+
+So, using a generic "fsl,lynx-28g" compatible string and expecting all
+SerDes instantiations to use it was a mistake that needs to be fixed.
+
+The option chosen is to encode the SoC and the SerDes instance in the
+compatible string, with everything else being the responsibility of the
+driver to derive.
+
+An alternative considered but dismissed was to add sufficient device
+tree properties to describe the per-lane differences (implying:
+supported protocols), as well as the different lane count.
+
+Any decision made for the 28G Lynx should be consistent with the
+decisions taken for the yet-to-be-introduced 10G Lynx SerDes (older
+generation for older SoCs), because of how similar they are.
+
+I've seen the alternative at play in this unmerged patch set for the 10G
+Lynx here, and I didn't like it:
+https://lore.kernel.org/linux-phy/20230413160607.4128315-3-sean.anderson@seco.com/
+
+This is because there, we have a higher degree of variability in the
+PCCR register values that need to be written per protocol. This makes
+that approach more drawn-out and more prone to errors, compared to the
+compatible strings which are more succinct and obviously correct.
+
+NXP SoC reference manuals clearly document the SerDes instantiations as
+not identical, and refers to them as such (SerDes 1, 2, etc).
+
+The per-SoC compatible string is prepended to the "fsl,lynx-28g" generic
+compatible, which is left there for compatibility with old kernels. An
+exception would be LX2160A SerDes #3, which at the time of writing is
+not described in fsl-lx2160a.dtsi. As "fsl,lx2160a-serdes3" implies it
+is a 28G Lynx SerDes, it makes "fsl,lynx-28g" redundant so we don't
+accept it.
+
+Signed-off-by: Vladimir Oltean <vladimir.oltean@nxp.com>
+Reviewed-by: Rob Herring (Arm) <robh@kernel.org>
+---
+ .../devicetree/bindings/phy/fsl,lynx-28g.yaml | 33 +++++++++++++++++--
+ 1 file changed, 30 insertions(+), 3 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/phy/fsl,lynx-28g.yaml b/Documentation/devicetree/bindings/phy/fsl,lynx-28g.yaml
+index e96229c2f8fb..8375bca810cc 100644
+--- a/Documentation/devicetree/bindings/phy/fsl,lynx-28g.yaml
++++ b/Documentation/devicetree/bindings/phy/fsl,lynx-28g.yaml
+@@ -9,10 +9,37 @@ title: Freescale Lynx 28G SerDes PHY
+ maintainers:
+   - Ioana Ciornei <ioana.ciornei@nxp.com>
+ 
++description:
++  The Lynx 28G is a multi-lane, multi-protocol SerDes (PCIe, SATA, Ethernet)
++  present in multiple instances on NXP LX2160A and LX2162A SoCs. All instances
++  share a common register map and programming model, however they differ in
++  supported protocols per lane in a way that is not detectable by said
++  programming model without prior knowledge. The distinction is made through
++  the compatible string.
++
+ properties:
+   compatible:
+-    enum:
+-      - fsl,lynx-28g
++    oneOf:
++      - const: fsl,lynx-28g
++        deprecated: true
++        description:
++          Legacy compatibility string for Lynx 28G SerDes. Any assumption
++          regarding whether a certain lane supports a certain protocol may
++          be incorrect. Deprecated except when used as a fallback. Use
++          device-specific strings instead.
++      - items:
++          - const: fsl,lx2160a-serdes1
++          - const: fsl,lynx-28g
++      - items:
++          - const: fsl,lx2160a-serdes2
++          - const: fsl,lynx-28g
++      - items:
++          - const: fsl,lx2162a-serdes1
++          - const: fsl,lynx-28g
++      - items:
++          - const: fsl,lx2162a-serdes2
++          - const: fsl,lynx-28g
++      - const: fsl,lx2160a-serdes3
+ 
+   reg:
+     maxItems: 1
+@@ -60,7 +87,7 @@ examples:
+       #size-cells = <2>;
+ 
+       serdes@1ea0000 {
+-        compatible = "fsl,lynx-28g";
++        compatible = "fsl,lx2160a-serdes1", "fsl,lynx-28g";
+         reg = <0x0 0x1ea0000 0x0 0x1e30>;
+         #address-cells = <1>;
+         #size-cells = <0>;
+-- 
+2.51.0
+

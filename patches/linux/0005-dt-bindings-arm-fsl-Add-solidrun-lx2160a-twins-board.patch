@@ -1,7 +1,7 @@
 From bcaced9696b53e1917473371063e110830442153 Mon Sep 17 00:00:00 2001
 From: Josua Mayer <josua@solid-run.com>
 Date: Sat, 9 May 2026 13:53:08 +0200
-Subject: [PATCH 05/14] dt-bindings: arm: fsl: Add solidrun lx2160a twins board
+Subject: [PATCH 05/26] dt-bindings: arm: fsl: Add solidrun lx2160a twins board
 
 The SolidRun LX2160A Twins board supports two configurations, one with
 with a sinle CEX-7 module, and one with two (dual).

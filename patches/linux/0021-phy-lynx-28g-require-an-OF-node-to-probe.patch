@@ -1,0 +1,52 @@
+From 0bda16afe3fe862b502be24728be434a66ab55c4 Mon Sep 17 00:00:00 2001
+From: Vladimir Oltean <vladimir.oltean@nxp.com>
+Date: Mon, 11 May 2026 18:00:21 +0300
+Subject: [PATCH 21/26] phy: lynx-28g: require an OF node to probe
+
+The driver will gain support for variants in an upcoming change, and
+will use of_device_get_match_data() to deduce the running variant from
+the compatible string.
+
+Currently, the driver expects the schema at phy/fsl,lynx-28g.yaml, and
+OF-based consumers, but doesn't enforce this. And it is possible for
+user space to force-bind the driver to a device without OF node using
+the driver_override sysfs.
+
+To avoid future surprise crashes for an unsupported configuration,
+explicitly test for the presence of an OF node and fail probing if
+found.
+
+Signed-off-by: Vladimir Oltean <vladimir.oltean@nxp.com>
+Reviewed-by: Ioana Ciornei <ioana.ciornei@nxp.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index 4ec3fb7a0d69..6d0c395d20e5 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -1286,6 +1286,12 @@ static int lynx_28g_probe(struct platform_device *pdev)
+ 	struct device_node *dn;
+ 	int err;
+ 
++	dn = dev_of_node(dev);
++	if (!dn) {
++		dev_err(dev, "Device requires an OF node\n");
++		return -EINVAL;
++	}
++
+ 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
+ 	if (!priv)
+ 		return -ENOMEM;
+@@ -1301,7 +1307,6 @@ static int lynx_28g_probe(struct platform_device *pdev)
+ 
+ 	lynx_28g_pll_read_configuration(priv);
+ 
+-	dn = dev_of_node(dev);
+ 	if (of_get_child_count(dn)) {
+ 		struct device_node *child;
+ 
+-- 
+2.51.0
+
