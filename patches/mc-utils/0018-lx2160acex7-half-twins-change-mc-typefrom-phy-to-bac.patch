@@ -1,0 +1,95 @@
+From 9f64024dec907556d1312cf3c5101983245382f3 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 18 Jun 2026 10:57:22 +0200
+Subject: [PATCH] lx2160acex7: half-twins: change mc typefrom phy to backplane
+
+When Linux is taking full ownership of a serdes lane and pcs, mac type
+should be set to backplane. Otherwise MC firmware keeps partial control
+and can interfere with the linux drivers state tracking.
+
+This is a misnomer but confirmed by NXP in that backplane on the mac
+merely means no automatic management, regardless of protocol.
+
+Update all half-twins sfp connector macs to type backplane.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts        | 32 +++++++++----------
+ 1 file changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/config/lx2160a/CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts b/config/lx2160a/CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts
+index 55f07cc..fbc892f 100644
+--- a/config/lx2160a/CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts
++++ b/config/lx2160a/CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts
+@@ -83,52 +83,52 @@
+ 
+ 		ports {
+ 			mac@3 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@4 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@5 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@6 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@7 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@8 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@9 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@10 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@11 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@12 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@13 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@14 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@15 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@16 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@17 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@18 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 		};
+ 	};
+-- 
+2.51.0
+
