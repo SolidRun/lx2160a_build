@@ -1,0 +1,108 @@
+From 3e2edcda65e8b1507a572dbe13dca3486d39f92f Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 22 Jun 2026 13:54:22 +0200
+Subject: [PATCH 09/11] lx2160acex7: twins: change mac type from phy to
+ backplane
+
+Mac types for DPC are misleading, what it really tells is how much
+autonomous management is performed by the MC firmware.
+
+Change type for all SFP ports to backplane, to ensure Linux does all the
+management of serdes lanes and pcs.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../LX2160A-CEX7/twins-s1_8-s2_9-dpc.dts      | 32 +++++++++----------
+ 1 file changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/config/lx2160a/LX2160A-CEX7/twins-s1_8-s2_9-dpc.dts b/config/lx2160a/LX2160A-CEX7/twins-s1_8-s2_9-dpc.dts
+index fc0c73a..4ba3228 100644
+--- a/config/lx2160a/LX2160A-CEX7/twins-s1_8-s2_9-dpc.dts
++++ b/config/lx2160a/LX2160A-CEX7/twins-s1_8-s2_9-dpc.dts
+@@ -78,67 +78,67 @@
+ 
+ 		ports {
+ 			mac@3 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@4 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@5 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@6 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@7 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@8 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@9 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@10 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@11 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@12 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@13 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@14 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@15 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@16 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@17 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@18 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 		};
+ 	};
+-- 
+2.51.0
+

@@ -135,9 +135,33 @@ case "${TARGET}" in
 	LX2160A_CEX7_HALF-TWINS_8S_9_2)
 		ATF_PLATFORM=lx2160acex7
 		ATF_DISABLE_S5=1
+		DPC=half-twins-s1_8-s2_9-dpc.dtb
+		DPL=half-twins-s1_8-s2_9-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-half-twins.dtb"
+		OPTEE_PLATFORM=ls-lx2160ardb
+		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+		UBOOT_FDT=fsl-lx2160a-half-twins
+		UBOOT_ETHPRIME="DPMAC13@sgmii" # right-most bottom sfp port
+		RCW_BOARD=TWINS
+	;;
+	LX2160A_CEX7_TWINS-RIGHT_8S_9_2)
+		ATF_PLATFORM=lx2160acex7
+		ATF_DISABLE_S5=1
 		DPC=twins-s1_8-s2_9-dpc.dtb
 		DPL=twins-s1_8-s2_9-dpl.dtb
-		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-half-twins.dtb"
+		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-twins-right.dtb"
+		OPTEE_PLATFORM=ls-lx2160ardb
+		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+		UBOOT_FDT=fsl-lx2160a-half-twins
+		UBOOT_ETHPRIME="DPMAC13@sgmii" # right-most bottom sfp port
+		RCW_BOARD=TWINS
+	;;
+	LX2160A_CEX7_TWINS-LEFT_8S_9_2)
+		ATF_PLATFORM=lx2160acex7
+		ATF_DISABLE_S5=1
+		DPC=twins-s1_8-s2_9-dpc.dtb
+		DPL=twins-s1_8-s2_9-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-twins-left.dtb"
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
 		UBOOT_FDT=fsl-lx2160a-half-twins
