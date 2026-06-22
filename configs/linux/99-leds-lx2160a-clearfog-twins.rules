@@ -1,7 +1,7 @@
 # LX2160A Twins Rules
-PROGRAM!="/bin/sh -c 'grep -Fq solidrun,twins-left /sys/firmware/devicetree/base/compatible 2>/dev/null'", GOTO="lx2160a_clearfog_twins_start"
-PROGRAM!="/bin/sh -c 'grep -Fq solidrun,twins-right /sys/firmware/devicetree/base/compatible 2>/dev/null'", GOTO="lx2160a_clearfog_twins_start"
-PROGRAM!="/bin/sh -c 'grep -Fq solidrun,twins-single /sys/firmware/devicetree/base/compatible 2>/dev/null'", GOTO="lx2160a_clearfog_half_twins_start"
+PROGRAM=="/bin/sh -c 'grep -Fq solidrun,twins-left /sys/firmware/devicetree/base/compatible 2>/dev/null'", GOTO="lx2160a_clearfog_twins_start"
+PROGRAM=="/bin/sh -c 'grep -Fq solidrun,twins-right /sys/firmware/devicetree/base/compatible 2>/dev/null'", GOTO="lx2160a_clearfog_twins_start"
+PROGRAM=="/bin/sh -c 'grep -Fq solidrun,twins-single /sys/firmware/devicetree/base/compatible 2>/dev/null'", GOTO="lx2160a_clearfog_half_twins_start"
 GOTO="lx2160a_clearfog_twins_end"
 
 # SFP Connector LED Configuration:
@@ -12,11 +12,6 @@ SUBSYSTEM=="net", ACTION=="add|change", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000
 SUBSYSTEM=="net", ACTION=="add|change", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs/ethernet@f", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-2/device_name && echo 1 > /sys/class/leds/green:lan-2/link'"
 SUBSYSTEM=="net", ACTION=="add|change", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs/ethernet@6", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-3/device_name && echo 1 > /sys/class/leds/green:lan-3/link'"
 SUBSYSTEM=="net", ACTION=="add|change", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs/ethernet@b", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-4/device_name && echo 1 > /sys/class/leds/green:lan-4/link'"
-
-KERNELS=="dpmac.5", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-1/device_name && echo 1 > /sys/class/leds/green:lan-1/link'"
-KERNELS=="dpmac.15", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-2/device_name && echo 1 > /sys/class/leds/green:lan-2/link'"
-KERNELS=="dpmac.6", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-3/device_name && echo 1 > /sys/class/leds/green:lan-3/link'"
-KERNELS=="dpmac.11", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-4/device_name && echo 1 > /sys/class/leds/green:lan-4/link'"
 
 LABEL="lx2160a_clearfog_twins_start"
 SUBSYSTEM=="net", ACTION=="add|change", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs/ethernet@3", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-11/device_name && echo 1 > /sys/class/leds/green:lan-11/link'"
@@ -31,17 +26,4 @@ SUBSYSTEM=="net", ACTION=="add|change", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000
 SUBSYSTEM=="net", ACTION=="add|change", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs/ethernet@10", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-14/device_name && echo 1 > /sys/class/leds/green:lan-14/link'"
 SUBSYSTEM=="net", ACTION=="add|change", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs/ethernet@11", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-10/device_name && echo 1 > /sys/class/leds/green:lan-10/link'"
 SUBSYSTEM=="net", ACTION=="add|change", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs/ethernet@12", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-16/device_name && echo 1 > /sys/class/leds/green:lan-16/link'"
-
-KERNELS=="dpmac.3", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-11/device_name && echo 1 > /sys/class/leds/green:lan-11/link'"
-KERNELS=="dpmac.4", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-9/device_name && echo 1 > /sys/class/leds/green:lan-9/link'"
-KERNELS=="dpmac.7", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-15/device_name && echo 1 > /sys/class/leds/green:lan-15/link'"
-KERNELS=="dpmac.8", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-13/device_name && echo 1 > /sys/class/leds/green:lan-13/link'"
-KERNELS=="dpmac.9", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-19/device_name && echo 1 > /sys/class/leds/green:lan-19/link'"
-KERNELS=="dpmac.10", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-17/device_name && echo 1 > /sys/class/leds/green:lan-17/link'"
-KERNELS=="dpmac.12", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-12/device_name && echo 1 > /sys/class/leds/green:lan-12/link'"
-KERNELS=="dpmac.13", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-20/device_name && echo 1 > /sys/class/leds/green:lan-20/link'"
-KERNELS=="dpmac.14", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-18/device_name && echo 1 > /sys/class/leds/green:lan-18/link'"
-KERNELS=="dpmac.16", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-14/device_name && echo 1 > /sys/class/leds/green:lan-14/link'"
-KERNELS=="dpmac.17", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-10/device_name && echo 1 > /sys/class/leds/green:lan-10/link'"
-KERNELS=="dpmac.18", ACTION=="add|change", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/green:lan-16/device_name && echo 1 > /sys/class/leds/green:lan-16/link'"
 LABEL="lx2160a_clearfog_twins_end"

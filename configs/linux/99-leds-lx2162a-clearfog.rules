@@ -7,9 +7,4 @@ SUBSYSTEM=="net", ACTION=="add", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs
 SUBSYSTEM=="net", ACTION=="add", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs/ethernet@4", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-ab/device_name && echo 1 > /sys/class/leds/led-sfp-ab/link'"
 SUBSYSTEM=="net", ACTION=="add", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs/ethernet@5", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-bt/device_name && echo 1 > /sys/class/leds/led-sfp-bt/link'"
 SUBSYSTEM=="net", ACTION=="add", ENV{OF_FULLNAME}=="/soc/fsl-mc@80c000000/dpmacs/ethernet@6", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-bb/device_name && echo 1 > /sys/class/leds/led-sfp-bb/link'"
-
-KERNELS=="dpmac.3", ACTION=="add", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-at/device_name && echo 1 > /sys/class/leds/led-sfp-at/link'"
-KERNELS=="dpmac.4", ACTION=="add", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-ab/device_name && echo 1 > /sys/class/leds/led-sfp-ab/link'"
-KERNELS=="dpmac.5", ACTION=="add", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-bt/device_name && echo 1 > /sys/class/leds/led-sfp-bt/link'"
-KERNELS=="dpmac.6", ACTION=="add", RUN+="/bin/sh -c 'echo %k > /sys/class/leds/led-sfp-bb/device_name && echo 1 > /sys/class/leds/led-sfp-bb/link'"
 LABEL="lx2162a_clearfog_end"
