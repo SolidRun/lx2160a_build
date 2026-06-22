@@ -1,0 +1,103 @@
+From 31e139f88ddceaa27111ed61e170054845118c15 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 22 Jun 2026 15:46:38 +0200
+Subject: [PATCH] arm64: dts: lx2160a-half-twins: fix two ports and leds
+
+Fix accidental status changes to dpmac and dropped leds.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../dts/freescale/fsl-lx2160a-half-twins.dts  | 42 +++++++++++++++++++
+ .../boot/dts/freescale/fsl-lx2160a-twins.dtsi | 16 -------
+ 2 files changed, 42 insertions(+), 16 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+index d47ce98586dc..d2bfd0b48f2d 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-half-twins.dts
+@@ -51,6 +51,48 @@ ht_c3_ab_sfp: sfp-4 {
+ 		maximum-power-milliwatt = <2000>;
+ 		mod-def0-gpios = <&expander2 12 GPIO_ACTIVE_LOW>;
+ 	};
++
++	leds {
++		led_ht_c3_bt: led-sfp-1 {
++			color = <LED_COLOR_ID_GREEN>;
++			default-state = "off";
++			function = LED_FUNCTION_LAN;
++			function-enumerator = <1>;
++			gpios = <&expander3 14 GPIO_ACTIVE_LOW>;
++			trigger-sources = <&dpmac5>;
++			linux,default-trigger = "netdev";
++		};
++
++		led_ht_c3_bb: led-sfp-2 {
++			color = <LED_COLOR_ID_GREEN>;
++			default-state = "off";
++			function = LED_FUNCTION_LAN;
++			function-enumerator = <2>;
++			gpios = <&expander3 13 GPIO_ACTIVE_LOW>;
++			trigger-sources = <&dpmac15>;
++			linux,default-trigger = "netdev";
++		};
++
++		led_ht_c3_at: led-sfp-3 {
++			color = <LED_COLOR_ID_GREEN>;
++			default-state = "off";
++			function = LED_FUNCTION_LAN;
++			function-enumerator = <3>;
++			gpios = <&expander3 11 GPIO_ACTIVE_LOW>;
++			trigger-sources = <&dpmac6>;
++			linux,default-trigger = "netdev";
++		};
++
++		led_ht_c3_ab: led-sfp-4 {
++			color = <LED_COLOR_ID_GREEN>;
++			default-state = "off";
++			function = LED_FUNCTION_LAN;
++			function-enumerator = <4>;
++			gpios = <&expander3 12 GPIO_ACTIVE_LOW>;
++			trigger-sources = <&dpmac11>;
++			linux,default-trigger = "netdev";
++		};
++	};
+ };
+ 
+ /* sfp port 1 */
+diff --git a/arch/arm64/boot/dts/freescale/fsl-lx2160a-twins.dtsi b/arch/arm64/boot/dts/freescale/fsl-lx2160a-twins.dtsi
+index a1450e8abbd0..9a29e2cf8ec4 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-lx2160a-twins.dtsi
++++ b/arch/arm64/boot/dts/freescale/fsl-lx2160a-twins.dtsi
+@@ -352,14 +352,6 @@ &dpmac10 {
+ 	sfp = <&c3_bt_sfp>;
+ };
+ 
+-/* sfp port 4 */
+-&dpmac11 {
+-	managed = "in-band-status";
+-	phys = <&serdes_2 0>;
+-	status = "disabled";
+-	/* twins assembly: sfp not connected (R678, R679, R680, R681) */
+-};
+-
+ /* sfp port 12 */
+ &dpmac12 {
+ 	managed = "in-band-status";
+@@ -381,14 +373,6 @@ &dpmac14 {
+ 	sfp = <&c3_bb_sfp>;
+ };
+ 
+-/* sfp port 2 */
+-&dpmac15 {
+-	managed = "in-band-status";
+-	phys = <&serdes_2 4>;
+-	status = "disabled";
+-	/* twins assembly: sfp not connected (R686, R687, R688, R689) */
+-};
+-
+ /* sfp port 14 */
+ &dpmac16 {
+ 	managed = "in-band-status";
+-- 
+2.51.0
+
