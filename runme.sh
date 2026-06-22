@@ -152,7 +152,7 @@ case "${TARGET}" in
 		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-twins-right.dtb"
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
-		UBOOT_FDT=fsl-lx2160a-half-twins
+		UBOOT_FDT=fsl-lx2160a-twins-right
 		UBOOT_ETHPRIME="DPMAC13@sgmii" # right-most bottom sfp port
 		RCW_BOARD=TWINS
 	;;
@@ -164,7 +164,7 @@ case "${TARGET}" in
 		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-twins-left.dtb"
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
-		UBOOT_FDT=fsl-lx2160a-half-twins
+		UBOOT_FDT=fsl-lx2160a-twins-left
 		UBOOT_ETHPRIME="DPMAC13@sgmii" # right-most bottom sfp port
 		RCW_BOARD=TWINS
 	;;
