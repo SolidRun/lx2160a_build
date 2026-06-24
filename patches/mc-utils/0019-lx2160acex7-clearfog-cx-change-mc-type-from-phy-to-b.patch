@@ -1,0 +1,39 @@
+From 953b161715eebb54845f9c9b4695c10271a4155a Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 24 Jun 2026 14:24:37 +0200
+Subject: [PATCH 19/20] lx2160acex7: clearfog-cx: change mc type from phy to
+ backplane
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ config/lx2160a/CEX7/dpc-8_x_usxgmii.dts | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/config/lx2160a/CEX7/dpc-8_x_usxgmii.dts b/config/lx2160a/CEX7/dpc-8_x_usxgmii.dts
+index 0f6114e..35ec535 100644
+--- a/config/lx2160a/CEX7/dpc-8_x_usxgmii.dts
++++ b/config/lx2160a/CEX7/dpc-8_x_usxgmii.dts
+@@ -84,16 +84,16 @@
+ 				link_type = "MAC_LINK_TYPE_FIXED";
+ 			};
+ 			mac@7 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@8 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@9 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@10 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 			mac@17 {
+ 				link_type = "MAC_LINK_TYPE_PHY";
+-- 
+2.51.0
+

@@ -1,0 +1,55 @@
+From 45d682e89693c9386e6a3f236620767fb91ca1d7 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 24 Jun 2026 14:31:46 +0200
+Subject: [PATCH 20/20] lx2160acex7 half-twins/clearfog-cx: increase mc log
+ level
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ config/lx2160a/CEX7/dpc-8_x_usxgmii.dts           | 4 ++--
+ config/lx2160a/CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts | 4 ++--
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/config/lx2160a/CEX7/dpc-8_x_usxgmii.dts b/config/lx2160a/CEX7/dpc-8_x_usxgmii.dts
+index 35ec535..fd00569 100644
+--- a/config/lx2160a/CEX7/dpc-8_x_usxgmii.dts
++++ b/config/lx2160a/CEX7/dpc-8_x_usxgmii.dts
+@@ -48,13 +48,13 @@
+ 
+ 		log {
+ 			mode = "LOG_MODE_ON";
+-			level = "LOG_LEVEL_WARNING";
++			level = "LOG_LEVEL_DEBUG";
+ 		};
+ 
+ 		console {
+ 			mode = "CONSOLE_MODE_OFF";
+ 			uart_id = <0x4>;
+-			level = "LOG_LEVEL_WARNING";
++			level = "LOG_LEVEL_DEBUG";
+ 		};
+ 	};
+ 
+diff --git a/config/lx2160a/CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts b/config/lx2160a/CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts
+index fbc892f..8426fe2 100644
+--- a/config/lx2160a/CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts
++++ b/config/lx2160a/CEX7/dpc-8_x_usxgmii_8_x_sgmii.dts
+@@ -48,13 +48,13 @@
+ 
+ 		log {
+ 			mode = "LOG_MODE_ON";
+-			level = "LOG_LEVEL_WARNING";
++			level = "LOG_LEVEL_DEBUG";
+ 		};
+ 
+ 		console {
+ 			mode = "CONSOLE_MODE_OFF";
+ 			uart_id = <0x4>;
+-			level = "LOG_LEVEL_WARNING";
++			level = "LOG_LEVEL_DEBUG";
+ 		};
+ 	};
+ 
+-- 
+2.51.0
+

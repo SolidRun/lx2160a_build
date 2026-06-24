@@ -1,0 +1,28 @@
+From a41a0bf97c41aa68657c26ba12b8e683d4cca222 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 24 Jun 2026 14:22:52 +0200
+Subject: [PATCH] net: pcs: lynx: debug state
+
+Enable debug print showing pcs state in kmsg.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/pcs/pcs-lynx.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/pcs/pcs-lynx.c b/drivers/net/pcs/pcs-lynx.c
+index 2916be7da089..53091a7ef741 100644
+--- a/drivers/net/pcs/pcs-lynx.c
++++ b/drivers/net/pcs/pcs-lynx.c
+@@ -103,7 +103,7 @@ static void lynx_pcs_get_state(struct phylink_pcs *pcs,
+ 		break;
+ 	}
+ 
+-	dev_dbg(&lynx->mdio->dev,
++	dev_info(&lynx->mdio->dev,
+ 		"mode=%s/%s/%s link=%u an_enabled=%u an_complete=%u\n",
+ 		phy_modes(state->interface),
+ 		phy_speed_to_str(state->speed),
+-- 
+2.51.0
+
