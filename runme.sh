@@ -142,7 +142,7 @@ case "${TARGET}" in
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
 		UBOOT_FDT=fsl-lx2160a-half-twins
 		UBOOT_ETHPRIME="DPMAC13@sgmii" # right-most bottom sfp port
-		RCW_BOARD=TWINS
+		RCW_BOARD=HALF-TWINS
 	;;
 	LX2160A_CEX7_TWINS-RIGHT_8S_9_2)
 		ATF_PLATFORM=lx2160acex7
