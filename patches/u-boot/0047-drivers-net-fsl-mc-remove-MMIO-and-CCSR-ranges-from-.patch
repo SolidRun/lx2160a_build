@@ -1,0 +1,70 @@
+From af5435907f0098905d932251c6a4f284ad2e9d2b Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 1 Jul 2026 17:40:12 +0200
+Subject: [PATCH 47/47] drivers: net: fsl-mc: remove MMIO and CCSR ranges from
+ reserved-memory
+
+The fdt_reserve_mc_mem() function historically injected peripheral MMIO
+and CCSR register blocks into the device tree's /reserved-memory node.
+However, the /reserved-memory parent node is strictly specified for
+carving out system DRAM regions, not memory-mapped I/O registers.
+
+When booting via UEFI, this improper categorization causes the Linux
+kernel's resource allocator to flag address collisions when native
+drivers try to claim their register planes. This blocks the serial
+console from probing:
+
+[    0.906343] OF: amba_device_add() failed (-16) for /soc/serial@21c0000
+[    3.294935] Warning: unable to open an initial console.
+
+It also prevents the management complex bus driver from probing its
+hardware communication portals, completely breaking the network subsystem:
+
+[    3.239842] fsl_mc_bus 80c000000.fsl-mc: devm_request_mem_region failed for MC portal 0x000000080c000000
+[    3.249438] fsl_mc_bus 80c000000.fsl-mc: probe with driver fsl_mc_bus failed with error -16
+
+Remove the legacy MMIO and CCSR blocks from the mc_mem_ranges array,
+leaving only index 0 (the actual dynamic DRAM carveout pool). This
+allows native Linux drivers to claim and map their register spaces cleanly.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/fsl-mc/mc.c | 22 ----------------------
+ 1 file changed, 22 deletions(-)
+
+diff --git a/drivers/net/fsl-mc/mc.c b/drivers/net/fsl-mc/mc.c
+index 714acafb7f4..739d91c6fa2 100644
+--- a/drivers/net/fsl-mc/mc.c
++++ b/drivers/net/fsl-mc/mc.c
+@@ -947,28 +947,6 @@ void fdt_reserve_mc_mem(void *blob, u32 mc_icid)
+ 		{
+ 			.start = 0,
+ 			.end = 0
+-		},
+-		{
+-			.start = CFG_SYS_FSL_MC_BASE,
+-			.end = CFG_SYS_FSL_MC_BASE + CFG_SYS_FSL_MC_SIZE - 1
+-		},
+-		{
+-			.start = CFG_SYS_FSL_NI_BASE,
+-			.end = CFG_SYS_FSL_NI_BASE + CFG_SYS_FSL_NI_SIZE - 1
+-		},
+-		{
+-			.start = CFG_SYS_FSL_QBMAN_BASE,
+-			.end = CFG_SYS_FSL_QBMAN_BASE +
+-					CFG_SYS_FSL_QBMAN_SIZE - 1
+-		},
+-		{
+-			.start = CFG_SYS_FSL_PEBUF_BASE,
+-			.end = CFG_SYS_FSL_PEBUF_BASE +
+-					CFG_SYS_FSL_PEBUF_SIZE - 1
+-		},
+-		{
+-			.start = CFG_SYS_FSL_CCSR_BASE,
+-			.end = CFG_SYS_FSL_CCSR_BASE + CFG_SYS_FSL_CCSR_SIZE - 1
+ 		}
+ 	};
+ 
+-- 
+2.51.0
+

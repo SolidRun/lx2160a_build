@@ -1,0 +1,87 @@
+From 10a28336d837029c3f3c714adc5edd4f19ff8ca1 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 1 Jul 2026 16:52:13 +0200
+Subject: [PATCH 46/47] drivers: net: fsl-mc: mark mc reserved memory no-map
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When booting an operating system via the UEFI pathway (e.g., using
+grub.efi), passing 0 as the flags argument to fdtdec_add_reserved_memory()
+omits the "no-map" property from the generated DTB entries.
+
+Consequently, U-Boot's internal UEFI memory allocator translates these
+regions—including the 256MB 'mc-mem5@0' co-processor block—into standard
+EFI_BOOT_SERVICES_DATA descriptors. The early Linux EFI stub parses this
+table and incorrectly maps absolute physical address 0x0 into system RAM:
+
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000000000000-0x000000000fffffff]
+
+Because the kernel now registers the SoC's lower peripheral configuration
+space as cacheable system memory, subsequent ioremap() calls to critical
+hardware blocks fail, preventing the system from initializing and
+triggering a watchdog reset loop:
+
+[    0.000000] GICv3: [Firmware Bug]: GICD region 0x0000000006000000 has overlapping address
+[    0.000000] WARNING: CPU: 0 PID: 0 at arch/arm64/mm/ioremap.c:28 ioremap_prot+0xb0/0xf0
+[    0.000000] Modules linked in:
+[    0.000000] CPU: 0 UID: 0 PID: 0 Comm: swapper/0 Not tainted 6.12.86+deb13-arm64 #1  Debian 6.12.86-1
+[    0.000000] Hardware name: SolidRun LX2160A SolidWAN Single (DT)
+[    0.000000] pstate: 800000c5 (Nzcv daIF -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[    0.000000] pc : ioremap_prot+0xb0/0xf0
+[    0.000000] lr : ioremap_prot+0x64/0xf0
+[    0.000000] sp : ffffb9bd5a833bc0
+[    0.000000] x29: ffffb9bd5a833bd0 x28: 000000000000000a x27: ffffb9bd5abc38a0
+[    0.000000] x26: dead000000000122 x25: ffff47ff00037d00 x24: dead000000000100
+[    0.000000] x23: ffffb9bd5abc34e8 x22: ffffb9bd59dcfe88 x21: 0000000000000000
+[    0.000000] x20: 0000000000010000 x19: 0000000006000000 x18: 0000000000000006
+[    0.000000] x17: 616c7265766f2073 x16: 6168203030303030 x15: 3036303030303030
+[    0.000000] x14: 3030307830206e6f x13: 7373657264646120 x12: ffffb9bd5a8c2b00
+[    0.000000] x11: ffffb9bd5a86ab58 x10: ffffb9bd5a89cca9 x9 : ffffb9bd58836d78
+[    0.000000] x8 : 0000000010000000 x7 : 0000000000000018 x6 : ffffb9bd5ac3c398
+[    0.000000] x5 : ffffb9bd5ac3c398 x4 : 0000000000000001 x3 : 0000000000000001
+[    0.000000] x2 : 0000000010000000 x1 : 0000000000000000 x0 : 0000000000000001
+[    0.000000] Call trace:
+[    0.000000]  ioremap_prot+0xb0/0xf0
+[    0.000000]  of_iomap+0x10c/0x128
+[    0.000000]  gic_of_iomap+0x60/0x88
+[    0.000000]  gic_of_init+0x70/0x288
+[    0.000000]  of_irq_init+0x210/0x388
+[    0.000000]  irqchip_init+0x20/0x50
+[    0.000000]  init_IRQ+0xa4/0xc8
+[    0.000000]  start_kernel+0x5d0/0x798
+[    0.000000]  __primary_switched+0x80/0x90
+[    0.000000] ---[ end trace 0000000000000000 ]---
+[    0.000000] GICv3: /interrupt-controller@6000000: unable to map gic dist registers
+[    0.000000] OF: of_irq_init: Failed to init /interrupt-controller@6000000 ((____ptrval____)), parent 0000000000000000
+[    0.000000] OF: of_irq_init: children remain, but no parents
+[    0.000000] rcu: srcu_init: Setting srcu_struct sizes based on contention.
+
+Fix this by explicitly passing the FDTDEC_RESERVED_MEMORY_NO_MAP flag.
+This injects the proper "no-map;" property into the device tree. U-Boot
+UEFI will then correctly treat it as EFI_RESERVED_MEMORY_TYPE, forcing
+the downstream Linux kernel to mark the pool as MEMBLOCK_NOMAP. This keeps
+the linear mapping clear and unblocks early system ioremap operations.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/fsl-mc/mc.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/fsl-mc/mc.c b/drivers/net/fsl-mc/mc.c
+index 7d2bae924b0..714acafb7f4 100644
+--- a/drivers/net/fsl-mc/mc.c
++++ b/drivers/net/fsl-mc/mc.c
+@@ -994,7 +994,7 @@ void fdt_reserve_mc_mem(void *blob, u32 mc_icid)
+ 		sprintf(mem_name, "mc-mem%d", i);
+ 		ret = fdtdec_add_reserved_memory(blob, mem_name,
+ 						 &mc_mem_ranges[i], NULL, 0,
+-						 &phandle, 0);
++						 &phandle, FDTDEC_RESERVED_MEMORY_NO_MAP);
+ 		if (ret < 0) {
+ 			printf("ERROR: failed to reserve MC memory: %d\n", ret);
+ 			return;
+-- 
+2.51.0
+
