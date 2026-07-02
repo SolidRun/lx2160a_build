@@ -1,0 +1,97 @@
+From 04b59019d4b356036f196c8728abd17bc6a88e18 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 17 May 2026 17:32:14 +0200
+Subject: [PATCH 12/15] lx2160acex7: clearfog-cx: switch sfp port macs to
+ backplane mode
+
+Mac types for DPC are misleading, what it really tells is how much
+autonomous management is performed by the MC firmware.
+
+Change type for all SFP ports to backplane, to ensure Linux does all the
+management of serdes lanes and pcs.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../LX2160A-CEX7/clearfog-cx-s1_20-s2_0-dpc.dts  |  8 ++++----
+ .../LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpc.dts   | 16 ++++++++--------
+ 2 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_20-s2_0-dpc.dts b/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_20-s2_0-dpc.dts
+index 42394d9..633bbe4 100644
+--- a/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_20-s2_0-dpc.dts
++++ b/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_20-s2_0-dpc.dts
+@@ -73,19 +73,19 @@
+ 			};
+ 
+ 			mac@7 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@8 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@9 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@10 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@17 {
+diff --git a/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpc.dts b/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpc.dts
+index 6b5277b..11b99f3 100644
+--- a/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpc.dts
++++ b/config/lx2160a/LX2160A-CEX7/clearfog-cx-s1_8-s2_0-dpc.dts
+@@ -69,35 +69,35 @@
+ 	board_info {
+ 		ports {
+ 			mac@3 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@4 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@5 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@6 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@7 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@8 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@9 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@10 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@17 {
+-- 
+2.51.0
+

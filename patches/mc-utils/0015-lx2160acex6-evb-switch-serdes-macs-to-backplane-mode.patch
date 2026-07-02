@@ -1,0 +1,47 @@
+From 665c2e008cb137c170ca7b6528b75f236a89e219 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 2 Jul 2026 14:35:58 +0200
+Subject: [PATCH 15/15] lx2160acex6: evb: switch serdes macs to backplane mode
+
+Mac types for DPC are misleading, what it really tells is how much
+autonomous management is performed by the MC firmware.
+
+Change type for all serdes ports to backplane, to ensure Linux does all the
+management of serdes lanes and pcs.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ config/lx2160a/LX2160A-CEX6/evb-s1_3-s2_0-dpc.dts | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/config/lx2160a/LX2160A-CEX6/evb-s1_3-s2_0-dpc.dts b/config/lx2160a/LX2160A-CEX6/evb-s1_3-s2_0-dpc.dts
+index 46cdca1..310604f 100644
+--- a/config/lx2160a/LX2160A-CEX6/evb-s1_3-s2_0-dpc.dts
++++ b/config/lx2160a/LX2160A-CEX6/evb-s1_3-s2_0-dpc.dts
+@@ -75,19 +75,19 @@
+ 		ports {
+ 			/* Serdes 1 */
+ 			mac@3 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@4 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@5 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@6 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			/* WRIOP MAC */
+-- 
+2.51.0
+
