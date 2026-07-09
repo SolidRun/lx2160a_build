@@ -1,0 +1,60 @@
+From 3b79ed684e3fe1f8992c0f41c7da1fbccd2d49f3 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 8 Jul 2026 19:40:04 +0200
+Subject: [PATCH] plat: lx2160a: add mechanism for board-specific
+ soc_early_init
+
+Add support for appending board-specific logic to soc_early_init.
+
+Platforms using this feature must set LX2160A_SOC_EARLY_INIT_EXTRA=yes
+in their platform.mk, and implement ls_soc_early_init_extra function.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/soc-lx2160a/soc.c  | 9 +++++++++
+ plat/nxp/soc-lx2160a/soc.mk | 5 +++++
+ 2 files changed, 14 insertions(+)
+
+diff --git a/plat/nxp/soc-lx2160a/soc.c b/plat/nxp/soc-lx2160a/soc.c
+index 17556f19d..1daa4e5c0 100644
+--- a/plat/nxp/soc-lx2160a/soc.c
++++ b/plat/nxp/soc-lx2160a/soc.c
+@@ -51,6 +51,10 @@
+ #include "platform_def.h"
+ #include "soc.h"
+ 
++#ifdef LX2160A_SOC_EARLY_INIT_EXTRA
++void ls_soc_early_init_extra(void);
++#endif
++
+ static struct soc_type soc_list[] =  {
+ 	/* SoC LX2160A */
+ 	SOC_ENTRY(LX2160A, LX2160A, 8, 2),
+@@ -323,6 +327,11 @@ void soc_early_init(void)
+ 	 */
+ 	delay_timer_init(NXP_TIMER_ADDR);
+ 	i2c_init(NXP_I2C_ADDR);
++
++#ifdef LX2160A_SOC_EARLY_INIT_EXTRA
++	/* pbi commands can be migrated here */
++	ls_soc_early_init_extra();
++#endif
+ }
+ 
+ void soc_bl2_prepare_exit(void)
+diff --git a/plat/nxp/soc-lx2160a/soc.mk b/plat/nxp/soc-lx2160a/soc.mk
+index 4e864e164..4e6e58e48 100644
+--- a/plat/nxp/soc-lx2160a/soc.mk
++++ b/plat/nxp/soc-lx2160a/soc.mk
+@@ -190,3 +190,8 @@ LX2160_FLUSH_IIC ?= ""
+ LX2160_FLUSH_IIC_MUX ?= ""
+ $(eval $(call add_define_val,CONFIG_LX2160_FLUSH_IIC,"$(LX2160_FLUSH_IIC)"))
+ $(eval $(call add_define_val,CONFIG_LX2160_FLUSH_IIC_MUX,"$(LX2160_FLUSH_IIC_MUX)"))
++
++# Call ls_soc_early_init_extra after soc_early_init
++ifeq (${LX2160A_SOC_EARLY_INIT_EXTRA}, yes)
++$(eval $(call add_define,LX2160A_SOC_EARLY_INIT_EXTRA))
++endif
+-- 
+2.51.0
+
