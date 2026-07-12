@@ -12,20 +12,20 @@ This project is organised in branches for different versions of NXP BSP:
 
   Based on NXP QorIQ LS-6.6.52-2.2.0 Release.
 
-  This version is under active development.
+  This version is production-ready and actively supported with new features and fixes.
 
 - [develop-ls-5.15.71-2.2.0](https://github.com/SolidRun/lx2160a_build/tree/develop-ls-5.15.71-2.2.0):
 
   Based on NXP QorIQ LS-5.15.71-2.2.0 Release.
 
-  This version is considered stable and maintained with bug fixes only.
+  This version is legacy and maintained with critical bug fixes only.
 
 - [develop-lsdk-21.08](https://github.com/SolidRun/lx2160a_build/tree/develop-lsdk-21.08)
 
   Based on NXP QorIQ LSDK-21.08 Release, with the upstream serdes driver
   backported supporting runtime switch between 1Gbps, 10Gbps and 25Gbps protocols.
 
-  This version is considered stable and maintained with bug fixes only.
+  This version is kept for reference only.
 
 - [develop-lsdk-21.08-pre-upstream-serdes-driver](https://github.com/SolidRun/lx2160a_build/tree/develop-lsdk-21.08-pre-upstream-serdes-driver)
 
