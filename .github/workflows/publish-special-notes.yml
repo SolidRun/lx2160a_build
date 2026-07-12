@@ -1,0 +1,30 @@
+name: publish-special-notes
+on:
+  push:
+    branches: ["master"]
+  workflow_dispatch:
+
+jobs:
+  publish_special_notes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout pull-request
+        uses: actions/checkout@v4
+
+      - name: Pre-Processing
+        run: |
+          rm -rf output
+          mkdir output
+          cp -v images-special-notes.html output/meta.txt
+
+      - name: Publish to S3
+        if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+        uses: shallwefootball/upload-s3-action@v1.3.3
+        with:
+          aws_key_id: ${{ secrets.IMAGES_S3_ACCESS }}
+          aws_secret_access_key: ${{ secrets.IMAGES_S3_SECRET }}
+          aws_bucket: ${{ secrets.IMAGES_S3_BUCKET }}
+          endpoint: ${{ secrets.IMAGES_S3_HOST }}
+          source_dir: output
+          destination_dir: LX2k/lx2160a_build
