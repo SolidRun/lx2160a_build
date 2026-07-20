@@ -1,0 +1,138 @@
+From 46f2fadcea2e7262b6c4374265e5e1725f998e48 Mon Sep 17 00:00:00 2001
+From: Dennis Camera <dennis.camera+github@riiengineering.ch>
+Date: Sun, 12 Jan 2025 21:52:19 +0100
+Subject: [PATCH] plat/nxp: fix build without bc(1)
+
+This patch fixes mysterious `invalid suffix "x" on integer constant'
+errors on build systems without the bc(1) command installed:
+
+	plat/nxp/common/setup/ls_bl2_el3_setup.c: In function ‘ls_bl2_el3_plat_arch_setup’:
+	<command-line>: error: invalid suffix "x" on integer constant
+	plat/nxp/common/setup/ls_bl2_el3_setup.c:189:31: note: in expansion of macro ‘BL2_BASE’
+	  189 |                               BL2_BASE,
+	      |                               ^~~~~~~~
+	<command-line>: error: invalid suffix "x" on integer constant
+	plat/nxp/common/setup/ls_bl2_el3_setup.c:190:63: note: in expansion of macro ‘BL2_BASE’
+	  190 |                               (unsigned long)(&__BL2_END__) - BL2_BASE,
+	      |                                                               ^~~~~~~~
+	make: *** [Makefile:1239: /usr/src/lx2160a_build/build/atf/build/lx2160acex7/release/bl2/ls_bl2_el3_setup.o] Error 1
+
+The potential issues, should addresses grow larger than 2 GiB, remain
+unchanged, because the usage of bc(1) provided no advantages here as
+the addresses were always calculated in arithmetic expansions for which
+POSIX.1-2024 only requires a signed long.
+
+Signed-off-by: Dennis Camera <dennis.camera+github@riiengineering.ch>
+---
+ plat/nxp/soc-ls1012a/soc.def | 2 +-
+ plat/nxp/soc-ls1028a/soc.def | 6 ++----
+ plat/nxp/soc-ls1043a/soc.def | 2 +-
+ plat/nxp/soc-ls1046a/soc.def | 2 +-
+ plat/nxp/soc-ls2088a/soc.def | 9 ++++-----
+ plat/nxp/soc-lx2160a/soc.def | 7 +++----
+ 6 files changed, 12 insertions(+), 16 deletions(-)
+
+diff --git a/plat/nxp/soc-ls1012a/soc.def b/plat/nxp/soc-ls1012a/soc.def
+index 1b27abb47..754bf4c08 100644
+--- a/plat/nxp/soc-ls1012a/soc.def
++++ b/plat/nxp/soc-ls1012a/soc.def
+@@ -61,7 +61,7 @@ NXP_ROM_RSVD	:=	0x8000
+ # Input to CST create_hdr_isbc tool
+ BL2_HDR_LOC_ADDR	?=	$(shell echo $$(( $(OCRAM_START_ADDR) + $(OCRAM_SIZE) - $(NXP_ROM_RSVD) - $(CSF_HDR_SZ))))
+ # Covert to HEX to be used by create_pbl.mk
+-BL2_HDR_LOC	:=	$$(echo "obase=16; ${BL2_HDR_LOC_ADDR}" | bc)
++BL2_HDR_LOC	:=	$(shell printf '0x%x' "$(BL2_HDR_LOC_ADDR)")
+ 
+ # Define Endianness of each module
+ NXP_GUR_ENDIANNESS	:=	BE
+diff --git a/plat/nxp/soc-ls1028a/soc.def b/plat/nxp/soc-ls1028a/soc.def
+index 93275b3ba..a787371bb 100644
+--- a/plat/nxp/soc-ls1028a/soc.def
++++ b/plat/nxp/soc-ls1028a/soc.def
+@@ -58,10 +58,8 @@ OCRAM_SIZE		:=	0x40000
+ NXP_ROM_RSVD	:=	0xa000
+ 
+ # Location of BL2 on OCRAM
+-BL2_BASE_ADDR	:=	$(shell echo $$(( $(OCRAM_START_ADDR) + $(NXP_ROM_RSVD) + $(CSF_HDR_SZ) )))
+-
+-# Covert to HEX to be used by create_pbl.mk
+-BL2_BASE	:=	$(shell echo "0x"$$(echo "obase=16; ${BL2_BASE_ADDR}" | bc))
++# this is a 32-bit value, so arithmetic expansion and printf is safe also on 32-bit systems.
++BL2_BASE	:=	$(shell printf '0x%x' $$(( $(OCRAM_START_ADDR) + $(NXP_ROM_RSVD) + $(CSF_HDR_SZ) )))
+ 
+ # BL2_HDR_LOC is at  (BL2_BASE + NXP_ROM_RSVD)
+ # This value BL2_HDR_LOC + CSF_HDR_SZ should not
+diff --git a/plat/nxp/soc-ls1043a/soc.def b/plat/nxp/soc-ls1043a/soc.def
+index b174bd6a2..bfda66e77 100644
+--- a/plat/nxp/soc-ls1043a/soc.def
++++ b/plat/nxp/soc-ls1043a/soc.def
+@@ -70,7 +70,7 @@ BL2_BASE		:=	0x10000000
+ # Input to CST create_hdr_isbc tool
+ BL2_HDR_LOC_HDR		?=	$(shell echo $$(( $(OCRAM_START_ADDR) + $(OCRAM_SIZE) - $(NXP_ROM_RSVD) - $(CSF_HDR_SZ))))
+ # Covert to HEX to be used by create_pbl.mk
+-BL2_HDR_LOC		:=	$$(echo "obase=16; ${BL2_HDR_LOC_HDR}" | bc)
++BL2_HDR_LOC		:=	$(shell printf '0x%x' "$(BL2_HDR_LOC_HDR)")
+ 
+ # Core Errata
+ ERRATA_A53_855873	:=	1
+diff --git a/plat/nxp/soc-ls1046a/soc.def b/plat/nxp/soc-ls1046a/soc.def
+index 50fc9c997..fed433a46 100644
+--- a/plat/nxp/soc-ls1046a/soc.def
++++ b/plat/nxp/soc-ls1046a/soc.def
+@@ -70,7 +70,7 @@ BL2_BASE		:=	0x10000000
+ # Input to CST create_hdr_isbc tool
+ BL2_HDR_LOC_HDR		?=	$(shell echo $$(( $(OCRAM_START_ADDR) + $(OCRAM_SIZE) - $(NXP_ROM_RSVD) - $(CSF_HDR_SZ))))
+ # Covert to HEX to be used by create_pbl.mk
+-BL2_HDR_LOC		:=	$$(echo "obase=16; ${BL2_HDR_LOC_HDR}" | bc)
++BL2_HDR_LOC		:=	$(shell printf '0x%x' "$(BL2_HDR_LOC_HDR)")
+ 
+ # Core Errata
+ ERRATA_A72_859971	:=	1
+diff --git a/plat/nxp/soc-ls2088a/soc.def b/plat/nxp/soc-ls2088a/soc.def
+index cd758de52..0b2593f36 100644
+--- a/plat/nxp/soc-ls2088a/soc.def
++++ b/plat/nxp/soc-ls2088a/soc.def
+@@ -57,13 +57,12 @@ OCRAM_START_ADDR	:=	0x18000000
+ OCRAM_SIZE		:=	0x20000
+ 
+ # Location of BL2 on OCRAM
+-BL2_BASE_ADDR	:=	$(shell echo $$(( $(OCRAM_START_ADDR) + $(NXP_ROM_RSVD))))
+-# Covert to HEX to be used by create_pbl.mk
+-BL2_BASE	:=	$(shell echo "0x"$$(echo "obase=16; ${BL2_BASE_ADDR}" | bc))
++# this is a 32-bit value, so arithmetic expansion and printf is safe also on 32-bit systems.
++BL2_BASE	:=	$(shell printf '0x%x' $$(( $(OCRAM_START_ADDR) + $(NXP_ROM_RSVD) )) )
+ 
+-BL2_HDR_LOC_HDR	?=	$(shell echo $$(( $(OCRAM_START_ADDR) + $(OCRAM_SIZE) - $(CSF_HDR_SZ))))
++BL2_HDR_LOC_HDR	?=	$(shell echo $$(( $(OCRAM_START_ADDR) + $(OCRAM_SIZE) - $(CSF_HDR_SZ) )) )
+ # Covert to HEX to be used by create_pbl.mk
+-BL2_HDR_LOC	:=	$(shell echo "0x"$$(echo "obase=16; ${BL2_HDR_LOC_HDR}" | bc))
++BL2_HDR_LOC	:=	$(shell printf '0x%x' "$(BL2_HDR_LOC_HDR)")
+ 
+ # SoC ERRATAS to be enabled
+ 
+diff --git a/plat/nxp/soc-lx2160a/soc.def b/plat/nxp/soc-lx2160a/soc.def
+index 044296295..a340fe7db 100644
+--- a/plat/nxp/soc-lx2160a/soc.def
++++ b/plat/nxp/soc-lx2160a/soc.def
+@@ -89,15 +89,14 @@ OCRAM_START_ADDR := 0x18000000
+ OCRAM_SIZE := 0x40000
+ 
+ # Location of BL2 on OCRAM
+-BL2_BASE_ADDR	:=	$(shell echo $$(( $(OCRAM_START_ADDR) + $(NXP_ROM_RSVD) + $(CSF_HDR_SZ) )))
+-# Covert to HEX to be used by create_pbl.mk
+-BL2_BASE	:=	$(shell echo "0x"$$(echo "obase=16; ${BL2_BASE_ADDR}" | bc))
++# this is a 32-bit value, so arithmetic expansion and printf is safe also on 32-bit systems.
++BL2_BASE	:=	$(shell printf '0x%x' $$(( $(OCRAM_START_ADDR) + $(NXP_ROM_RSVD) + $(CSF_HDR_SZ) )))
+ 
+ # BL2_HDR_LOC is at  (OCRAM_ADDR + NXP_ROM_RSVD)
+ # This value BL2_HDR_LOC + CSF_HDR_SZ should not overalp with BL2_BASE
+ BL2_HDR_LOC_HDR	?=	$(shell echo $$(( $(OCRAM_START_ADDR) + $(NXP_ROM_RSVD) )))
+ # Covert to HEX to be used by create_pbl.mk
+-BL2_HDR_LOC	:=	$$(echo "obase=16; ${BL2_HDR_LOC_HDR}" | bc)
++BL2_HDR_LOC	:=	$(shell printf '0x%x' "$(BL2_HDR_LOC_HDR)")
+ 
+ # SoC ERRATAS to be enabled
+ #
+-- 
+2.47.1
+
