@@ -1,0 +1,88 @@
+From 7fab1bb31a1d9739ca7b6a20de7d84c47693e60f Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 12 Aug 2026 16:10:57 +0300
+Subject: [PATCH 50/53] efi_loader: only add real dram to efi reserved memory
+ map
+
+u-boot/device-tree can have reserved memory nodes for MMIO regions, and
+real system ram.
+
+Marking MMU ranges as system ram in uefi memory map causes collisions
+while Linux loads between drivers claiming these regions, and general
+allocations.
+
+Add check ensuring a region is part of sdram and only then add it to
+uefi memory map.
+
+This fixes Linux crashing on LX2160A using the u-boot uefi boot path.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lib/efi_loader/efi_dt_fixup.c | 41 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 41 insertions(+)
+
+diff --git a/lib/efi_loader/efi_dt_fixup.c b/lib/efi_loader/efi_dt_fixup.c
+index 9886e6897cd..214b917b083 100644
+--- a/lib/efi_loader/efi_dt_fixup.c
++++ b/lib/efi_loader/efi_dt_fixup.c
+@@ -10,9 +10,37 @@
+ #include <efi_rng.h>
+ #include <fdtdec.h>
+ #include <mapmem.h>
++#include <asm/global_data.h>
++
++DECLARE_GLOBAL_DATA_PTR;
+ 
+ const efi_guid_t efi_guid_dt_fixup_protocol = EFI_DT_FIXUP_PROTOCOL_GUID;
+ 
++/**
++ * efi_is_ram() - check that a range is backed by system memory
++ *
++ * @addr:	start address of the range
++ * @size:	size of the range
++ * Return:	true if the range lies within a DRAM bank
++ */
++static bool efi_is_ram(u64 addr, u64 size)
++{
++	int i;
++
++	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++) {
++		u64 bank_start = gd->bd->bi_dram[i].start;
++		u64 bank_size = gd->bd->bi_dram[i].size;
++
++		if (!bank_size)
++			continue;
++
++		if (addr >= bank_start && addr + size <= bank_start + bank_size)
++			return true;
++	}
++
++	return false;
++}
++
+ /**
+  * efi_reserve_memory() - add reserved memory to memory map
+  *
+@@ -26,6 +54,19 @@ static void efi_reserve_memory(u64 addr, u64 size, bool nomap)
+ 	int type;
+ 	efi_uintn_t ret;
+ 
++	/*
++	 * Device trees may describe reservations that are not system memory,
++	 * for instance MMIO ranges carrying an "iommu-addresses" property.
++	 * Adding those to the memory map would announce them as RAM to the
++	 * payload, which then collides with the drivers claiming the same
++	 * registers.
++	 */
++	if (!efi_is_ram(addr, size)) {
++		log_debug("Ignoring non-memory reservation addr %llx size %llx\n",
++			  addr, size);
++		return;
++	}
++
+ 	/* Convert from sandbox address space. */
+ 	addr = (uintptr_t)map_sysmem(addr, 0);
+ 
+-- 
+2.43.0
+

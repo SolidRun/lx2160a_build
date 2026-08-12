@@ -1,0 +1,47 @@
+From 65a1b0826e21226d03f5eaff9bb137bbbd811a06 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 12 Aug 2026 16:11:03 +0300
+Subject: [PATCH 51/53] Revert "drivers: net: fsl-mc: remove MMIO and CCSR
+ ranges from reserved-memory"
+
+This reverts commit c9c940c9294e664d760ab2d98412d5bf86c5e3d7.
+---
+ drivers/net/fsl-mc/mc.c | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/drivers/net/fsl-mc/mc.c b/drivers/net/fsl-mc/mc.c
+index 739d91c6fa2..714acafb7f4 100644
+--- a/drivers/net/fsl-mc/mc.c
++++ b/drivers/net/fsl-mc/mc.c
+@@ -947,6 +947,28 @@ void fdt_reserve_mc_mem(void *blob, u32 mc_icid)
+ 		{
+ 			.start = 0,
+ 			.end = 0
++		},
++		{
++			.start = CFG_SYS_FSL_MC_BASE,
++			.end = CFG_SYS_FSL_MC_BASE + CFG_SYS_FSL_MC_SIZE - 1
++		},
++		{
++			.start = CFG_SYS_FSL_NI_BASE,
++			.end = CFG_SYS_FSL_NI_BASE + CFG_SYS_FSL_NI_SIZE - 1
++		},
++		{
++			.start = CFG_SYS_FSL_QBMAN_BASE,
++			.end = CFG_SYS_FSL_QBMAN_BASE +
++					CFG_SYS_FSL_QBMAN_SIZE - 1
++		},
++		{
++			.start = CFG_SYS_FSL_PEBUF_BASE,
++			.end = CFG_SYS_FSL_PEBUF_BASE +
++					CFG_SYS_FSL_PEBUF_SIZE - 1
++		},
++		{
++			.start = CFG_SYS_FSL_CCSR_BASE,
++			.end = CFG_SYS_FSL_CCSR_BASE + CFG_SYS_FSL_CCSR_SIZE - 1
+ 		}
+ 	};
+ 
+-- 
+2.43.0
+
