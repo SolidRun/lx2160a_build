@@ -192,6 +192,10 @@ jobs:
         id: dl_url
         shell: bash {0}
         run: |
+          echo "lx2160_cex7_clearfog_cx_8x1G_multi_url=http://ciserver.ci:8000/cipublish/${{ needs.build.outputs.local_artifacts_path }}/lx2160a_rev2_cex7_clearfog-cx_multi_2000_700_2900_4_5_2-${{ needs.info.outputs.build_rev }}.img.xz" >> "$GITHUB_OUTPUT"
+          echo "lx2160_cex7_clearfog_cx_8x10G_multi_url=http://ciserver.ci:8000/cipublish/${{ needs.build.outputs.local_artifacts_path }}/lx2160a_rev2_cex7_clearfog-cx_multi_2000_700_2900_8_5_2-${{ needs.info.outputs.build_rev }}.img.xz" >> "$GITHUB_OUTPUT"
+          echo "lx2160_cex7_clearfog_cx_4x10G_4x25G_multi_url=http://ciserver.ci:8000/cipublish/${{ needs.build.outputs.local_artifacts_path }}/lx2160a_rev2_cex7_clearfog-cx_multi_2000_700_2900_18_5_2-${{ needs.info.outputs.build_rev }}.img.xz" >> "$GITHUB_OUTPUT"
+          echo "lx2160_cex7_clearfog_cx_4x10G_1x40G_multi_url=http://ciserver.ci:8000/cipublish/${{ needs.build.outputs.local_artifacts_path }}/lx2160a_rev2_cex7_clearfog-cx_multi_2000_700_2900_20_5_2-${{ needs.info.outputs.build_rev }}.img.xz" >> "$GITHUB_OUTPUT"
           echo "lx2162_som_multi_url=http://ciserver.ci:8000/cipublish/${{ needs.build.outputs.local_artifacts_path }}/lx2162a_rev2_som_clearfog_multi_2000_650_2900_18_9_0-${{ needs.info.outputs.build_rev }}.img.xz" >> "$GITHUB_OUTPUT"
 
       - name: Checkout LAVA action
@@ -211,8 +215,36 @@ jobs:
           jobs: |
             [
               {
-                "device_type": "lx2162a-solidrun",
-                "tags": [],
+                "device_type": "lx2",
+                "tags": ["soc-lx2160a-rev2", "lx2160a-cex7", "carrier-clearfog-cx"],
+                "image_url": "${{ steps.dl_url.outputs.lx2160_cex7_clearfog_cx_8x1G_multi_url }}",
+                "description": "LX2160A Ubuntu - lx2160a_build/${{ needs.info.outputs.build_ref }} (${{ needs.info.outputs.build_rev }}) - 8x1G",
+                "compression": "xz",
+                "all_devices": false
+              }, {
+                "device_type": "lx2",
+                "tags": ["soc-lx2160a-rev2", "lx2160a-cex7", "carrier-clearfog-cx"],
+                "image_url": "${{ steps.dl_url.outputs.lx2160_cex7_clearfog_cx_8x10G_multi_url }}",
+                "description": "LX2160A Ubuntu - lx2160a_build/${{ needs.info.outputs.build_ref }} (${{ needs.info.outputs.build_rev }}) - 8x10G",
+                "compression": "xz",
+                "all_devices": false
+              }, {
+                "device_type": "lx2",
+                "tags": ["soc-lx2160a-rev2", "lx2160a-cex7", "carrier-clearfog-cx"],
+                "image_url": "${{ steps.dl_url.outputs.lx2160_cex7_clearfog_cx_4x10G_4x25G_multi_url }}",
+                "description": "LX2160A Ubuntu - lx2160a_build/${{ needs.info.outputs.build_ref }} (${{ needs.info.outputs.build_rev }}) - 4x10G + 4x 25G",
+                "compression": "xz",
+                "all_devices": false
+              }, {
+                "device_type": "lx2",
+                "tags": ["soc-lx2160a-rev2", "lx2160a-cex7", "carrier-clearfog-cx"],
+                "image_url": "${{ steps.dl_url.outputs.lx2160_cex7_clearfog_cx_4x10G_1x40G_multi_url }}",
+                "description": "LX2160A Ubuntu - lx2160a_build/${{ needs.info.outputs.build_ref }} (${{ needs.info.outputs.build_rev }}) - 4x10G + 40G",
+                "compression": "xz",
+                "all_devices": false
+              }, {
+                "device_type": "lx2",
+                "tags": ["lx2162a-som", "carrier-clearfog"],
                 "image_url": "${{ steps.dl_url.outputs.lx2162_som_multi_url }}",
                 "description": "LX2162A Ubuntu - lx2160a_build/${{ needs.info.outputs.build_ref }} (${{ needs.info.outputs.build_rev }})",
                 "compression": "xz",
