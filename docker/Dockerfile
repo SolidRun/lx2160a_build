@@ -39,6 +39,7 @@ RUN apt-get install -y python3-pyelftools
 
 # build environment
 WORKDIR /work
+ENV KBUILD_BUILD_HOST=localhost
 COPY shflags /
 COPY entry.sh /
 ENTRYPOINT ["/bin/sh", "/entry.sh"]
