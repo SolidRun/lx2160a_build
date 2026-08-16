@@ -663,7 +663,7 @@ test -n "$APTPROXY" && printf 'Acquire::http { Proxy "%s"; }\n' $APTPROXY | tee 
 
 apt-get update
 env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C \
-	apt-get install --no-install-recommends -y apt apt-utils bc busybox ethtool fdisk i2c-tools ifupdown iproute2 iptables iputils-ping isc-dhcp-client kmod less libatomic1 lm-sensors locales net-tools ntpdate openssh-server pciutils procps psmisc python3 sudo systemd-sysv tee-supplicant wget $EXTRA_PKGS
+	apt-get install --no-install-recommends -y apt apt-utils bc busybox ethtool fdisk grub-efi i2c-tools ifupdown iproute2 iptables iputils-ping isc-dhcp-client kmod less libatomic1 lm-sensors locales net-tools ntpdate openssh-server pciutils procps psmisc python3 sudo systemd-sysv tee-supplicant wget $EXTRA_PKGS
 apt-get clean
 
 # set root password
@@ -764,7 +764,7 @@ if [[ $DISTRO == debian ]]; then
 		fakeroot debootstrap --variant=minbase \
 			--arch=arm64 --components=main,contrib,non-free \
 			--foreign \
-			--include=apt-transport-https,busybox,ca-certificates,curl,e2fsprogs,ethtool,fdisk,haveged,i2c-tools,ifupdown,iputils-ping,isc-dhcp-client,iw,initramfs-tools,lm-sensors,localepurge,nano,net-tools,ntpdate,openssh-server,pciutils,psmisc,rfkill,sudo,systemd-sysv,tee-supplicant,tio,usbutils,wget,wpasupplicant,xz-utils \
+			--include=apt-transport-https,busybox,ca-certificates,curl,e2fsprogs,ethtool,fdisk,grub-efi,haveged,i2c-tools,ifupdown,iputils-ping,isc-dhcp-client,iw,initramfs-tools,lm-sensors,localepurge,nano,net-tools,ntpdate,openssh-server,pciutils,psmisc,rfkill,sudo,systemd-sysv,tee-supplicant,tio,usbutils,wget,wpasupplicant,xz-utils \
 			${EXCLUDE} \
 			$DEBIAN_VERSION \
 			stage1 \
@@ -918,33 +918,67 @@ pkg_dpdk
 ###############################################################################
 # assembling images
 ###############################################################################
-function do_generate_extlinux_conf() {
-	local EXTLINUX=$1
-	local DISKIMAGE=$2
-	local PARTNUMBER=$3
-	local PARTUUID=`blkid -s PTUUID -o value ${DISKIMAGE}`
-	PARTUUID=${PARTUUID}'-0'${PARTNUMBER} # specific partition uuid
+do_generate_grub_efi() {
+	local DESTDIR="$1"
+	local IMG="$2"
+	local EFIFS="$3"
+	local ROOTFS="$4"
+	local PARTUUID_ROOT=`blkid -s PTUUID -o value ${IMG}`-02
+	local FSUUID_EFI=`blkid -s UUID -o value ${EFIFS}`
+	local FSUUID_ROOT=`blkid -s UUID -o value ${ROOTFS}`
 
-	mkdir -p $(dirname ${EXTLINUX})
+	GRUB_MODULES_BUILTIN="fat part_msdos search search_fs_uuid"
 
-	cat > ${EXTLINUX} << EOF
-timeout 30
-default linux
-menu title linux-lx2160a boot options
-label primary
-    menu label primary kernel
-    linux /boot/Image.gz
-    fdtdir /boot/
-    APPEND console=\${console} earlycon=pl011,mmio32,0x21c0000 default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf root=PARTUUID=$PARTUUID rw rootwait
+	# recreate grub folder
+	rm -rf "${DESTDIR}/grub"
+	mkdir -p "${DESTDIR}/grub/arm64-efi" "${DESTDIR}/EFI/BOOT"
+
+	# set grub-mkconfig and copy modules
+	case ${DISTRO} in
+	debian|ubuntu)
+		# use host os / container grub-mkconfig
+		GRUB_MKIMAGE=$(env PATH=$PATH:/sbin:/usr/sbin:/usr/local/sbin which grub-mkimage)
+
+		# copy grub modules to boot partition
+		e2ls "${ROOTFS}:usr/lib/grub/arm64-efi" | xargs -n 1 echo | grep -E "\.(mod|lst|img)$" | xargs -I {} e2cp "${ROOTFS}:usr/lib/grub/arm64-efi/{}" "${DESTDIR}/grub/arm64-efi/{}"
+	;;
+	*)
+		echo "Generating grub.efi not implemented for ${DISTRO}!"
+		return 1
+	;;
+	esac
+
+	# generate builtin grub config
+	cat > builtin.cfg << EOF
+search.fs_uuid ${FSUUID_EFI} root
+set prefix=(\$root)/grub
+EOF
+
+	"$GRUB_MKIMAGE" \
+		-d "${DESTDIR}/grub/arm64-efi" \
+		-O arm64-efi \
+		-o "${DESTDIR}/EFI/BOOT/BOOTAA64.EFI" \
+		-p /grub \
+		-c builtin.cfg \
+		${GRUB_MODULES_BUILTIN}
+
+	# generate full grub.cfg
+	cat > "${DESTDIR}/grub/grub.cfg" << EOF
+set timeout=1
+set default="0"
+menuentry "SolidRun LX2160A Reference BSP" {
+	search.fs_uuid ${FSUUID_ROOT} root
+	linux /boot/Image.gz earlycon default_hugepagesz=1024m hugepagesz=1024m hugepages=2 pci=pcie_bus_perf root=PARTUUID=${PARTUUID_ROOT} rw rootwait
+}
 EOF
 }
 
-function do_install_extlinux_conf() {
-	local EXTLINUX="$1"
-	local FSIMG="$2"
+function do_install_grub_efi() {
+	local SOURCEDIR="$1"
+	local EFIFS="$2"
 
-	e2mkdir -G 0 -O 0 $FSIMG:extlinux
-	e2cp -G 0 -O 0 $EXTLINUX $FSIMG:extlinux/
+	mcopy -s -i "${EFIFS}" "${SOURCEDIR}/EFI" ::
+	mcopy -s -i "${EFIFS}" "${SOURCEDIR}/grub" ::
 }
 
 function do_install_kernel() {
@@ -992,12 +1026,22 @@ function do_install_udev_rules() {
 function do_allocate_disk_image() {
 	local IMAGE="$1"
 	local PART1_SIZE=$2
+	local PART2_SIZE=$3
+	local IMAGE_BOOTPART_START=$((64*1024*1024))
+	local IMAGE_BOOTPART_END=$((IMAGE_BOOTPART_START+PART1_SIZE-1))
+	local IMAGE_ROOTPART_START=$((IMAGE_BOOTPART_END+1))
+	local IMAGE_ROOTPART_END=$((IMAGE_ROOTPART_START+PART2_SIZE-1))
 
 	rm -f $IMAGE
 	truncate -s 64M $IMAGE
 	truncate -s +$PART1_SIZE $IMAGE
 
-	parted --script $IMAGE mklabel msdos mkpart primary 64MiB $((64*1024*1024+PART1_SIZE-1))B
+	if [ -z "$PART2_SIZE" ]; then
+		parted --script $IMAGE mklabel msdos mkpart primary ${IMAGE_BOOTPART_START}B ${IMAGE_BOOTPART_END}B
+	else
+		truncate -s +$PART2_SIZE $IMAGE
+		parted --script $IMAGE mklabel msdos mkpart primary fat32 ${IMAGE_BOOTPART_START}B ${IMAGE_BOOTPART_END}B set 1 esp on mkpart primary ${IMAGE_ROOTPART_START}B ${IMAGE_ROOTPART_END}B
+	fi
 }
 
 echo "Assembling rootfs"
@@ -1009,13 +1053,23 @@ do_install_udev_rules $ROOTDIR/images/tmp/$ROOTFS.ext4
 declare -a IMAGES
 
 echo "Assembling disk images"
-do_allocate_disk_image $ROOTDIR/images/tmp/$ROOTFS.img $ROOTFS_SIZE
+EFISIZE_M=4
+do_allocate_disk_image $ROOTDIR/images/tmp/$ROOTFS.img $((EFISIZE_M*1024*1024)) $ROOTFS_SIZE
 ROOTFS_IMG_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/$ROOTFS.img)
 
-# generate extlinux.conf after partition table, to pick up generated random partuuid
-do_generate_extlinux_conf $ROOTDIR/images/tmp/extlinux/extlinux.conf $ROOTDIR/images/tmp/$ROOTFS.img 1
-do_install_extlinux_conf $ROOTDIR/images/tmp/extlinux/extlinux.conf $ROOTDIR/images/tmp/$ROOTFS.ext4
-dd if=$ROOTDIR/images/tmp/$ROOTFS.ext4 of=$ROOTDIR/images/tmp/$ROOTFS.img bs=1M seek=64 conv=notrunc
+# generate efi partition fs
+EFIFS="$ROOTDIR/images/tmp/efi.fat32"
+rm -f "${EFIFS}"
+truncate -s ${EFISIZE_M}MiB "${EFIFS}"
+env PATH="$PATH:/sbin:/usr/sbin" mkdosfs "${EFIFS}"
+
+# generate grub.efi after partition table, to pick up generated random partuuid
+do_generate_grub_efi $ROOTDIR/images/tmp/grub "$ROOTDIR/images/tmp/$ROOTFS.img" "${EFIFS}" $ROOTDIR/images/tmp/$ROOTFS.ext4
+do_install_grub_efi $ROOTDIR/images/tmp/grub "${EFIFS}"
+
+# insert rootfs and efi into disk image
+dd if="${EFIFS}" of=$ROOTDIR/images/tmp/$ROOTFS.img bs=1M seek=64 conv=notrunc
+dd if=$ROOTDIR/images/tmp/$ROOTFS.ext4 of=$ROOTDIR/images/tmp/$ROOTFS.img bs=1M seek=$((64+EFISIZE_M)) conv=notrunc
 
 # add default prefix for short DPL/DPC variables
 if [[ ! $DPL =~ / ]]; then
