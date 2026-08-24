@@ -1,0 +1,63 @@
+From 9c469c2abd7fd22bc6a5722cc8d8f378a325c102 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 24 Aug 2026 16:15:21 +0200
+Subject: [PATCH 37/38] net: sfp: add extended compliance codes for additional
+ 100g aoc/acc modules
+
+SFF-8024 specifies two sets of extended compliance codes for active
+optical and copper cables:
+
+- 0x01 = 100G or 25G Active Optical Cable, BER 5E-5
+- 0x08 = 100G or 25G Active Copper Cable, BER 5E-5
+- 0x18 = 100G or 25G Active Optical Cable, BER 1E-12
+- 0x19 = 100G or 25G Active Copper Cable, BER 1E-12
+
+Add definitions for the missing codes (0x08, 0x18, 0x19). To maintain
+consistency, also add BER suffix to the existing definition for 0x01.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/phy/sfp-bus.c | 2 +-
+ include/linux/sfp.h       | 5 ++++-
+ 2 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/phy/sfp-bus.c b/drivers/net/phy/sfp-bus.c
+index 274bb090b827..79bc481de99b 100644
+--- a/drivers/net/phy/sfp-bus.c
++++ b/drivers/net/phy/sfp-bus.c
+@@ -254,7 +254,7 @@ void sfp_parse_support(struct sfp_bus *bus, const struct sfp_eeprom_id *id,
+ 	switch (id->base.extended_cc) {
+ 	case SFF8024_ECC_UNSPEC:
+ 		break;
+-	case SFF8024_ECC_100G_25GAUI_C2M_AOC:
++	case SFF8024_ECC_100G_25GAUI_C2M_AOC_BER_5E_5:
+ 		if (br_min <= 28000 && br_max >= 25000) {
+ 			/* 25GBASE-R, possibly with FEC */
+ 			__set_bit(PHY_INTERFACE_MODE_25GBASER, interfaces);
+diff --git a/include/linux/sfp.h b/include/linux/sfp.h
+index 9346cd44814d..2521abc4a07b 100644
+--- a/include/linux/sfp.h
++++ b/include/linux/sfp.h
+@@ -316,15 +316,18 @@ enum {
+ 	SFF8024_CONNECTOR_MXC_2X16	= 0x24,
+ 
+ 	SFF8024_ECC_UNSPEC		= 0x00,
+-	SFF8024_ECC_100G_25GAUI_C2M_AOC	= 0x01,
++	SFF8024_ECC_100G_25GAUI_C2M_AOC_BER_5E_5 = 0x01,
+ 	SFF8024_ECC_100GBASE_SR4_25GBASE_SR = 0x02,
+ 	SFF8024_ECC_100GBASE_LR4_25GBASE_LR = 0x03,
+ 	SFF8024_ECC_100GBASE_ER4_25GBASE_ER = 0x04,
+ 	SFF8024_ECC_100GBASE_SR10	= 0x05,
++	SFF8024_ECC_100G_25GAUI_C2M_ACC_BER_5E_5 = 0x08,
+ 	SFF8024_ECC_100GBASE_CR4	= 0x0b,
+ 	SFF8024_ECC_25GBASE_CR_S	= 0x0c,
+ 	SFF8024_ECC_25GBASE_CR_N	= 0x0d,
+ 	SFF8024_ECC_10GBASE_T_SFI	= 0x16,
++	SFF8024_ECC_100G_25GAUI_C2M_AOC_BER_1E_12 = 0x18,
++	SFF8024_ECC_100G_25GAUI_C2M_ACC_BER_1E_12 = 0x19,
+ 	SFF8024_ECC_10GBASE_T_SR	= 0x1c,
+ 	SFF8024_ECC_5GBASE_T		= 0x1d,
+ 	SFF8024_ECC_2_5GBASE_T		= 0x1e,
+-- 
+2.51.0
+
