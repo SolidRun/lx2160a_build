@@ -29,6 +29,7 @@ RUN set -e; \
 
 RUN set -e; \
 	apt-get -y install --no-install-recommends libpython3-dev python3-pip python3-setuptools python3-wheel swig; \
+	export CFLAGS="-DPyInt_AsLong=PyLong_AsLong -DPyString_FromString=PyUnicode_FromString -DPyString_AsString=PyBytes_AsString -Wno-error=implicit-function-declaration -Wno-error=int-conversion"; \
 	pip3 install importlib-metadata; \
 	pip3 install dtschema; \
 	pip3 install cryptography; \
