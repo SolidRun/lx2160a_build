@@ -139,6 +139,9 @@ For example:
 - `SHALLOW`: enable shallow git clone to save space and bandwidth
   - `false` (default)
   - `true`
+- `CCACHE_DISABLE`: compiler cache, stored in `.ccache/`
+  - `1`: disabled (default)
+  - `0`: enabled (effective only when toolchain on the path links to ccache)
 - `SECURE`: enable secure-boot
   - `false` (default)
   - `true`

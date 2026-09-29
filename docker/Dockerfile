@@ -23,7 +23,7 @@ RUN set -e; \
 RUN set -e; \
 	apt-get update; \
 	apt-get --no-install-recommends -y install \
-		acpica-tools bc bison build-essential ca-certificates cmake cpio debian-archive-keyring debootstrap device-tree-compiler dosfstools e2fsprogs e2tools fakeroot fdisk file flex gdb-multiarch git kmod libelf-dev libncurses-dev libssl-dev libyaml-dev lzop make meson mtools ninja-build p7zip p7zip-full pahole pandoc parted pkg-config qemu-system-arm rsync sudo tar u-boot-tools unzip wget xz-utils yamllint; \
+		acpica-tools bc bison build-essential ca-certificates ccache cmake cpio debian-archive-keyring debootstrap device-tree-compiler dosfstools e2fsprogs e2tools fakeroot fdisk file flex gdb-multiarch git kmod libelf-dev libncurses-dev libssl-dev libyaml-dev lzop make meson mtools ninja-build p7zip p7zip-full pahole pandoc parted pkg-config qemu-system-arm rsync sudo tar u-boot-tools unzip wget xz-utils yamllint; \
 	dpkg-architecture --is arm64 || apt-get --no-install-recommends -y install crossbuild-essential-arm64; \
 	:
 
@@ -41,6 +41,10 @@ RUN apt-get install -y python3-pyelftools
 # build environment
 WORKDIR /work
 ENV KBUILD_BUILD_HOST=localhost
+# compiler cache: always on PATH, disabled by default
+ENV PATH=/usr/lib/ccache:$PATH CCACHE_DISABLE=1
+# let sudo keep caller's path
+RUN echo 'Defaults !secure_path' > /etc/sudoers.d/keep-path
 COPY shflags /
 COPY entry.sh /
 ENTRYPOINT ["/bin/sh", "/entry.sh"]
