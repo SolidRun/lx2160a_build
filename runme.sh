@@ -33,6 +33,10 @@ set -e
 # - secondary (Clearfog-CX / Honeycomb Backup Flash)
 : ${BOOTFLASH:=primary}
 : ${SHALLOW:=false}
+# Compiler cache (cache lives in ./.ccache)
+# - 1: disabled (default)
+# - 0: enabled (effective only when toolchain on the path links to ccache)
+: ${CCACHE_DISABLE:=1}
 : ${SECURE:=false}
 : ${ATF_DEBUG:=false}
 # Distribution for rootfs
@@ -72,6 +76,16 @@ SPEED=${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}
 
 export CROSS_COMPILE=aarch64-linux-gnu-
 export ARCH=arm64
+
+export CCACHE_DIR=$ROOTDIR/.ccache
+if [ "x$CCACHE_DISABLE" == "x0" ]; then
+	# ccache ignores the value of CCACHE_DISABLE and only checks whether it is set,
+	# so it has to be unset to enable caching.
+	unset CCACHE_DISABLE
+else
+	# effective only when toolchain on the path links to ccache (see docker/Dockerfile)
+	export CCACHE_DISABLE
+fi
 
 REPO_PREFIX=`git log -1 --pretty=format:%h || echo unknown`
 echo "Repository prefix for images is $REPO_PREFIX"
@@ -1240,6 +1254,13 @@ if [ "${BOOTSOURCE}" = "auto" ]; then
 	IMAGES+=("images/${IMG}")
 fi
 
+# print compiler cache statistics when enabled and available
+if [ -z "${CCACHE_DISABLE+x}" ] && which ccache 2>&1 >/dev/null; then
+	echo "Compiler cache statistics:"
+	ccache -s
+fi
+
+# list generated images
 for IMG in ${IMAGES[@]}; do
 	echo "Generated ${IMG}"
 done
