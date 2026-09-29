@@ -1,0 +1,103 @@
+From 16db76a1f7cdc85f211227924ce9734a57c2d19a Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 19 May 2026 15:07:13 +0200
+Subject: [PATCH 44/44] board: solidrun: lx2160acex7: support build-time option
+ for swapped cs
+
+Add new buil-time option LX2160ACEX7_XSPI_SWAPPED_CS supporting the
+use-case of BIOS_DIS0# signal causing XSPI CS0 swapped with CS1.
+
+Software canot detect this condition so it must be encoded in the binary
+itself when booting from the secondary spi flash on carrier board.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ board/solidrun/lx2160acex7/Kconfig   |  7 ++++
+ board/solidrun/lx2160acex7/lx2160a.c | 48 ++++++++++++++++++++++++++++
+ 2 files changed, 55 insertions(+)
+
+diff --git a/board/solidrun/lx2160acex7/Kconfig b/board/solidrun/lx2160acex7/Kconfig
+index 2a9a134e297..6118f93123f 100644
+--- a/board/solidrun/lx2160acex7/Kconfig
++++ b/board/solidrun/lx2160acex7/Kconfig
+@@ -42,4 +42,11 @@ config ENV_SECT_SIZE
+ 	default 0x20000 if LX2160ACEX7_BOOTMEDIA_64M
+ 	default 0x10000 if LX2160ACEX7_BOOTMEDIA_4M
+ 
++config LX2160ACEX7_XSPI_SWAPPED_CS
++	bool "XSPI Chip-Select 0/1 are swapped"
++	default n
++	help
++	  Enable if XSPI chip-select are swapped, e.g. due to BIOS_DIS0# override
++	  when booting from backup SPI flash on carrier board.
++
+ endif
+diff --git a/board/solidrun/lx2160acex7/lx2160a.c b/board/solidrun/lx2160acex7/lx2160a.c
+index 478742ad587..bdde9d1880a 100644
+--- a/board/solidrun/lx2160acex7/lx2160a.c
++++ b/board/solidrun/lx2160acex7/lx2160a.c
+@@ -236,6 +236,50 @@ int fsl_board_late_init(void) {
+ }
+ #endif
+ 
++#ifdef CONFIG_LX2160ACEX7_XSPI_SWAPPED_CS
++void board_setup_fdt_swap_xspi_cs(void *fdt)
++{
++	const char *const xspi_paths[] = {
++		"/soc/spi@20c0000",
++		"/spi@20c0000",
++		"/flexspi@20c0000",
++	}, *name, *suffix;
++	int node, subnode;
++
++	/* find xspi controller node */
++	for (size_t i = 0; i < ARRAY_SIZE(xspi_paths); i++) {
++		node = fdt_path_offset(fdt, xspi_paths[i]);
++		if (node >= 0)
++			break;
++	}
++	if (node < 0)
++		return;
++
++	/* find xspi sub-nodes */
++	fdt_for_each_subnode(subnode, fdt, node) {
++		name = fdt_get_name(fdt, subnode, NULL);
++		suffix = strrchr(name, '@');
++		if (!suffix)
++			continue;
++
++		/* override cs 0 node reg proeprty forcing cs 1 */
++		if (strcmp(suffix, "@0") == 0)
++			fdt_setprop_inplace_u32(fdt, subnode, "reg", 1);
++
++		/* override cs 1 node reg proeprty forcing cs 0 */
++		else if (strcmp(suffix, "@1") == 0)
++			fdt_setprop_inplace_u32(fdt, subnode, "reg", 0);
++	}
++}
++
++int fdtdec_board_setup(const void *fdt_blob)
++{
++	board_setup_fdt_swap_xspi_cs((void *)fdt_blob);
++
++	return 0;
++}
++#endif /* CONFIG_LX2160ACEX7_XSPI_SWAPPED_CS */
++
+ #ifdef CONFIG_FSL_MC_ENET
+ void fdt_fixup_board_enet(void *fdt)
+ {
+@@ -346,6 +390,10 @@ int ft_board_setup(void *blob, struct bd_info *bd)
+ 	board_setup_fdt_serdes_ports(blob);
+ 	fdt_fixup_icid(blob);
+ 
++#ifdef CONFIG_LX2160ACEX7_XSPI_SWAPPED_CS
++	board_setup_fdt_swap_xspi_cs(blob);
++#endif
++
+ 	return 0;
+ }
+ #endif
+-- 
+2.51.0
+

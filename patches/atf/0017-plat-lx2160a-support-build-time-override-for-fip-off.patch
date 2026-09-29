@@ -1,0 +1,60 @@
+From 6e3f0babe5b8e5be191b5e5818c7a60743dcde9e Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 19 May 2026 18:00:59 +0200
+Subject: [PATCH 17/19] plat: lx2160a: support build-time override for fip
+ offsets
+
+Allow passing fip offsets and sizes through make:
+- DDR_FIP_OFFSET
+- DDR_FIP_MAX_SIZE
+- FIP_OFFSET
+- FIP_MAX_SIZE
+- FUSE_FIP_OFFSET
+- FUSE_FIP_MAX_SIZE
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../plat_make_helper/plat_common_def.mk       | 30 +++++++++++++++++++
+ 1 file changed, 30 insertions(+)
+
+diff --git a/plat/nxp/common/plat_make_helper/plat_common_def.mk b/plat/nxp/common/plat_make_helper/plat_common_def.mk
+index ed6e0bdac..50cb071b4 100644
+--- a/plat/nxp/common/plat_make_helper/plat_common_def.mk
++++ b/plat/nxp/common/plat_make_helper/plat_common_def.mk
+@@ -107,3 +107,33 @@ ifneq (,$(findstring $(BOOT_MODE),$(SUPPORTED_BOOT_MODE)))
+ else
+     $(error $(PLAT) Un-supported Boot Mode = $(BOOT_MODE))
+ endif
++
++# FIP Storage Offset
++ifdef FIP_OFFSET
++$(eval $(call add_define_val,PLAT_FIP_OFFSET,$(FIP_OFFSET)))
++endif
++
++# FIP Storage Size
++ifdef FIP_MAX_SIZE
++$(eval $(call add_define_val,PLAT_FIP_MAX_SIZE,$(FIP_MAX_SIZE)))
++endif
++
++# DDR FIP Storage Offset
++ifdef DDR_FIP_OFFSET
++$(eval $(call add_define_val,PLAT_DDR_FIP_OFFSET,$(DDR_FIP_OFFSET)))
++endif
++
++# DDR FIP Storage Size
++ifdef DDR_FIP_MAX_SIZE
++$(eval $(call add_define_val,PLAT_DDR_FIP_MAX_SIZE,$(DDR_FIP_MAX_SIZE)))
++endif
++
++# FUSE FIP Storage Offset
++ifdef FUSE_FIP_OFFSET
++$(eval $(call add_define_val,PLAT_FUSE_FIP_OFFSET,$(FUSE_FIP_OFFSET)))
++endif
++
++# FUSE FIP Storage Size
++ifdef FUSE_FIP_MAX_SIZE
++$(eval $(call add_define_val,PLAT_FUSE_FIP_MAX_SIZE,$(FUSE_FIP_MAX_SIZE)))
++endif
+-- 
+2.51.0
+

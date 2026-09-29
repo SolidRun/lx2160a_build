@@ -1,0 +1,48 @@
+From 887b60e842a75dddffc9b9e2795f825cb77875a5 Mon Sep 17 00:00:00 2001
+From: Seung-Woo Kim <sw0312.kim@samsung.com>
+Date: Thu, 1 Aug 2024 10:01:00 +0900
+Subject: [PATCH 39/39] tools: imagetool: Remove unnecessary check from
+ toc0_verify_cert_item()
+
+C99 introduced the possibility to mark function parameters declared as
+arrays with an extra keyword "static":
+	void foo(uint8_t digest[static SHA256_DIGEST_LENGTH]);
+This requires the respective function argument to be at least as large
+as specified. Passing in random pointers (like NULL) then becomes
+undefined behaviour, and compilers warn about this.
+Newer GCC compilers (starting with GCC 14) will also automatically mark
+those parameters as "nonnull", and thus warn if a (redundant) NULL check
+is done inside the function:
+tools/sunxi_toc0.o tools/sunxi_toc0.c
+tools/sunxi_toc0.c: In function 'toc0_verify_cert_item':
+tools/sunxi_toc0.c:447:12: warning: 'nonnull' argument 'digest' compared to NULL [-Wnonnull-compare]
+  447 |         if (digest && memcmp(&extension->digest, digest, SHA256_DIGEST_LENGTH)) {
+      |            ^
+
+Remove the unnecessary NULL check from toc0_verify_cert_item(), to avoid
+the warning.
+
+Signed-off-by: Seung-Woo Kim <sw0312.kim@samsung.com>
+Reviewed-by: Andre Przywara <andre.przywara@arm.com>
+[Andre: extend commit message]
+Signed-off-by: Andre Przywara <andre.przywara@arm.com>
+---
+ tools/sunxi_toc0.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/sunxi_toc0.c b/tools/sunxi_toc0.c
+index 292649fe90f..76693647a09 100644
+--- a/tools/sunxi_toc0.c
++++ b/tools/sunxi_toc0.c
+@@ -444,7 +444,7 @@ static int toc0_verify_cert_item(const uint8_t *buf, uint32_t len, RSA *fw_key,
+ 
+ 	/* If a digest was provided, compare it to the embedded digest. */
+ 	extension = &totalSequence->mainSequence.explicit3.extension;
+-	if (digest && memcmp(&extension->digest, digest, SHA256_DIGEST_LENGTH)) {
++	if (memcmp(&extension->digest, digest, SHA256_DIGEST_LENGTH)) {
+ 		pr_err("Wrong firmware digest in certificate\n");
+ 		goto err;
+ 	}
+-- 
+2.51.0
+

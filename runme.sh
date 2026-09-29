@@ -28,6 +28,10 @@ set -e
 # - sdhc2 (eMMC)
 # - xspi (SPI NOR Flash)
 : ${BOOTSOURCE:=auto}
+# Boot Flash
+# - primary (default)
+# - secondary (Clearfog-CX / Honeycomb Backup Flash)
+: ${BOOTFLASH:=primary}
 : ${SHALLOW:=false}
 : ${SECURE:=false}
 : ${ATF_DEBUG:=false}
@@ -131,12 +135,36 @@ case "${TARGET}" in
 	LX2160A_CEX7_HALF-TWINS_8S_9_2)
 		ATF_PLATFORM=lx2160acex7
 		ATF_DISABLE_S5=1
-		DPC=twins-s1_8-s2_9-dpc.dtb
-		DPL=twins-s1_8-s2_9-dpl.dtb
+		DPC=half-twins-s1_8-s2_9-dpc.dtb
+		DPL=half-twins-s1_8-s2_9-dpl.dtb
 		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-half-twins.dtb"
 		OPTEE_PLATFORM=ls-lx2160ardb
 		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
 		UBOOT_FDT=fsl-lx2160a-half-twins
+		UBOOT_ETHPRIME="DPMAC13@sgmii" # right-most bottom sfp port
+		RCW_BOARD=HALF-TWINS
+	;;
+	LX2160A_CEX7_TWINS-RIGHT_8S_9_2)
+		ATF_PLATFORM=lx2160acex7
+		ATF_DISABLE_S5=1
+		DPC=twins-s1_8-s2_9-dpc.dtb
+		DPL=twins-s1_8-s2_9-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-twins-right.dtb"
+		OPTEE_PLATFORM=ls-lx2160ardb
+		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+		UBOOT_FDT=fsl-lx2160a-twins-right
+		UBOOT_ETHPRIME="DPMAC13@sgmii" # right-most bottom sfp port
+		RCW_BOARD=TWINS
+	;;
+	LX2160A_CEX7_TWINS-LEFT_8S_9_2)
+		ATF_PLATFORM=lx2160acex7
+		ATF_DISABLE_S5=1
+		DPC=twins-s1_8-s2_9-dpc.dtb
+		DPL=twins-s1_8-s2_9-dpl.dtb
+		DEFAULT_FDT_FILE="freescale/fsl-lx2160a-twins-left.dtb"
+		OPTEE_PLATFORM=ls-lx2160ardb
+		UBOOT_DEFCONFIG=lx2160acex7_tfa_defconfig
+		UBOOT_FDT=fsl-lx2160a-twins-left
 		UBOOT_ETHPRIME="DPMAC13@sgmii" # right-most bottom sfp port
 		RCW_BOARD=TWINS
 	;;
@@ -175,6 +203,23 @@ case "${TARGET}" in
 	;;
 	*)
 		echo "Please specify a supported TARGET configuration"
+		exit -1
+	;;
+esac
+
+case "${TARGET}_${BOOTFLASH}" in
+	LX2160A_CEX7_HONEYCOMB_*_secondary|LX2160A_CEX7_CLEARFOG-CX_*_secondary)
+		FLASH_TYPE=W25Q32
+		FLASH_SIZE=4M
+		FLASH_SWAPPED=y
+	;;
+	*_primary)
+		FLASH_TYPE=MT35XU512A
+		FLASH_SIZE=64M
+		FLASH_SWAPPED=n
+	;;
+	*)
+		echo "Please specify a supported BOOTFLASH configuration"
 		exit -1
 	;;
 esac
@@ -292,6 +337,9 @@ do_build_uboot() {
 	test -n "${DEFAULT_FDT_FILE}" && printf "CONFIG_DEFAULT_FDT_FILE=\"%s\"\n" "${DEFAULT_FDT_FILE}" >> .config || true
 	test -n "${UBOOT_FDT}" && printf "CONFIG_DEFAULT_DEVICE_TREE=\"%s\"\n" "${UBOOT_FDT}" >> .config || true
 	test -n "${UBOOT_ETHPRIME}" && printf "CONFIG_ETHPRIME=\"%s\"\n" "${UBOOT_ETHPRIME}" >> .config || true
+	printf "CONFIG_LX2160ACEX7_BOOTMEDIA_%s=y\n" "${FLASH_SIZE}" >> .config
+	printf "CONFIG_LX2160ACEX7_XSPI_SWAPPED_CS=%s\n" "${FLASH_SWAPPED}" >> .config || true
+
 	make olddefconfig
 	make -j${PARALLEL}
 	make savedefconfig
@@ -347,6 +395,9 @@ do_build_atf() {
 	if [ -z "${RCW_BOARD}" ]; then
 		RCW_BOARD=${BOARD}
 	fi
+	if [ -z "${FLASH_TYPE}" ]; then
+		FLASH_TYPE=MT35XU512A
+	fi
 	local BOOT_MODE=
 	# atf create_pbl appends 24 bytes of additional instructions - max size is 4072
 	local rcwsize_max=4072
@@ -385,6 +436,31 @@ do_build_atf() {
 		return 1
 	fi
 
+	local DDR_FIP_OFFSET DDR_FIP_MAX_SIZE
+	local FIP_OFFSET FIP_MAX_SIZE
+	local FUSE_FIP_OFFSET FUSE_FIP_MAX_SIZE
+	case ${FLASH_SIZE} in
+	4M)
+		DDR_FIP_OFFSET=0x020000
+		DDR_FIP_MAX_SIZE=0x020000
+		FIP_OFFSET=0x040000
+		FIP_MAX_SIZE=0x1b0000
+		FUSE_FIP_OFFSET=0x200000
+		FUSE_FIP_MAX_SIZE=0x020000
+		;;
+	64M)
+		DDR_FIP_OFFSET=0x800000
+		DDR_FIP_MAX_SIZE=0x032000
+		FIP_OFFSET=0x100000
+		FIP_MAX_SIZE=0x400000
+		FUSE_FIP_OFFSET=0x880000
+		FUSE_FIP_MAX_SIZE=0x080000
+		;;
+	*)
+		echo "\"${FLASH_SIZE}\" is not a supported boot image size!"
+		exit 1
+	esac
+
 	rm -rf $ROOTDIR/images/tmp/atf
 	mkdir -p $ROOTDIR/images/tmp/atf
 	cd $ROOTDIR/build/atf/
@@ -404,6 +480,10 @@ do_build_atf() {
 		BL32=$ROOTDIR/images/tmp/optee/tee-pager_v2.bin SPD=opteed \
 		BL33=${UBOOT_BINARY} \
 		DDR_PHY_BIN_PATH=$DDR_PHY_BIN_PATH \
+		FLASH_TYPE=${FLASH_TYPE} \
+		DDR_FIP_OFFSET=${DDR_FIP_OFFSET} DDR_FIP_MAX_SIZE=${DDR_FIP_MAX_SIZE} \
+		FIP_OFFSET=${FIP_OFFSET} FIP_MAX_SIZE=${FIP_MAX_SIZE} \
+		FUSE_FIP_OFFSET=${FUSE_FIP_OFFSET} FUSE_FIP_MAX_SIZE=${FUSE_FIP_MAX_SIZE} \
 		${DEBUG_FLAGS} \
 		all fip pbl fip_ddr
 
@@ -966,7 +1046,7 @@ MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/ | grep -v sha256sum | cut -f1`
 MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/${MC}`
 
 # shared function for placing artifacts in boot image
-do_populate_bootimg() {
+do_populate_bootimg_64M() {
 	local IMG="$1"
 	local BOOTSOURCE="$2"
 
@@ -999,9 +1079,105 @@ do_populate_bootimg() {
 	dd if=$ROOTDIR/build/mc-utils/config/${DPC} of=images/${IMG} bs=512 seek=28672 conv=notrunc
 
 	# DTB at 0x0f00000 (block 0x7800)
+	dd if=$ROOTDIR/images/tmp/linux/boot/${DEFAULT_FDT_FILE} of=images/${IMG} bs=512 seek=30720 conv=notrunc
 
 	# Kernel at 0x1000000 (block 0x8000)
 	dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=32768 conv=notrunc
+}
+
+# shared function for placing artifacts in dense boot image 4mb size
+do_populate_bootimg_4M() {
+	local IMG="$1"
+	local BOOTSOURCE="$2"
+
+	local PBL_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/atf/bl2.pbl)
+	if [[ ${BOOTSOURCE} == sdhc* ]]; then
+		# RCW+PBI+BL2 at 0x1000 (block 0x8)
+		if [ $PBL_SIZE -gt $((128*1024 - 8*512)) ]; then
+			echo "ERROR: PBL too large"
+			return 1
+		fi
+		dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
+	elif [ "${BOOTSOURCE}" = "xspi" ]; then
+		# RCW+PBI+BL2 at 0x0000000 (block 0x0000)
+		if [ $PBL_SIZE -gt $((128*1024)) ]; then
+			echo "ERROR: PBL too large"
+			return 1
+		fi
+		dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=images/${IMG} bs=512 seek=0 conv=notrunc
+	fi
+
+	# DDR PHY FIP at 0x0020000 (block 0x100)
+	local DDR_FIP_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/atf/ddr_fip.bin)
+	if [ $DDR_FIP_SIZE -gt $((128*1024)) ]; then
+		echo "ERROR: DDR FIP too large"
+		return 1
+	fi
+	dd if=$ROOTDIR/images/tmp/atf/ddr_fip.bin of=images/${IMG} bs=512 seek=256 conv=notrunc
+
+	# FIP (BL31+BL32+BL33) at 0x0040000 (block 0x200)
+	local FIP_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/atf/fip.bin)
+	if [ $FIP_SIZE -gt $((1728*1024)) ]; then
+		echo "ERROR: FIP too large"
+		return 1
+	fi
+	dd if=$ROOTDIR/images/tmp/atf/fip.bin of=images/${IMG} bs=512 seek=512 conv=notrunc
+
+	# U-Boot environment at 0x01F0000 (block 0xf80)
+	dd if=/dev/zero of=images/${IMG} bs=512 seek=3968 conv=notrunc count=128
+
+	# Fuse header FIP at 0x0200000 (block 0x1000)
+	if [ "x$SECURE" == "xtrue" ]; then
+		local FUSE_FIP_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/atf/fuse_fip.bin)
+		if [ $FUSE_FIP_SIZE -gt $((128*1024)) ]; then
+			echo "ERROR: FUSE FIP too large"
+			return 1
+		fi
+		dd if=$ROOTDIR/images/tmp/atf/fuse_fip.bin of=images/${IMG} bs=512 seek=4096 conv=notrunc
+	fi
+
+	# DPAA2-MC at 0x0220000 (block 0x1100)
+	local MC_SIZE=$(stat -c "%s" ${MC})
+	if [ $MC_SIZE -gt $((1792*1024)) ]; then
+		echo "ERROR: MC FW too large"
+		return 1
+	fi
+	dd if=${MC} of=images/${IMG} bs=512 seek=4352 conv=notrunc
+
+	# DTB at 0x03e0000 (block 0x1f00)
+	local DTB_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/linux/boot/${DEFAULT_FDT_FILE})
+	if [ $DTB_SIZE -gt $((100*1024)) ]; then
+		echo "ERROR: DTB too large"
+		return 1
+	fi
+	dd if=$ROOTDIR/images/tmp/linux/boot/${DEFAULT_FDT_FILE} of=images/${IMG} bs=512 seek=7936 conv=notrunc
+
+	# DPAA2-MC Signature at 0x03f9000 (block 0x1fc8)
+	dd if=/dev/zero of=images/${IMG} bs=512 seek=8136 conv=notrunc count=8
+
+	# DPAA2 DPC Signature at 0x03fa000 (block 0x1fd0)
+	dd if=/dev/zero of=images/${IMG} bs=512 seek=8144 conv=notrunc count=8
+
+	# DPAA2 DPL Signature at 0x03fb000 (block 0x1fd8)
+	dd if=/dev/zero of=images/${IMG} bs=512 seek=8152 conv=notrunc count=8
+
+	# DPAA2 DPC at 0x03fc000 (block 0x1fe0)
+	local DPC_SIZE=$(stat -c "%s" $ROOTDIR/build/mc-utils/config/${DPC})
+	if [ $DPC_SIZE -gt $((4*1024)) ]; then
+		echo "ERROR: DPC too large"
+		return 1
+	fi
+	dd if=$ROOTDIR/build/mc-utils/config/${DPC} of=images/${IMG} bs=512 seek=8160 conv=notrunc
+
+	# DPAA2 DPL at 0x03fd000 (block 0x1fe8)
+	local DPL_SIZE=$(stat -c "%s" $ROOTDIR/build/mc-utils/config/${DPL})
+	if [ $DPL_SIZE -gt $((12*1024)) ]; then
+		echo "ERROR: DPL too large"
+		return 1
+	fi
+	dd if=$ROOTDIR/build/mc-utils/config/${DPL} of=images/${IMG} bs=512 seek=8168 conv=notrunc
+
+	# no Kernel
 }
 
 # generate SD boot image
@@ -1011,7 +1187,7 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc1 ]]); then
 
 	IMG=${SOC,,}_rev${CPU_REVISION}_${MODULE,,}_${BOARD,,}_sd_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
 	cp --sparse=always $ROOTDIR/images/tmp/$ROOTFS.img images/${IMG}
-	do_populate_bootimg "${IMG}" sdhc
+	do_populate_bootimg_${FLASH_SIZE} "${IMG}" sdhc
 
 	IMAGES+=("images/${IMG}")
 fi
@@ -1023,7 +1199,7 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc2 ]]); then
 
 	IMG=${SOC,,}_rev${CPU_REVISION}_${MODULE,,}_${BOARD,,}_emmc_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
 	cp --sparse=always $ROOTDIR/images/tmp/$ROOTFS.img images/${IMG}
-	do_populate_bootimg "${IMG}" sdhc
+	do_populate_bootimg_${FLASH_SIZE} "${IMG}" sdhc
 
 	IMAGES+=("images/${IMG}")
 fi
@@ -1034,10 +1210,13 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [ "${BOOTSOURCE}" = "xspi" ]); then
 	cd $ROOTDIR/
 
 	XSPI_IMG=${SOC,,}_rev${CPU_REVISION}_${MODULE,,}_${BOARD,,}_xspi_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
+	if [ "${BOOTFLASH}" = "secondary" ]; then
+		XSPI_IMG=${SOC,,}_rev${CPU_REVISION}_${MODULE,,}_${BOARD,,}_xspi_backup_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
+	fi
 	rm -rf $ROOTDIR/images/${XSPI_IMG}
-	truncate -s 64M $ROOTDIR/images/${XSPI_IMG}
+	truncate -s ${FLASH_SIZE} $ROOTDIR/images/${XSPI_IMG}
 
-	do_populate_bootimg "${XSPI_IMG}" xspi
+	do_populate_bootimg_${FLASH_SIZE} "${XSPI_IMG}" xspi
 
 	IMAGES+=("images/${XSPI_IMG}")
 fi
@@ -1059,9 +1238,13 @@ if [ "${BOOTSOURCE}" = "auto" ]; then
 	rm -rf $ROOTDIR/images/${IMG}
 	do_allocate_disk_image $ROOTDIR/images/${IMG} $BOOTPART_SIZE
 
-	e2cp -G 0 -O 0 $ROOTDIR/images/${XSPI_IMG} $ROOTDIR/images/tmp/boot.part:/xspi.img
+	if [ "${BOOTFLASH}" = "secondary" ]; then
+		e2cp -G 0 -O 0 $ROOTDIR/images/${XSPI_IMG} $ROOTDIR/images/tmp/boot.part:/xspi_backup.img
+	else
+		e2cp -G 0 -O 0 $ROOTDIR/images/${XSPI_IMG} $ROOTDIR/images/tmp/boot.part:/xspi.img
+	fi
 
-	do_populate_bootimg "${IMG}" sdhc
+	do_populate_bootimg_${FLASH_SIZE} "${IMG}" sdhc
 
 	# Copy first 64MByte from image excluding MBR to rootfs image, making it bootable
 	dd if=images/${IMG} of=$ROOTDIR/images/tmp/$ROOTFS.img bs=512 seek=1 skip=1 count=131071 conv=notrunc

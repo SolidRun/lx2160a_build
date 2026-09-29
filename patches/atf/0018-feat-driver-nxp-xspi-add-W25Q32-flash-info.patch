@@ -1,0 +1,41 @@
+From 184d90e475693eaca2d4a39ed5b6ae5d945a49d9 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 20 May 2026 14:42:06 +0200
+Subject: [PATCH 18/19] feat(driver/nxp/xspi): add W25Q32 flash info
+
+Add flash information for W25Q32 16Mbit SPI flash memory.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ include/drivers/nxp/flexspi/flash_info.h | 16 +++++++++++++++-
+ 1 file changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/include/drivers/nxp/flexspi/flash_info.h b/include/drivers/nxp/flexspi/flash_info.h
+index d0ffc86b4..7b64162b6 100644
+--- a/include/drivers/nxp/flexspi/flash_info.h
++++ b/include/drivers/nxp/flexspi/flash_info.h
+@@ -84,6 +84,20 @@
+ #define F_SECTOR_ERASE_SZ		F_SECTOR_4K
+ #endif
+ 
+-#endif /* End of #elif defined(CONFIG_MT35XU02G) */
++/* End of #elif defined(CONFIG_MT35XU02G) */
++
++/* Start of "if defined(CONFIG_W25Q32)" */
++#elif defined(CONFIG_W25Q32)
++#define F_SECTOR_64K			0x10000U
++#define F_PAGE_256			0x100U
++#define F_SECTOR_4K			0x1000U
++#define F_FLASH_SIZE_BYTES		0x400000U
++#define F_SECTOR_ERASE_SZ		F_SECTOR_64K
++#ifdef CONFIG_FSPI_4K_ERASE
++#define F_SECTOR_ERASE_SZ		F_SECTOR_4K
++#endif
++/* End of #elif defined(CONFIG_W25Q32) */
++
++#endif
+ 
+ #endif /* FLASH_INFO_H */
+-- 
+2.51.0
+

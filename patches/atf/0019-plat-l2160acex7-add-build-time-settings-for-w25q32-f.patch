@@ -1,0 +1,48 @@
+From 085737aeca0d20b88825ca3bd925fcd7451fbd27 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 20 May 2026 14:57:57 +0200
+Subject: [PATCH 19/19] plat: l2160acex7: add build-time settings for w25q32
+ flash
+
+Depending on FLASH_TYPE build-time argument, define the correct flash
+details for W25Q32 vs. default MT35XU512A.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/soc-lx2160a/lx2160acex7/platform.mk | 20 +++++++++++++++-----
+ 1 file changed, 15 insertions(+), 5 deletions(-)
+
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk b/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
+index 0b064bbbf..998b62596 100644
+--- a/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
++++ b/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
+@@ -33,11 +33,21 @@ LX2160_FLUSH_IIC_MUX := { 1, 0x77, 0x01 },
+ ERRATA_DDR_A011396	:= 1
+ ERRATA_DDR_A050450	:= 1
+ 
+- # On-Board Flash Details
+-FLASH_TYPE	:=	MT35XU512A
+-XSPI_FLASH_SZ	:=	0x10000000
+-NXP_XSPI_NOR_UNIT_SIZE		:=	0x20000
+-BL2_BIN_XSPI_NOR_END_ADDRESS	:=	0x100000
++# On-Board Flash
++FLASH_TYPE			?= MT35XU512A
++
++# W25Q32 Flash Details
++ifeq (${FLASH_TYPE}, W25Q32)
++XSPI_FLASH_SZ			:= 0x400000
++NXP_XSPI_NOR_UNIT_SIZE		:= 0x10000
++BL2_BIN_XSPI_NOR_END_ADDRESS	:= 0x20000
++endif
++
++# MT35XU512A Flash Details
++XSPI_FLASH_SZ			?= 0x10000000
++NXP_XSPI_NOR_UNIT_SIZE		?= 0x20000
++BL2_BIN_XSPI_NOR_END_ADDRESS	?= 0x100000
++
+ # CONFIG_FSPI_ERASE_4K is required to erase 4K sector sizes. This
+ # config is enabled for future use cases.
+ FSPI_ERASE_4K	:= 0
+-- 
+2.51.0
+

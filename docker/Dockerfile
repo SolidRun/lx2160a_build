@@ -1,7 +1,7 @@
-FROM python:slim-bookworm
+FROM python:slim-trixie
 
 # enable backports
-RUN printf "deb http://deb.debian.org/debian bookworm-backports main\n" >> /etc/apt/sources.list
+RUN printf "deb http://deb.debian.org/debian trixie-backports main\n" >> /etc/apt/sources.list
 
 # retry at least 3 times to succeed on sketchy connections
 RUN printf 'Acquire::http { Proxy "%s"; };\n' $APTPROXY | tee -a /etc/apt/apt.conf.d/proxy
@@ -23,12 +23,13 @@ RUN set -e; \
 RUN set -e; \
 	apt-get update; \
 	apt-get --no-install-recommends -y install \
-		acpica-tools bc bison build-essential ca-certificates cmake cpio debian-archive-keyring debootstrap device-tree-compiler dosfstools e2tools fakeroot fdisk file flex gdb-multiarch git kmod libncurses-dev libssl-dev libyaml-dev lzop make meson mtools ninja-build p7zip p7zip-full pandoc parted pkg-config qemu-system-arm rsync sudo tar u-boot-tools unzip wget xz-utils yamllint; \
+		acpica-tools bc bison build-essential ca-certificates cmake cpio debian-archive-keyring debootstrap device-tree-compiler dosfstools e2fsprogs e2tools fakeroot fdisk file flex gdb-multiarch git kmod libelf-dev libncurses-dev libssl-dev libyaml-dev lzop make meson mtools ninja-build p7zip p7zip-full pahole pandoc parted pkg-config qemu-system-arm rsync sudo tar u-boot-tools unzip wget xz-utils yamllint; \
 	dpkg-architecture --is arm64 || apt-get --no-install-recommends -y install crossbuild-essential-arm64; \
 	:
 
 RUN set -e; \
 	apt-get -y install --no-install-recommends libpython3-dev python3-pip python3-setuptools python3-wheel swig; \
+	export CFLAGS="-DPyInt_AsLong=PyLong_AsLong -DPyString_FromString=PyUnicode_FromString -DPyString_AsString=PyBytes_AsString -Wno-error=implicit-function-declaration -Wno-error=int-conversion"; \
 	pip3 install importlib-metadata; \
 	pip3 install dtschema; \
 	pip3 install cryptography; \
@@ -39,6 +40,7 @@ RUN apt-get install -y python3-pyelftools
 
 # build environment
 WORKDIR /work
+ENV KBUILD_BUILD_HOST=localhost
 COPY shflags /
 COPY entry.sh /
 ENTRYPOINT ["/bin/sh", "/entry.sh"]

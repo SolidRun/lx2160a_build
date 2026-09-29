@@ -1,0 +1,149 @@
+From 2e1ed6c7aaf4fb6d9bec709fbadf435d4c336382 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 2 Jul 2026 14:30:41 +0200
+Subject: [PATCH 14/15] lx2162asom: clearfog: switch serdes macs to backplane
+ mode
+
+Mac types for DPC are misleading, what it really tells is how much
+autonomous management is performed by the MC firmware.
+
+Change type for all serdes ports to backplane, to ensure Linux does all the
+management of serdes lanes and pcs.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ .../LX2162A-SOM/clearfog-s1_3-s2_7-dpc.dts    | 20 ++++++++--------
+ .../LX2162A-SOM/clearfog-s1_3-s2_9-dpc.dts    | 24 +++++++++----------
+ 2 files changed, 22 insertions(+), 22 deletions(-)
+
+diff --git a/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_7-dpc.dts b/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_7-dpc.dts
+index 0f0ec4b..6176e88 100644
+--- a/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_7-dpc.dts
++++ b/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_7-dpc.dts
+@@ -75,44 +75,44 @@
+ 		ports {
+ 			/* Serdes 1 */
+ 			mac@3 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@4 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@5 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@6 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			/* Serdes 2 */
+ 			mac@12 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@13 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@14 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@16 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@17 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@18 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 		};
+ 	};
+diff --git a/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_9-dpc.dts b/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_9-dpc.dts
+index 5aa4640..3d25ae5 100644
+--- a/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_9-dpc.dts
++++ b/config/lx2162a/LX2162A-SOM/clearfog-s1_3-s2_9-dpc.dts
+@@ -75,52 +75,52 @@
+ 		ports {
+ 			/* Serdes 1 */
+ 			mac@3 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@4 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@5 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@6 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			/* Serdes 2 */
+ 			mac@11 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@12 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@13 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@14 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@15 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@16 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@17 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 
+ 			mac@18 {
+-				link_type = "MAC_LINK_TYPE_PHY";
++				link_type = "MAC_LINK_TYPE_BACKPLANE";
+ 			};
+ 		};
+ 	};
+-- 
+2.51.0
+

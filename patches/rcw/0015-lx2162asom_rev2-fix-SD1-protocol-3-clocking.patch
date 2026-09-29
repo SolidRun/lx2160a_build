@@ -1,0 +1,33 @@
+From e94cbb3c48623f9f960a09c58e92ae4390c1cb84 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 7 May 2026 16:38:32 +0200
+Subject: [PATCH] lx2162asom_rev2: fix SD1 protocol 3 clocking
+
+SD1 Protocol 3 must configure PLLS for 161MHz on LX2162 SoM,
+using the reference clock input from PLLS.
+
+The comment was correct, fix the actual setting of bits
+SRDS_PLL_REF_CLK_SEL_S1 from 0 to 2 (i.e. set second bit).
+
+Unfortunately the clock rates 156 and 161 are close enough that the PLL
+locks on the wrong frequency well enough to boot, but not good enough
+for a network link at 10Gbps.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lx2162asom_rev2/include/SD1_3.rcwi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lx2162asom_rev2/include/SD1_3.rcwi b/lx2162asom_rev2/include/SD1_3.rcwi
+index 82709ef..729b6ac 100644
+--- a/lx2162asom_rev2/include/SD1_3.rcwi
++++ b/lx2162asom_rev2/include/SD1_3.rcwi
+@@ -15,4 +15,4 @@ SRDS_INTRA_REF_CLK_S1=1
+  * Select Serdes 1 PLLS frequency 161.1328125MHz for 10GE mode: Bit 1 = 1
+  * (See QorIQ LX2162A Reference Manual, Rev. 1, 12/2021, 4.9.8.9 Reset Control Word (RCW) Register Descriptions, Bits 932)
+  */
+-SRDS_PLL_REF_CLK_SEL_S1=0
++SRDS_PLL_REF_CLK_SEL_S1=2
+-- 
+2.51.0
+

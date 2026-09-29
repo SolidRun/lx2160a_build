@@ -1,0 +1,27 @@
+From 18b9e8fcdfada023fe07bbe66ac9bf52584094dc Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 25 Mar 2026 19:06:08 +0100
+Subject: [PATCH 38/39] cmd: tlv_eeprom: fix compiler warning for undefined
+ variable i
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ cmd/tlv_eeprom.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/cmd/tlv_eeprom.c b/cmd/tlv_eeprom.c
+index 27eb4e3488a..03b50e84d6a 100644
+--- a/cmd/tlv_eeprom.c
++++ b/cmd/tlv_eeprom.c
+@@ -919,7 +919,7 @@ static int find_tlv_devices(struct udevice **tlv_devices_p)
+ 	struct udevice *dev;
+ 
+ 	/* find by alias */
+-	for (int i = 0; i < MAX_TLV_DEVICES; i++) {
++	for (i = 0; i < MAX_TLV_DEVICES; i++) {
+ 		snprintf(alias_name, sizeof(alias_name), "tlv%d", i);
+ 		node = ofnode_get_aliases_node(alias_name);
+ 		if (!ofnode_valid(node))
+-- 
+2.51.0
+

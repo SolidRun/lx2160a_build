@@ -1,0 +1,51 @@
+From 20df0a3502fdfb965d361fd1fb9c8123631f2008 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 20 May 2026 14:16:45 +0200
+Subject: [PATCH 42/44] board: solidrun: lx2160acex7: enable
+ clearfog-cx/honeycomb board flash
+
+Enable support for the secondary SPI flash on Honeycomb / Clearfog-CX
+boards.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm/dts/fsl-lx2160a-clearfog-itx.dtsi | 10 ++++++++++
+ configs/lx2160acex7_tfa_defconfig          |  1 +
+ 2 files changed, 11 insertions(+)
+
+diff --git a/arch/arm/dts/fsl-lx2160a-clearfog-itx.dtsi b/arch/arm/dts/fsl-lx2160a-clearfog-itx.dtsi
+index 91a2fd0c260..1e5c3d4325d 100644
+--- a/arch/arm/dts/fsl-lx2160a-clearfog-itx.dtsi
++++ b/arch/arm/dts/fsl-lx2160a-clearfog-itx.dtsi
+@@ -94,6 +94,16 @@
+ 	status = "okay";
+ };
+ 
++&fspi {
++	flash@1 {
++		compatible = "winbond,w25q32", "jedec,spi-nor";
++		reg = <1>;
++		spi-max-frequency = <50000000>;
++		spi-rx-bus-width = <1>;
++		spi-tx-bus-width = <1>;
++	};
++};
++
+ &pcs_mdio7 {
+ 	status = "okay";
+ };
+diff --git a/configs/lx2160acex7_tfa_defconfig b/configs/lx2160acex7_tfa_defconfig
+index 72072756f26..59aa5ab7978 100644
+--- a/configs/lx2160acex7_tfa_defconfig
++++ b/configs/lx2160acex7_tfa_defconfig
+@@ -73,6 +73,7 @@ CONFIG_MTD=y
+ CONFIG_DM_SPI_FLASH=y
+ CONFIG_SPI_FLASH_STMICRO=y
+ CONFIG_SPI_FLASH_MT35XU=y
++CONFIG_SPI_FLASH_WINBOND=y
+ # CONFIG_SPI_FLASH_USE_4K_SECTORS is not set
+ CONFIG_PHYLIB=y
+ CONFIG_PHY_AQUANTIA=y
+-- 
+2.51.0
+

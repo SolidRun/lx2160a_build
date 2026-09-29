@@ -1,0 +1,648 @@
+From bcd00b04e3b98dd18f85fb3904a7da77bdccfac2 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 14 Apr 2026 17:26:48 +0200
+Subject: [PATCH] cmd: ds250dfx10: support manual link adaptation control
+
+Add new sub-commands:
+
+- get/set adaptation mode
+- reset cdr
+- get/set dfe weights
+- get/set eq boost
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ cmd/ds250dfx10.c | 557 +++++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 543 insertions(+), 14 deletions(-)
+
+diff --git a/cmd/ds250dfx10.c b/cmd/ds250dfx10.c
+index ded3681bfbb..e0538b8a2cf 100644
+--- a/cmd/ds250dfx10.c
++++ b/cmd/ds250dfx10.c
+@@ -10,6 +10,7 @@
+ #include <i2c.h>
+ #include <linux/delay.h>
+ #include <time.h>
++#include <stdint.h>
+ 
+ enum ds250dfx10_reg_type {
+ 	DS250DFX10_REG_GLOBAL,
+@@ -24,26 +25,54 @@ enum ds250dfx10_reg_type {
+ #define DS250DFX10_CDR_LOCK_LOSS_INT		DS250DFX10_REG_CHANNEL,	0x01,	5,	1
+ #define DS250DFX10_POL_INV_DET			DS250DFX10_REG_CHANNEL,	0x01,	6,	1
+ #define DS250DFX10_PRBS_SEQ_DET			DS250DFX10_REG_CHANNEL,	0x01,	1,	4
++#define DS250DFX10_EQ_BST			DS250DFX10_REG_CHANNEL,	0x03,	0,	8
++#define DS250DFX10_CDR_RESET_SM			DS250DFX10_REG_CHANNEL,	0x0A,	2,	1
++#define DS250DFX10_CDR_RESET_OV			DS250DFX10_REG_CHANNEL,	0x0A,	3,	1
+ #define DS250DFX10_BYPASS_PFD_OV		DS250DFX10_REG_CHANNEL,	0x09,	5,	1
+ #define DS250DFX10_DES_PD			DS250DFX10_REG_CHANNEL,	0x0D,	7,	1
++#define DS250DFX10_DFE_TAP5_POL			DS250DFX10_REG_CHANNEL,	0x11,	0,	1
++#define DS250DFX10_DFE_TAP4_POL			DS250DFX10_REG_CHANNEL,	0x11,	1,	1
++#define DS250DFX10_DFE_TAP3_POL			DS250DFX10_REG_CHANNEL,	0x11,	2,	1
++#define DS250DFX10_DFE_TAP2_POL			DS250DFX10_REG_CHANNEL,	0x11,	3,	1
+ #define DS250DFX10_EOM_PD			DS250DFX10_REG_CHANNEL,	0x11,	5,	1
+ #define DS250DFX10_EOM_SEL_VRANGE		DS250DFX10_REG_CHANNEL,	0x11,	6,	2
++#define DS250DFX10_DFE_WT1			DS250DFX10_REG_CHANNEL,	0x12,	0,	5
++#define DS250DFX10_DFE_TAP1_POL			DS250DFX10_REG_CHANNEL,	0x12,	7,	1
++#define DS250DFX10_DFE_FORCE_EN			DS250DFX10_REG_CHANNEL,	0x15,	7,	1
++#define DS250DFX10_EN_PARTIAL_DFE		DS250DFX10_REG_CHANNEL,	0x1E,	1,	1
++#define DS250DFX10_DFE_PD			DS250DFX10_REG_CHANNEL,	0x1E,	3,	1
+ #define DS250DFX10_SER_EN			DS250DFX10_REG_CHANNEL,	0x1E,	4,	1
+ #define DS250DFX10_PFD_SEL_DATA_PRELCK		DS250DFX10_REG_CHANNEL,	0x1E,	5,	3
++#define DS250DFX10_DFE_WT4			DS250DFX10_REG_CHANNEL,	0x20,	0,	4
++#define DS250DFX10_DFE_WT5			DS250DFX10_REG_CHANNEL,	0x20,	4,	4
++#define DS250DFX10_DFE_WT2			DS250DFX10_REG_CHANNEL,	0x21,	0,	4
++#define DS250DFX10_DFE_WT3			DS250DFX10_REG_CHANNEL,	0x21,	4,	4
+ #define DS250DFX10_EOM_START			DS250DFX10_REG_CHANNEL,	0x24,	0,	1
+ #define DS250DFX10_DFE_EQ_ERROR_NO_LOCK		DS250DFX10_REG_CHANNEL,	0x24,	6,	1
+ #define DS250DFX10_FAST_EOM			DS250DFX10_REG_CHANNEL,	0x24,	7,	1
+ #define DS250DFX10_EOM_DATA_HI			DS250DFX10_REG_CHANNEL,	0x25,	0,	8
+ #define DS250DFX10_EOM_DATA_LO			DS250DFX10_REG_CHANNEL,	0x26,	0,	8
+ #define DS250DFX10_VEO_SCALE			DS250DFX10_REG_CHANNEL,	0x2C,	6,	1
++#define DS250DFX10_EQ_BST_OV			DS250DFX10_REG_CHANNEL,	0x2D,	3,	1
+ #define DS250DFX10_PRBS_PATTERN_SEL_HI		DS250DFX10_REG_CHANNEL,	0x2E,	2,	1
+ #define DS250DFX10_PRBS_PATTERN_SEL_LO		DS250DFX10_REG_CHANNEL,	0x30,	0,	2
+ #define DS250DFX10_PRBS_EN_DIG_CLK		DS250DFX10_REG_CHANNEL,	0x30,	3,	1
+ #define DS250DFX10_RELOAD_PRBS_CHKR		DS250DFX10_REG_CHANNEL,	0x30,	4,	1
+ #define DS250DFX10_SIGNAL_DET_LOSS_INT_EN	DS250DFX10_REG_CHANNEL,	0x31,	0,	1
+ #define DS250DFX10_CDR_LOCK_LOSS_INT_EN		DS250DFX10_REG_CHANNEL,	0x31,	1,	1
++#define DS250DFX10_ADAPT_MODE			DS250DFX10_REG_CHANNEL,	0x31,	5,	2
+ #define DS250DFX10_PRBS_INT_EN			DS250DFX10_REG_CHANNEL,	0x31,	7,	1
+ #define DS250DFX10_HV_LOCKMON_EN		DS250DFX10_REG_CHANNEL,	0x67,	5,	1
++#define DS250DFX10_DFE_WT1_OBS			DS250DFX10_REG_CHANNEL,	0x71,	0,	5
++#define DS250DFX10_DFE_POL_1_OBS		DS250DFX10_REG_CHANNEL,	0x71,	5,	1
++#define DS250DFX10_DFE_WT2_OBS			DS250DFX10_REG_CHANNEL,	0x72,	0,	4
++#define DS250DFX10_DFE_POL_2_OBS		DS250DFX10_REG_CHANNEL,	0x72,	4,	1
++#define DS250DFX10_DFE_WT3_OBS			DS250DFX10_REG_CHANNEL,	0x73,	0,	4
++#define DS250DFX10_DFE_POL_3_OBS		DS250DFX10_REG_CHANNEL,	0x73,	4,	1
++#define DS250DFX10_DFE_WT4_OBS			DS250DFX10_REG_CHANNEL,	0x74,	0,	4
++#define DS250DFX10_DFE_POL_4_OBS		DS250DFX10_REG_CHANNEL,	0x74,	4,	1
++#define DS250DFX10_DFE_WT5_OBS			DS250DFX10_REG_CHANNEL,	0x75,	0,	4
++#define DS250DFX10_DFE_POL_5_OBS		DS250DFX10_REG_CHANNEL,	0x75,	4,	1
+ #define DS250DFX10_CDR_LOCK_STATUS		DS250DFX10_REG_CHANNEL,	0x78,	4,	1
+ #define DS250DFX10_PRBS_GEN_EN			DS250DFX10_REG_CHANNEL,	0x79,	5,	1
+ #define DS250DFX10_PRBS_CHKR_EN			DS250DFX10_REG_CHANNEL,	0x79,	6,	1
+@@ -51,6 +80,7 @@ enum ds250dfx10_reg_type {
+ #define DS250DFX10_FREEZE_PRBS_CNTR		DS250DFX10_REG_CHANNEL,	0x82,	7,	1
+ #define DS250DFX10_PRBS_ERR_CNT_HI		DS250DFX10_REG_CHANNEL,	0x83,	0,	3
+ #define DS250DFX10_PRBS_ERR_CNT_LO		DS250DFX10_REG_CHANNEL,	0x84,	0,	8
++#define DS250DFX10_EQ_BST_TO_EQ			DS250DFX10_REG_CHANNEL,	0x8F,	0,	8
+ 
+ /* DS250DFx10 Global Registers			domain,			reg	offset	length */
+ #define DS250DFX10_CHAN_CONFIG_ID		DS250DFX10_REG_GLOBAL,	0xEF,	0,	4
+@@ -120,6 +150,31 @@ static enum ds250dfx10_prbs_pattern ds250dfx10_prbs_pattern_parse(const char *co
+ 	return DS250DFX10_PRBS_PATTERN_MAX;
+ }
+ 
++enum ds250dfx10_adapt_mode {
++	DS250DFX10_ADAPT_NONE = 0,
++	DS250DFX10_ADAPT_CTLE,
++	DS250DFX10_ADAPT_CTLE_DFE,
++	DS250DFX10_ADAPT_FULL,
++	DS250DFX10_ADAPT_MODE_MAX,
++};
++
++static const char *const ds250dfx10_adapt_mode_str[DS250DFX10_ADAPT_MODE_MAX] = {
++	"NONE",
++	"CTLE",
++	"CTLE_DFE",
++	"FULL",
++};
++
++static enum ds250dfx10_adapt_mode ds250dfx10_adapt_mode_parse(const char *const str)
++{
++	for (int i = 0; i < DS250DFX10_ADAPT_MODE_MAX; i++) {
++		if (!strcmp(str, ds250dfx10_adapt_mode_str[i]))
++			return i;
++	}
++
++	return DS250DFX10_ADAPT_MODE_MAX;
++}
++
+ static uint8_t ds250dfx10_channel_count[DS250DFX10_TYPE_MAX] = {
+ 	4,
+ 	8,
+@@ -1195,6 +1250,468 @@ static int do_ds250dfx10_eom(struct cmd_tbl *cmdtp, int flag, int argc, char *co
+ 	return ret ? CMD_RET_FAILURE : CMD_RET_SUCCESS;
+ }
+ 
++static int ds250dfx10_adapt_get(enum ds250dfx10_adapt_mode *mode)
++{
++	int ret;
++	uint8_t value;
++
++	ret = ds250dfx10_get(DS250DFX10_ADAPT_MODE, &value);
++	if (ret)
++		return ret;
++
++	*mode = value;
++	return ret;
++}
++
++static int ds250dfx10_adapt_set(enum ds250dfx10_adapt_mode mode)
++{
++	int ret = 0;
++
++	switch (mode) {
++	case DS250DFX10_ADAPT_NONE:
++	case DS250DFX10_ADAPT_CTLE:
++	case DS250DFX10_ADAPT_CTLE_DFE:
++	case DS250DFX10_ADAPT_FULL:
++		/* enable DFE */
++		ret = ds250dfx10_set(DS250DFX10_DFE_PD, 0);
++		if (ret)
++			return ret;
++
++		ret = ds250dfx10_set(DS250DFX10_EN_PARTIAL_DFE, 1);
++		if (ret)
++			return ret;
++
++		break;
++	default:
++		return -EINVAL;
++	}
++
++	ret = ds250dfx10_set(DS250DFX10_ADAPT_MODE, mode);
++	if (ret)
++		return ret;
++
++	switch (mode) {
++	case DS250DFX10_ADAPT_NONE:
++	case DS250DFX10_ADAPT_CTLE:
++		/* disable DFE */
++		ret = ds250dfx10_set(DS250DFX10_DFE_PD, 1);
++		if (ret)
++			return ret;
++
++		ret = ds250dfx10_set(DS250DFX10_EN_PARTIAL_DFE, 0);
++		if (ret)
++			return ret;
++
++		break;
++	case DS250DFX10_ADAPT_CTLE_DFE:
++	case DS250DFX10_ADAPT_FULL:
++		break;
++	default:
++		return -EINVAL;
++	}
++
++	return ret;
++}
++
++static int do_ds250dfx10_adapt(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
++{
++	int ret;
++	enum ds250dfx10_adapt_mode mode;
++
++	if (!priv->dev) {
++		puts("no device selected\n");
++		return CMD_RET_FAILURE;
++	}
++
++	ret = do_ds250dfx10_chan_get();
++	if (ret < 0) {
++		return CMD_RET_FAILURE;
++	} else if (ret == 0) {
++		puts("no channel selected\n");
++		return CMD_RET_FAILURE;
++	}
++
++	switch (argc) {
++	case 2:
++		ret = ds250dfx10_adapt_mode_parse(argv[1]);
++		if (ret == DS250DFX10_ADAPT_MODE_MAX) {
++			printf("unknown mode \"%s\"\n", argv[1]);
++			return CMD_RET_FAILURE;
++		}
++		mode = ret;
++
++		ret = ds250dfx10_adapt_set(mode);
++		if (ret)
++			return CMD_RET_FAILURE;
++
++		fallthrough;
++	case 1:
++		ret = ds250dfx10_adapt_get(&mode);
++		if (ret)
++			return CMD_RET_FAILURE;
++
++		puts("adaptation mode: ");
++		puts(ds250dfx10_adapt_mode_str[mode]);
++		putc('\n');
++
++		return CMD_RET_SUCCESS;
++	default:
++		return CMD_RET_USAGE;
++	}
++}
++
++static int do_ds250dfx10_cdr_reset(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
++{
++	int ret;
++	unsigned long start;
++	unsigned long duration;
++
++	if (!priv->dev) {
++		puts("no device selected\n");
++		return CMD_RET_FAILURE;
++	}
++
++	ret = do_ds250dfx10_chan_get();
++	if (ret < 0) {
++		return CMD_RET_FAILURE;
++	} else if (ret == 0) {
++		puts("no channel selected\n");
++		return CMD_RET_FAILURE;
++	}
++
++	if (argc != 2)
++		return CMD_RET_USAGE;
++
++	duration = simple_strtoul(argv[1], NULL, 0);
++	if (duration < 0) {
++		printf("invalid duration: %ld\n", duration);
++		return CMD_RET_FAILURE;
++	}
++
++	/* enable cdr reset override */
++	ret = ds250dfx10_set(DS250DFX10_CDR_RESET_OV, 1);
++	if (ret)
++		return CMD_RET_FAILURE;
++
++	/* assert cdr reset */
++	ret = ds250dfx10_set(DS250DFX10_CDR_RESET_SM, 1);
++	if (ret)
++		return CMD_RET_FAILURE;
++
++	/* wait user-defined time */
++	start = get_timer(0);
++	while (1) {
++		if (get_timer(start) > duration)
++			break;
++
++		if (ctrlc()) {
++			puts("Abort\n");
++			return CMD_RET_FAILURE;
++		}
++
++		udelay(1);
++		schedule();
++	}
++
++	/* de-assert cdr reset */
++	ret = ds250dfx10_set(DS250DFX10_CDR_RESET_SM, 0);
++	if (ret)
++		return CMD_RET_FAILURE;
++
++	/* disable cdr reset override */
++	ret = ds250dfx10_set(DS250DFX10_CDR_RESET_OV, 0);
++	if (ret)
++		return CMD_RET_FAILURE;
++
++	return CMD_RET_SUCCESS;
++}
++
++int ds250dfx10_eq_get(uint8_t *value)
++{
++	return ds250dfx10_get(DS250DFX10_EQ_BST_TO_EQ, value);
++}
++
++int ds250dfx10_eq_set(bool override, uint8_t value)
++{
++	int ret;
++
++	/* set override */
++	ret = ds250dfx10_set(DS250DFX10_EQ_BST_OV, override);
++	if (ret)
++		return ret;
++
++	/* set value */
++	ret = ds250dfx10_set(DS250DFX10_EQ_BST, value);
++	if (ret)
++		return ret;
++
++	return ret;
++}
++
++static int do_ds250dfx10_eq(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
++{
++	int ret;
++	unsigned long value;
++	uint8_t boost_val;
++	bool boost_ovr;
++
++	if (!priv->dev) {
++		puts("no device selected\n");
++		return CMD_RET_FAILURE;
++	}
++
++	ret = do_ds250dfx10_chan_get();
++	if (ret < 0) {
++		return CMD_RET_FAILURE;
++	} else if (ret == 0) {
++		puts("no channel selected\n");
++		return CMD_RET_FAILURE;
++	}
++
++	switch (argc) {
++	case 2:
++		if (!(strcmp(argv[1], "auto"))) {
++			/* automatic mode */
++			boost_val = 0;
++			boost_ovr = false;
++		} else {
++			/* override mode */
++			value = simple_strtoul(argv[1], NULL, 0);
++			if (value < 0 || value > UINT8_MAX) {
++				printf("invalid boost value: %ld\n", value);
++				return CMD_RET_FAILURE;
++			}
++			boost_val = value;
++			boost_ovr = true;
++		}
++
++		ret = ds250dfx10_eq_set(boost_ovr, boost_val);
++		if (ret)
++			return ret;
++
++		if (boost_ovr)
++			printf("eq boost override: %#04x\n", boost_val);
++
++		fallthrough;
++	case 1:
++		ret = ds250dfx10_eq_get(&boost_val);
++		if (ret < 0)
++			return CMD_RET_FAILURE;
++
++		printf("eq boost: %#04x\n", boost_val);
++
++		return CMD_RET_SUCCESS;
++	default:
++		return CMD_RET_USAGE;
++	}
++}
++
++static int ds250dfx10_dfe_set(bool override, int8_t wt1, int8_t wt2, int8_t wt3, int8_t wt4, int8_t wt5)
++{
++	int ret;
++
++	/* clear override */
++	if (!override) {
++		ret = ds250dfx10_set(DS250DFX10_DFE_FORCE_EN, override);
++		if (ret)
++			return ret;
++	}
++
++	/* set tap1 value */
++	ret = ds250dfx10_set(DS250DFX10_DFE_WT1, abs(wt1));
++	if (ret)
++		return ret;
++
++	/* set tap1 sign */
++	ret = ds250dfx10_set(DS250DFX10_DFE_TAP1_POL, (wt1 < 0));
++	if (ret)
++		return ret;
++
++	/* set tap2 value */
++	ret = ds250dfx10_set(DS250DFX10_DFE_WT2, abs(wt2));
++	if (ret)
++		return ret;
++
++	/* set tap2 sign */
++	ret = ds250dfx10_set(DS250DFX10_DFE_TAP2_POL, (wt2 < 0));
++	if (ret)
++		return ret;
++
++	/* set tap2 value */
++	ret = ds250dfx10_set(DS250DFX10_DFE_WT3, abs(wt3));
++	if (ret)
++		return ret;
++
++	/* set tap2 sign */
++	ret = ds250dfx10_set(DS250DFX10_DFE_TAP3_POL, (wt3 < 0));
++	if (ret)
++		return ret;
++
++	/* set tap2 value */
++	ret = ds250dfx10_set(DS250DFX10_DFE_WT4, abs(wt4));
++	if (ret)
++		return ret;
++
++	/* set tap2 sign */
++	ret = ds250dfx10_set(DS250DFX10_DFE_TAP4_POL, (wt4 < 0));
++	if (ret)
++		return ret;
++
++	/* set tap2 value */
++	ret = ds250dfx10_set(DS250DFX10_DFE_WT5, abs(wt5));
++	if (ret)
++		return ret;
++
++	/* set tap2 sign */
++	ret = ds250dfx10_set(DS250DFX10_DFE_TAP5_POL, (wt5 < 0));
++	if (ret)
++		return ret;
++
++	/* set override */
++	if (override) {
++		ret = ds250dfx10_set(DS250DFX10_DFE_FORCE_EN, override);
++		if (ret)
++			return ret;
++	}
++
++	return ret;
++}
++
++static int ds250dfx10_dfe_get(int8_t *wt1, int8_t *wt2, int8_t *wt3, int8_t *wt4, int8_t *wt5)
++{
++	int ret;
++	uint8_t value;
++
++	ret = ds250dfx10_get(DS250DFX10_DFE_WT1_OBS, &value);
++	if (ret)
++		return ret;
++	*wt1 = value;
++
++	ret = ds250dfx10_get(DS250DFX10_DFE_POL_1_OBS, &value);
++	if (ret)
++		return ret;
++	if (value)
++		*wt1 = 0 - *wt1;
++
++	ret = ds250dfx10_get(DS250DFX10_DFE_WT2_OBS, &value);
++	if (ret)
++		return ret;
++	*wt2 = value;
++
++	ret = ds250dfx10_get(DS250DFX10_DFE_POL_2_OBS, &value);
++	if (ret)
++		return ret;
++	if (value)
++		*wt2 = 0 - *wt2;
++
++	ret = ds250dfx10_get(DS250DFX10_DFE_WT3_OBS, &value);
++	if (ret)
++		return ret;
++	*wt3 = value;
++
++	ret = ds250dfx10_get(DS250DFX10_DFE_POL_3_OBS, &value);
++	if (ret)
++		return ret;
++	if (value)
++		*wt3 = 0 - *wt3;
++
++	ret = ds250dfx10_get(DS250DFX10_DFE_WT4_OBS, &value);
++	if (ret)
++		return ret;
++	*wt4 = value;
++
++	ret = ds250dfx10_get(DS250DFX10_DFE_POL_4_OBS, &value);
++	if (ret)
++		return ret;
++	if (value)
++		*wt4 = 0 - *wt4;
++
++	ret = ds250dfx10_get(DS250DFX10_DFE_WT5_OBS, &value);
++	if (ret)
++		return ret;
++	*wt5 = value;
++
++	ret = ds250dfx10_get(DS250DFX10_DFE_POL_5_OBS, &value);
++	if (ret)
++		return ret;
++	if (value)
++		*wt5 = 0 - *wt5;
++
++	return ret;
++}
++
++static int do_ds250dfx10_dfe(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
++{
++	int ret, i;
++	long value;
++	int8_t wt_val[5];
++	bool wt_ovr;
++
++	if (!priv->dev) {
++		puts("no device selected\n");
++		return CMD_RET_FAILURE;
++	}
++
++	ret = do_ds250dfx10_chan_get();
++	if (ret < 0) {
++		return CMD_RET_FAILURE;
++	} else if (ret == 0) {
++		puts("no channel selected\n");
++		return CMD_RET_FAILURE;
++	}
++
++	switch (argc) {
++	case 2:
++	case 6:
++		switch (argc) {
++		case 2:
++			if (strcmp(argv[1], "auto"))
++				return CMD_RET_USAGE;
++
++			wt_ovr = false;
++			break;
++		case 6:
++			value = simple_strtol(argv[1], NULL, 0);
++			if (abs(value) > 0x1f) {
++				printf("invalid tap%d value: %ld\n", 1, value);
++				return CMD_RET_FAILURE;
++			}
++			wt_val[0] = value;
++
++			for (i = 1; i < 5; i++) {
++				value = simple_strtol(argv[i + 1], NULL, 0);
++				if (abs(value) > 0x0f) {
++					printf("invalid tap%d value: %ld\n", (i + 1), value);
++					return CMD_RET_FAILURE;
++				}
++				wt_val[i] = value;
++			}
++
++			wt_ovr = true;
++			break;
++		}
++
++		ret = ds250dfx10_dfe_set(wt_ovr, wt_val[0], wt_val[1], wt_val[2], wt_val[3], wt_val[4]);
++		if (ret < 0)
++			return CMD_RET_FAILURE;
++
++		if (wt_ovr)
++			printf("override dfe tap weights: [%d, %d, %d, %d, %d]\n", wt_val[0], wt_val[1], wt_val[2], wt_val[3], wt_val[4]);
++
++		fallthrough;
++	case 1:
++		ret = ds250dfx10_dfe_get(&wt_val[0], &wt_val[1], &wt_val[2], &wt_val[3], &wt_val[4]);
++		if (ret < 0)
++			return CMD_RET_FAILURE;
++
++		printf("dfe tap weights: [%d, %d, %d, %d, %d]\n", wt_val[0], wt_val[1], wt_val[2], wt_val[3], wt_val[4]);
++
++		return CMD_RET_SUCCESS;
++	default:
++		return CMD_RET_USAGE;
++	}
++}
++
+ static int do_ds250dfx10_todo(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+ {
+ 	for (int i = 0; i < argc; i++) {
+@@ -1224,20 +1741,28 @@ static int do_ds250dfx10_todo(struct cmd_tbl *cmdtp, int flag, int argc, char *c
+  */
+ 
+ U_BOOT_LONGHELP(ds250dfx10,
+-	"dev [<i2c bus name> <i2c bus address>] - select active retimer device\n"
+-	"ds250dfx10 chan [<channel>]                       - get/set current retimer channel\n"
+-	"ds250dfx10 pttgen <pattern>                       - start pattern generator\n"
+-	"                                                  - <pattern> is one of [ PRBS7, PRBS9, PRBS11, PRBS15, PRBS23, PRBS31, PRBS58, PRBS63]\n"
+-	"ds250dfx10 pttgen stop                            - stop pattern generator\n"
+-	"ds250dfx10 pttchk start                           - start pattern checker\n"
+-	"ds250dfx10 pttchk detect                          - try detect current pattern\n"
+-	"ds250dfx10 pttchk validate <duration>             - detect and validate current pattern for <duration> seconds\n"
+-	"ds250dfx10 pttchk stop                            - stop pattern checker\n"
+-	"ds250dfx10 eom capture [<iterations>]             - capture eye diagram\n"
+-	"                                                  - <iterations> is integer indicating number of times to capture accumulating results, min. 1, max. 256\n"
+-	"ds250dfx10 eom show                               - show eye diagram with vte compatible colours\n"
+-	"ds250dfx10 eom export                             - export eye diagram in csv format to console\n"
+-	"ds250dfx10 todo                                   - to be done\n");
++	"dev [<i2c bus name> <i2c bus address>]                  - select active retimer device\n"
++	"ds250dfx10 chan [<channel>]                             - get/set current retimer channel\n"
++	"ds250dfx10 pttgen <pattern>                             - start pattern generator\n"
++	"                                                        - <pattern> is one of [ PRBS7, PRBS9, PRBS11, PRBS15, PRBS23, PRBS31, PRBS58, PRBS63]\n"
++	"ds250dfx10 pttgen stop                                  - stop pattern generator\n"
++	"ds250dfx10 pttchk start                                 - start pattern checker\n"
++	"ds250dfx10 pttchk detect                                - try detect current pattern\n"
++	"ds250dfx10 pttchk validate <duration>                   - detect and validate current pattern for <duration> seconds\n"
++	"ds250dfx10 pttchk stop                                  - stop pattern checker\n"
++	"ds250dfx10 eom capture [<iterations>]                   - capture eye diagram\n"
++	"                                                        - <iterations> is integer indicating number of times to capture accumulating results, min. 1\n"
++	"ds250dfx10 eom show                                     - show eye diagram with vte compatible colours\n"
++	"ds250dfx10 eom export                                   - export eye diagram in csv format to console\n"
++	"ds250dfx10 adapt [<mode>]                               - get/set adaptation mode\n"
++	"                                                        - <mode> is one of [ NONE, CTLE, CTLE_DFE, FULL]\n"
++	"ds250dfx10 eq [auto | <value>]                          - get/set eq boost value\n"
++	"                                                        - <value> is 8-bit unsigned integer\n"
++	"ds250dfx10 dfe [auto | [<wt1> <wt2> <wt3> <wt4> <wt5>]] - get/set dfe tap weights\n"
++	"                                                        - <wt1> is 6-bit signed integer\n"
++	"                                                        - <wt2> <wt3> <wt4> <wt5> are 5-bit signed integer\n"
++	"ds250dfx10 cdr_reset <duration>                         - hold CDR in reset for <duration> milli-seconds\n"
++	"ds250dfx10 todo                                         - to be done\n");
+ 
+ U_BOOT_CMD_WITH_SUBCMDS(ds250dfx10, "DS250DFx10 Retimer", ds250dfx10_help_text,
+ 	U_BOOT_SUBCMD_MKENT(dev, 3, 1, do_ds250dfx10_dev),
+@@ -1245,4 +1770,8 @@ U_BOOT_CMD_WITH_SUBCMDS(ds250dfx10, "DS250DFx10 Retimer", ds250dfx10_help_text,
+ 	U_BOOT_SUBCMD_MKENT(pttgen, 2, 1, do_ds250dfx10_pttgen),
+ 	U_BOOT_SUBCMD_MKENT(pttchk, 3, 1, do_ds250dfx10_pttchk),
+ 	U_BOOT_SUBCMD_MKENT(eom, 3, 1, do_ds250dfx10_eom),
++	U_BOOT_SUBCMD_MKENT(adapt, 2, 1, do_ds250dfx10_adapt),
++	U_BOOT_SUBCMD_MKENT(cdr_reset, 2, 1, do_ds250dfx10_cdr_reset),
++	U_BOOT_SUBCMD_MKENT(eq, 2, 1, do_ds250dfx10_eq),
++	U_BOOT_SUBCMD_MKENT(dfe, 6, 1, do_ds250dfx10_dfe),
+ 	U_BOOT_SUBCMD_MKENT(todo, 100, 1, do_ds250dfx10_todo));
+-- 
+2.51.0
+

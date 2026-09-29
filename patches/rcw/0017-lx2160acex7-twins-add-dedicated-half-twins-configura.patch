@@ -1,0 +1,339 @@
+From b51a9e823ad6537b9b16ab1cde6728bf785ea9c3 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 25 Jun 2026 14:30:24 +0200
+Subject: [PATCH] lx2160acex7: twins: add dedicated half-twins configuration
+
+Add dedicated configurations for full and half twins, where full twins
+disable 2 sgmii ports on serdes 2 protocol 9.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ GenerateSRConfigs.sh                          |  1 +
+ lx2160acex7_half-twins.tmpl                   | 26 ++++++++++++++
+ .../rcw_2000_700_2400_8S_9_2_auto.rcw         | 26 ++++++++++++++
+ .../rcw_2000_700_2600_8S_9_2_auto.rcw         | 26 ++++++++++++++
+ .../rcw_2000_700_2666_8S_9_2_auto.rcw         | 26 ++++++++++++++
+ .../rcw_2000_700_2900_8S_9_2_auto.rcw         | 26 ++++++++++++++
+ .../rcw_2000_700_3200_8S_9_2_auto.rcw         | 26 ++++++++++++++
+ .../twins/rcw_2000_700_2400_8S_9_2_auto.rcw   |  1 +
+ .../twins/rcw_2000_700_2600_8S_9_2_auto.rcw   |  1 +
+ .../twins/rcw_2000_700_2666_8S_9_2_auto.rcw   |  1 +
+ .../twins/rcw_2000_700_2900_8S_9_2_auto.rcw   |  1 +
+ .../twins/rcw_2000_700_3200_8S_9_2_auto.rcw   |  1 +
+ lx2160acex7_twins.tmpl                        |  1 +
+ lx2160asi/sd2_lane_a_e_disable_sgmii.rcw      | 34 +++++++++++++++++++
+ 14 files changed, 197 insertions(+)
+ create mode 100644 lx2160acex7_half-twins.tmpl
+ create mode 100644 lx2160acex7_rev2/half-twins/rcw_2000_700_2400_8S_9_2_auto.rcw
+ create mode 100644 lx2160acex7_rev2/half-twins/rcw_2000_700_2600_8S_9_2_auto.rcw
+ create mode 100644 lx2160acex7_rev2/half-twins/rcw_2000_700_2666_8S_9_2_auto.rcw
+ create mode 100644 lx2160acex7_rev2/half-twins/rcw_2000_700_2900_8S_9_2_auto.rcw
+ create mode 100644 lx2160acex7_rev2/half-twins/rcw_2000_700_3200_8S_9_2_auto.rcw
+ create mode 100644 lx2160asi/sd2_lane_a_e_disable_sgmii.rcw
+
+diff --git a/GenerateSRConfigs.sh b/GenerateSRConfigs.sh
+index 3189a2a..e9efc36 100755
+--- a/GenerateSRConfigs.sh
++++ b/GenerateSRConfigs.sh
+@@ -78,5 +78,6 @@ done
+ 
+ # generate LX2160A CEX-7 Internal Twins Board
+ for DDR_SPEED in 2400 2600 2666 2900 3200; do
++	generate lx2160acex7_half-twins.tmpl lx2160acex7 2 half-twins 2000 700 ${DDR_SPEED} 8S 9 2 auto
+ 	generate lx2160acex7_twins.tmpl lx2160acex7 2 twins 2000 700 ${DDR_SPEED} 8S 9 2 auto
+ done
+diff --git a/lx2160acex7_half-twins.tmpl b/lx2160acex7_half-twins.tmpl
+new file mode 100644
+index 0000000..f2fa9ab
+--- /dev/null
++++ b/lx2160acex7_half-twins.tmpl
+@@ -0,0 +1,26 @@
++/*
++ * SerDes Protocol 1 -  %SD1%
++ * SerDes Protocol 2 -  %SD2%
++ * SerDes Protocol 3 -  %SD3%
++ *
++ * Frequencies:
++ * Core     -- %CPU_SPEED% MHz
++ * Platform -- %BUS_SPEED%  MHz
++ * DDR      -- %DDR_SPEED% MT/s
++ *
++ * Silicon %SOC_REVISION%.0
++ * Boot from %BOOTSOURCE%
++ */
++
++#define LX_SR %SOC_REVISION%
++#define LX_BOOTSOURCE_%BOOTSOURCE%
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../%module%/include/pll_%CPU_SPEED%_%BUS_SPEED%_xxxx.rcwi>
++#include <../%module%/include/pll_xxxx_xxx_%DDR_SPEED%.rcwi>
++#include <../%module%/include/common.rcwi>
++#include <../%module%/include/SD1_%SD1%.rcwi>
++#include <../%module%/include/SD2_%SD2%.rcwi>
++#include <../%module%/include/SD3_%SD3%.rcwi>
++#include <../%module%/include/common_pbi.rcwi>
++#include <../%module%/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_rev2/half-twins/rcw_2000_700_2400_8S_9_2_auto.rcw b/lx2160acex7_rev2/half-twins/rcw_2000_700_2400_8S_9_2_auto.rcw
+new file mode 100644
+index 0000000..3e39c19
+--- /dev/null
++++ b/lx2160acex7_rev2/half-twins/rcw_2000_700_2400_8S_9_2_auto.rcw
+@@ -0,0 +1,26 @@
++/*
++ * SerDes Protocol 1 -  8S
++ * SerDes Protocol 2 -  9
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2400 MT/s
++ *
++ * Silicon 2.0
++ * Boot from AUTO
++ */
++
++#define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2400.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8S.rcwi>
++#include <../lx2160acex7/include/SD2_9.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_rev2/half-twins/rcw_2000_700_2600_8S_9_2_auto.rcw b/lx2160acex7_rev2/half-twins/rcw_2000_700_2600_8S_9_2_auto.rcw
+new file mode 100644
+index 0000000..dd38456
+--- /dev/null
++++ b/lx2160acex7_rev2/half-twins/rcw_2000_700_2600_8S_9_2_auto.rcw
+@@ -0,0 +1,26 @@
++/*
++ * SerDes Protocol 1 -  8S
++ * SerDes Protocol 2 -  9
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2600 MT/s
++ *
++ * Silicon 2.0
++ * Boot from AUTO
++ */
++
++#define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2600.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8S.rcwi>
++#include <../lx2160acex7/include/SD2_9.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_rev2/half-twins/rcw_2000_700_2666_8S_9_2_auto.rcw b/lx2160acex7_rev2/half-twins/rcw_2000_700_2666_8S_9_2_auto.rcw
+new file mode 100644
+index 0000000..2a73cd4
+--- /dev/null
++++ b/lx2160acex7_rev2/half-twins/rcw_2000_700_2666_8S_9_2_auto.rcw
+@@ -0,0 +1,26 @@
++/*
++ * SerDes Protocol 1 -  8S
++ * SerDes Protocol 2 -  9
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2666 MT/s
++ *
++ * Silicon 2.0
++ * Boot from AUTO
++ */
++
++#define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2666.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8S.rcwi>
++#include <../lx2160acex7/include/SD2_9.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_rev2/half-twins/rcw_2000_700_2900_8S_9_2_auto.rcw b/lx2160acex7_rev2/half-twins/rcw_2000_700_2900_8S_9_2_auto.rcw
+new file mode 100644
+index 0000000..4dd4c9b
+--- /dev/null
++++ b/lx2160acex7_rev2/half-twins/rcw_2000_700_2900_8S_9_2_auto.rcw
+@@ -0,0 +1,26 @@
++/*
++ * SerDes Protocol 1 -  8S
++ * SerDes Protocol 2 -  9
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 2900 MT/s
++ *
++ * Silicon 2.0
++ * Boot from AUTO
++ */
++
++#define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_2900.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8S.rcwi>
++#include <../lx2160acex7/include/SD2_9.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_rev2/half-twins/rcw_2000_700_3200_8S_9_2_auto.rcw b/lx2160acex7_rev2/half-twins/rcw_2000_700_3200_8S_9_2_auto.rcw
+new file mode 100644
+index 0000000..3eb73e4
+--- /dev/null
++++ b/lx2160acex7_rev2/half-twins/rcw_2000_700_3200_8S_9_2_auto.rcw
+@@ -0,0 +1,26 @@
++/*
++ * SerDes Protocol 1 -  8S
++ * SerDes Protocol 2 -  9
++ * SerDes Protocol 3 -  2
++ *
++ * Frequencies:
++ * Core     -- 2000 MHz
++ * Platform -- 700  MHz
++ * DDR      -- 3200 MT/s
++ *
++ * Silicon 2.0
++ * Boot from AUTO
++ */
++
++#define LX_SR 2
++#define LX_BOOTSOURCE_AUTO
++
++#include <../lx2160asi/lx2160a.rcwi>
++#include <../lx2160acex7/include/pll_2000_700_xxxx.rcwi>
++#include <../lx2160acex7/include/pll_xxxx_xxx_3200.rcwi>
++#include <../lx2160acex7/include/common.rcwi>
++#include <../lx2160acex7/include/SD1_8S.rcwi>
++#include <../lx2160acex7/include/SD2_9.rcwi>
++#include <../lx2160acex7/include/SD3_2.rcwi>
++#include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_rev2/twins/rcw_2000_700_2400_8S_9_2_auto.rcw b/lx2160acex7_rev2/twins/rcw_2000_700_2400_8S_9_2_auto.rcw
+index 3e39c19..01d04a2 100644
+--- a/lx2160acex7_rev2/twins/rcw_2000_700_2400_8S_9_2_auto.rcw
++++ b/lx2160acex7_rev2/twins/rcw_2000_700_2400_8S_9_2_auto.rcw
+@@ -23,4 +23,5 @@
+ #include <../lx2160acex7/include/SD2_9.rcwi>
+ #include <../lx2160acex7/include/SD3_2.rcwi>
+ #include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160asi/sd2_lane_a_e_disable_sgmii.rcw>
+ #include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_rev2/twins/rcw_2000_700_2600_8S_9_2_auto.rcw b/lx2160acex7_rev2/twins/rcw_2000_700_2600_8S_9_2_auto.rcw
+index dd38456..c8201f3 100644
+--- a/lx2160acex7_rev2/twins/rcw_2000_700_2600_8S_9_2_auto.rcw
++++ b/lx2160acex7_rev2/twins/rcw_2000_700_2600_8S_9_2_auto.rcw
+@@ -23,4 +23,5 @@
+ #include <../lx2160acex7/include/SD2_9.rcwi>
+ #include <../lx2160acex7/include/SD3_2.rcwi>
+ #include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160asi/sd2_lane_a_e_disable_sgmii.rcw>
+ #include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_rev2/twins/rcw_2000_700_2666_8S_9_2_auto.rcw b/lx2160acex7_rev2/twins/rcw_2000_700_2666_8S_9_2_auto.rcw
+index 2a73cd4..b486233 100644
+--- a/lx2160acex7_rev2/twins/rcw_2000_700_2666_8S_9_2_auto.rcw
++++ b/lx2160acex7_rev2/twins/rcw_2000_700_2666_8S_9_2_auto.rcw
+@@ -23,4 +23,5 @@
+ #include <../lx2160acex7/include/SD2_9.rcwi>
+ #include <../lx2160acex7/include/SD3_2.rcwi>
+ #include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160asi/sd2_lane_a_e_disable_sgmii.rcw>
+ #include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_rev2/twins/rcw_2000_700_2900_8S_9_2_auto.rcw b/lx2160acex7_rev2/twins/rcw_2000_700_2900_8S_9_2_auto.rcw
+index 4dd4c9b..357d3d2 100644
+--- a/lx2160acex7_rev2/twins/rcw_2000_700_2900_8S_9_2_auto.rcw
++++ b/lx2160acex7_rev2/twins/rcw_2000_700_2900_8S_9_2_auto.rcw
+@@ -23,4 +23,5 @@
+ #include <../lx2160acex7/include/SD2_9.rcwi>
+ #include <../lx2160acex7/include/SD3_2.rcwi>
+ #include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160asi/sd2_lane_a_e_disable_sgmii.rcw>
+ #include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_rev2/twins/rcw_2000_700_3200_8S_9_2_auto.rcw b/lx2160acex7_rev2/twins/rcw_2000_700_3200_8S_9_2_auto.rcw
+index 3eb73e4..c22869a 100644
+--- a/lx2160acex7_rev2/twins/rcw_2000_700_3200_8S_9_2_auto.rcw
++++ b/lx2160acex7_rev2/twins/rcw_2000_700_3200_8S_9_2_auto.rcw
+@@ -23,4 +23,5 @@
+ #include <../lx2160acex7/include/SD2_9.rcwi>
+ #include <../lx2160acex7/include/SD3_2.rcwi>
+ #include <../lx2160acex7/include/common_pbi.rcwi>
++#include <../lx2160asi/sd2_lane_a_e_disable_sgmii.rcw>
+ #include <../lx2160acex7/include/bootlocptr.rcwi>
+diff --git a/lx2160acex7_twins.tmpl b/lx2160acex7_twins.tmpl
+index f2fa9ab..c15e58d 100644
+--- a/lx2160acex7_twins.tmpl
++++ b/lx2160acex7_twins.tmpl
+@@ -23,4 +23,5 @@
+ #include <../%module%/include/SD2_%SD2%.rcwi>
+ #include <../%module%/include/SD3_%SD3%.rcwi>
+ #include <../%module%/include/common_pbi.rcwi>
++#include <../lx2160asi/sd2_lane_a_e_disable_sgmii.rcw>
+ #include <../%module%/include/bootlocptr.rcwi>
+diff --git a/lx2160asi/sd2_lane_a_e_disable_sgmii.rcw b/lx2160asi/sd2_lane_a_e_disable_sgmii.rcw
+new file mode 100644
+index 0000000..9f94089
+--- /dev/null
++++ b/lx2160asi/sd2_lane_a_e_disable_sgmii.rcw
+@@ -0,0 +1,34 @@
++/* Convert the SD#2 LANE A and E to SGMII */
++#define SRDS_BASE 0x1eb0000 /* SerDes 2 */
++#include <../serdes_28g.rcw>
++#define  T_STP_REQ(x)		(((x) << 26) & 0x04000000)
++#define  T_DIS(x)		(((x) << 24) & 0x01000000)
++#define  R_STP_REQ(x)		(((x) << 26) & 0x04000000)
++#define  R_DIS(x)		(((x) << 24) & 0x01000000)
++
++.pbi
++/* Issue a stop request on the lanes */
++write LNmTRSTCTL(0), T_STP_REQ(1)
++write LNmRRSTCTL(0), R_STP_REQ(1)
++write LNmTRSTCTL(4), T_STP_REQ(1)
++write LNmRRSTCTL(4), R_STP_REQ(1)
++wait 100
++
++/* disable the lanes */
++write LNmTRSTCTL(0), T_DIS(1)
++write LNmRRSTCTL(0), R_DIS(1)
++write LNmTRSTCTL(4), T_DIS(1)
++write LNmRRSTCTL(4), R_DIS(1)
++wait 100
++
++/* Disable MAC.1, MAC.2, MAC.11, MAC.15 from the DEVDISR register */
++// bits (1 << 0) | (1 << 1) | (1 << 10) | (1 << 14)
++write 0x1e00074, 0x4403
++
++/* disable the protocol converters SGMIIA, SGMIIE */
++write PCC8, 0x01110111
++write SGMIIaCR1(0), MDEV_PORT(0) | SGMIICR1_MAGIC
++write SGMIIaCR1(4), MDEV_PORT(0) | SGMIICR1_MAGIC
++.end
++
++#undef SRDS_BASE
+-- 
+2.51.0
+

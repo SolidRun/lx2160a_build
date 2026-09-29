@@ -1,0 +1,216 @@
+From dc01eda4a286639641ddcd0b80773f12444bad94 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 13 Aug 2026 13:56:59 +0300
+Subject: [PATCH 52/53] armv8: sec_firmware: make the reserved CAAM job rings
+ configurable
+
+sec_firmware_used_jobring_offset() names a single, hardcoded job ring:
+JR3, which is the ring NXP's PPA firmware reserves. Its node is removed
+from the device tree and left out of the ICID fixups, so that the OS
+does not try to drive a ring it cannot access.
+
+Boards running TF-A with OP-TEE reserve two rings, and which ones is a
+build-time choice of either firmware. On the Layerscape platforms TF-A
+takes JR3 (0x40000), while OP-TEE takes the ring given by its
+CFG_JR_INDEX, 2 (0x30000). Both claim their ring exclusively by setting
+the TrustZone bit in JRxMIDR, after which non-secure accesses are
+ignored.
+
+Hardcoding one ring hides only half of what is claimed there: the OS
+still finds jr@30000 in the device tree and fails to probe it, leaving
+it with two usable rings instead of the expected three:
+
+  caam_jr 8030000.jr: failed to flush job ring 2
+  caam_jr 8030000.jr: probe with driver caam_jr failed with error -5
+
+Replace the hardcoded offset with one Kconfig symbol per exception
+level - SEC_FIRMWARE_EL3_JR_OFFSET for the secure monitor firmware and
+SEC_FIRMWARE_SEL1_JR_OFFSET for the trusted OS - and use both for the
+device tree removal as well as for the ICID fixups. An offset of 0 means
+no ring is claimed, since 0 addresses the CAAM controller itself and
+never a job ring; it is the default for the trusted OS. The EL3 default
+of 0x40000 keeps PPA based boards unchanged.
+
+Deleting a node invalidates every device tree offset held at the time,
+so fdt_fixup_remove_jr() scans the crypto node once per reserved ring
+instead of removing both in a single pass.
+
+The new symbols only exist where secure firmware support is available.
+sec_firmware.h falls back to 0 for everyone else, so that the ICID
+tables - built for every Layerscape SoC, and testing the offsets in a
+static initializer - keep building.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm/cpu/armv8/Kconfig                    | 34 +++++++++++++++++++
+ arch/arm/cpu/armv8/fsl-layerscape/fdt.c       | 21 +++++++++---
+ .../asm/arch-fsl-layerscape/fsl_icid.h        | 10 ++++--
+ arch/arm/include/asm/armv8/sec_firmware.h     | 30 +++++++++++++---
+ 4 files changed, 83 insertions(+), 12 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/Kconfig b/arch/arm/cpu/armv8/Kconfig
+index 9f0fb369f77..6da00da064a 100644
+--- a/arch/arm/cpu/armv8/Kconfig
++++ b/arch/arm/cpu/armv8/Kconfig
+@@ -109,6 +109,40 @@ config ARMV8_SEC_FIRMWARE_ERET_ADDR_REVERT
+ 	  Say Y here when the endianness of the register or memory holding the
+ 	  Secure firmware exception return address is different with core's.
+ 
++config SEC_FIRMWARE_EL3_JR_OFFSET
++	hex "CAAM job ring reserved by the EL3 firmware"
++	depends on ARMV8_SEC_FIRMWARE_SUPPORT || SPL_ARMV8_SEC_FIRMWARE_SUPPORT
++	default 0x40000
++	help
++	  Offset of the CAAM job ring register block, relative to the CAAM
++	  controller, that the secure monitor firmware running at EL3 claims
++	  for itself. Valid values are 0x10000 (JR0) up to 0x40000 (JR3), or
++	  0x0 if it does not use a job ring at all.
++
++	  The job ring is claimed exclusively: the firmware sets the TrustZone
++	  bit in its JRxMIDR, after which non-secure accesses to the ring are
++	  ignored. U-Boot removes the corresponding node from the device tree
++	  so that the OS does not try to use it, and leaves the ring out of the
++	  ICID fixups.
++
++	  NXP's PPA and TF-A both use JR3 (0x40000), which is the default.
++
++config SEC_FIRMWARE_SEL1_JR_OFFSET
++	hex "CAAM job ring reserved by the S-EL1 trusted OS"
++	depends on ARMV8_SEC_FIRMWARE_SUPPORT || SPL_ARMV8_SEC_FIRMWARE_SUPPORT
++	default 0x0
++	help
++	  Offset of the CAAM job ring register block, relative to the CAAM
++	  controller, that the trusted OS running at S-EL1 claims for itself.
++	  It is hidden from the OS just like the ring reserved by the EL3
++	  firmware, see SEC_FIRMWARE_EL3_JR_OFFSET.
++
++	  Valid values are 0x10000 (JR0) up to 0x40000 (JR3), or 0x0 - the
++	  default - when no trusted OS is loaded or it does not use a job ring.
++
++	  OP-TEE picks its ring from CFG_JR_INDEX, which is 2 (0x30000) for the
++	  Layerscape platforms.
++
+ endmenu
+ 
+ config PSCI_RESET
+diff --git a/arch/arm/cpu/armv8/fsl-layerscape/fdt.c b/arch/arm/cpu/armv8/fsl-layerscape/fdt.c
+index fdd0e7bf355..10d8a647c1b 100644
+--- a/arch/arm/cpu/armv8/fsl-layerscape/fdt.c
++++ b/arch/arm/cpu/armv8/fsl-layerscape/fdt.c
+@@ -380,19 +380,18 @@ static void fdt_fixup_msi(void *blob)
+ #endif
+ 
+ #if CONFIG_IS_ENABLED(ARMV8_SEC_FIRMWARE_SUPPORT)
+-/* Remove JR node used by SEC firmware */
+-void fdt_fixup_remove_jr(void *blob)
++/* Remove the node of a single JR, identified by its offset within the CAAM */
++static void fdt_fixup_remove_one_jr(void *blob, u64 used_jr)
+ {
+ 	int jr_node, addr_cells, len;
+ 	int crypto_node = fdt_path_offset(blob, "crypto");
+-	u64 jr_offset, used_jr;
++	u64 jr_offset;
+ 	fdt32_t *reg;
+ 
+ 	/* Return if crypto node not found */
+ 	if (crypto_node < 0)
+ 		return;
+ 
+-	used_jr = sec_firmware_used_jobring_offset();
+ 	fdt_support_default_count_cells(blob, crypto_node, &addr_cells, NULL);
+ 
+ 	jr_node = fdt_node_offset_by_compatible(blob, crypto_node,
+@@ -411,6 +410,20 @@ void fdt_fixup_remove_jr(void *blob)
+ 							"fsl,sec-v4.0-job-ring");
+ 	}
+ }
++
++/* Remove the JR nodes used by the secure world */
++void fdt_fixup_remove_jr(void *blob)
++{
++	/*
++	 * One removal at a time: deleting a node invalidates every offset
++	 * obtained so far, so each ring gets its own scan of the crypto node.
++	 */
++	if (SEC_FIRMWARE_EL3_JR_OFFSET)
++		fdt_fixup_remove_one_jr(blob, SEC_FIRMWARE_EL3_JR_OFFSET);
++
++	if (SEC_FIRMWARE_SEL1_JR_OFFSET)
++		fdt_fixup_remove_one_jr(blob, SEC_FIRMWARE_SEL1_JR_OFFSET);
++}
+ #endif
+ 
+ #ifdef CONFIG_ARCH_LS1028A
+diff --git a/arch/arm/include/asm/arch-fsl-layerscape/fsl_icid.h b/arch/arm/include/asm/arch-fsl-layerscape/fsl_icid.h
+index d5f63f4a7ed..9a7689fd9cf 100644
+--- a/arch/arm/include/asm/arch-fsl-layerscape/fsl_icid.h
++++ b/arch/arm/include/asm/arch-fsl-layerscape/fsl_icid.h
+@@ -176,11 +176,15 @@ extern int fman_icid_tbl_sz;
+ 		QDMA_BASE_ADDR + QMAN_CQSIDR_REG + 4, \
+ 		QDMA_BASE_ADDR, QDMA_IS_LE)
+ 
++/*
++ * A job ring claimed by the secure world gets no compatible: its stream ID is
++ * still programmed, but no device tree node is looked up for it - there is
++ * none left, fdt_fixup_remove_jr() removes it.
++ */
+ #define SET_SEC_JR_ICID_ENTRY(jr_num, streamid) \
+ 	SET_ICID_ENTRY( \
+-		(CONFIG_IS_ENABLED(ARMV8_SEC_FIRMWARE_SUPPORT) && \
+-		(FSL_SEC_JR##jr_num##_OFFSET ==  \
+-			SEC_JR3_OFFSET + CFG_SYS_FSL_SEC_OFFSET) \
++		(SEC_FIRMWARE_IS_USED_JR(FSL_SEC_JR##jr_num##_OFFSET - \
++					 CFG_SYS_FSL_SEC_OFFSET) \
+ 			? NULL \
+ 			: "fsl,sec-v4.0-job-ring"), \
+ 		streamid, \
+diff --git a/arch/arm/include/asm/armv8/sec_firmware.h b/arch/arm/include/asm/armv8/sec_firmware.h
+index 0f86c72b24d..0cd6d88a1bb 100644
+--- a/arch/arm/include/asm/armv8/sec_firmware.h
++++ b/arch/arm/include/asm/armv8/sec_firmware.h
+@@ -7,7 +7,6 @@
+ #define __SEC_FIRMWARE_H_
+ 
+ #define PSCI_INVALID_VER		0xffffffff
+-#define SEC_JR3_OFFSET			0x40000
+ #define WORD_MASK			0xffffffff
+ #define WORD_SHIFT			32
+ 
+@@ -27,9 +26,30 @@ static inline unsigned int sec_firmware_support_psci_version(void)
+ }
+ #endif
+ 
+-static inline unsigned int sec_firmware_used_jobring_offset(void)
+-{
+-	return SEC_JR3_OFFSET;
+-}
++/*
++ * CAAM job rings claimed by the secure world: one by the secure monitor
++ * firmware at EL3, one by the trusted OS at S-EL1. Which rings those are
++ * depends on the firmware: NXP's PPA and TF-A take JR3, OP-TEE takes the ring
++ * given by its CFG_JR_INDEX. They are locked to the secure world, so the OS
++ * must not be told about them.
++ *
++ * An offset of 0 means no ring is claimed - it addresses the CAAM controller
++ * itself, never a job ring. The Kconfig symbols only exist where secure
++ * firmware support is available, so fall back to that for everyone else.
++ */
++#if CONFIG_IS_ENABLED(ARMV8_SEC_FIRMWARE_SUPPORT)
++#define SEC_FIRMWARE_EL3_JR_OFFSET	CONFIG_SEC_FIRMWARE_EL3_JR_OFFSET
++#define SEC_FIRMWARE_SEL1_JR_OFFSET	CONFIG_SEC_FIRMWARE_SEL1_JR_OFFSET
++#else
++#define SEC_FIRMWARE_EL3_JR_OFFSET	0
++#define SEC_FIRMWARE_SEL1_JR_OFFSET	0
++#endif
++
++/* Test an offset relative to the CAAM controller against both of them */
++#define SEC_FIRMWARE_IS_USED_JR(jr_offset) \
++	((SEC_FIRMWARE_EL3_JR_OFFSET && \
++	  (jr_offset) == SEC_FIRMWARE_EL3_JR_OFFSET) || \
++	 (SEC_FIRMWARE_SEL1_JR_OFFSET && \
++	  (jr_offset) == SEC_FIRMWARE_SEL1_JR_OFFSET))
+ 
+ #endif /* __SEC_FIRMWARE_H_ */
+-- 
+2.43.0
+

@@ -1,0 +1,320 @@
+From 4aa9eee11da89a56a0e62d868df74b87074ae79b Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 19 May 2026 18:52:22 +0200
+Subject: [PATCH 43/44] board: solidrun: lx2160acex7: support tiny 4MB boot
+ media
+
+Define new defaults for a dense 4MB boot media memory layout, supporting
+in particular boot from the Clearfog-CX carrier backup flash memory.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ board/solidrun/lx2160acex7/Kconfig            |  30 ++++
+ configs/lx2160acex7_tfa_SECURE_BOOT_defconfig |   1 -
+ configs/lx2160acex7_tfa_defconfig             |   2 -
+ include/configs/lx2160acex7.h                 | 157 ++++++++++++++----
+ 4 files changed, 157 insertions(+), 33 deletions(-)
+
+diff --git a/board/solidrun/lx2160acex7/Kconfig b/board/solidrun/lx2160acex7/Kconfig
+index 85673846a4a..2a9a134e297 100644
+--- a/board/solidrun/lx2160acex7/Kconfig
++++ b/board/solidrun/lx2160acex7/Kconfig
+@@ -12,4 +12,34 @@ config SYS_SOC
+ config SYS_CONFIG_NAME
+ 	default "lx2160acex7"
+ 
++choice
++	prompt "Boot Media Memory Layout"
++	default LX2160ACEX7_BOOTMEDIA_64M
++	help
++	  Select the physical boot media memory layout.
++
++config LX2160ACEX7_BOOTMEDIA_4M
++	bool "Dense 4MB Layout"
++	help
++	  Optimized mapping for small 4MB SPI flash.
++
++config LX2160ACEX7_BOOTMEDIA_64M
++	bool "Standard 64MB Flash Layout"
++	help
++	  Default mapping for the standard 64MB SPI flash.
++
++endchoice
++
++config ENV_OFFSET
++	default 0x500000 if LX2160ACEX7_BOOTMEDIA_64M
++	default 0x1F0000 if LX2160ACEX7_BOOTMEDIA_4M
++
++config ENV_SIZE
++	default 0x40000 if LX2160ACEX7_BOOTMEDIA_64M
++	default 0x2000 if LX2160ACEX7_BOOTMEDIA_4M
++
++config ENV_SECT_SIZE
++	default 0x20000 if LX2160ACEX7_BOOTMEDIA_64M
++	default 0x10000 if LX2160ACEX7_BOOTMEDIA_4M
++
+ endif
+diff --git a/configs/lx2160acex7_tfa_SECURE_BOOT_defconfig b/configs/lx2160acex7_tfa_SECURE_BOOT_defconfig
+index d55bdb24a4b..b35dff2bb6f 100644
+--- a/configs/lx2160acex7_tfa_SECURE_BOOT_defconfig
++++ b/configs/lx2160acex7_tfa_SECURE_BOOT_defconfig
+@@ -7,7 +7,6 @@ CONFIG_SYS_TEXT_BASE=0x82000000
+ CONFIG_SYS_MALLOC_LEN=0x202000
+ CONFIG_SYS_MALLOC_F_LEN=0x6000
+ CONFIG_NR_DRAM_BANKS=3
+-CONFIG_ENV_SIZE=0x2000
+ CONFIG_NXP_ESBC=y
+ CONFIG_DM_GPIO=y
+ CONFIG_DEFAULT_DEVICE_TREE="fsl-lx2160a-cex7"
+diff --git a/configs/lx2160acex7_tfa_defconfig b/configs/lx2160acex7_tfa_defconfig
+index 59aa5ab7978..160b25f979c 100644
+--- a/configs/lx2160acex7_tfa_defconfig
++++ b/configs/lx2160acex7_tfa_defconfig
+@@ -8,8 +8,6 @@ CONFIG_SYS_MALLOC_LEN=0x202000
+ CONFIG_SYS_MALLOC_F_LEN=0x6000
+ CONFIG_NR_DRAM_BANKS=3
+ CONFIG_ENV_SIZE=0x2000
+-CONFIG_ENV_OFFSET=0x500000
+-CONFIG_ENV_SECT_SIZE=0x20000
+ CONFIG_DM_GPIO=y
+ CONFIG_DEFAULT_DEVICE_TREE="fsl-lx2160a-cex7"
+ CONFIG_FSPI_AHB_EN_4BYTE=y
+diff --git a/include/configs/lx2160acex7.h b/include/configs/lx2160acex7.h
+index 652cce98b66..db0772e2c12 100644
+--- a/include/configs/lx2160acex7.h
++++ b/include/configs/lx2160acex7.h
+@@ -10,6 +10,7 @@
+ #include <asm/arch/stream_id_lsch3.h>
+ #include <asm/arch/config.h>
+ #include <asm/arch/soc.h>
++#include <linux/stringify.h>
+ 
+ #define CFG_SYS_FLASH_BASE		0x20000000
+ 
+@@ -77,17 +78,76 @@
+ 
+ #define HWCONFIG_BUFFER_SIZE		128
+ 
++
+ /*
+- * Memory Layout Ovverview:
++ * Memory Layout
+  *
+  */
+ 
++#ifdef CONFIG_LX2160ACEX7_BOOTMEDIA_4M
++/*
++ * Boot-Media Layout:
++ * - SD/eMMC MC offsets (in sectors):
++ *   - 0x1100: mc firmware
++ *   - 0x1f00: dtb
++ *   - 0x1fc8: mc firmware signature
++ *   - 0x1fd0: dpc signature
++ *   - 0x1fd8: dpl signature
++ *   - 0x1fe0: dpc
++ *   - 0x1fe8: dpl
++ * - SPI offsets (in byte):
++ *   - 0x0220000: mc firmware
++ *   - 0x03e0000: dtb
++ *   - 0x03f9000: mc firmware signature
++ *   - 0x03fa000: dpc signature
++ *   - 0x03fb000: dpl signature
++ *   - 0x03fc000: dpc
++ *   - 0x03fd000: dpl
++ */
++#define MMC_MC_FW_OFFSET		__stringify(0x1100)
++#define MMC_MC_FW_MAX_SIZE		__stringify(0x0e00)
++#define MMC_MC_FW_SIG_OFFSET		__stringify(0x1fc8)
++#define MMC_MC_FW_SIG_MAX_SIZE		__stringify(0x0008)
++
++#define MMC_MC_DPC_OFFSET		__stringify(0x1fe0)
++#define MMC_MC_DPC_MAX_SIZE		__stringify(0x0008)
++#define MMC_MC_DPC_SIG_OFFSET		__stringify(0x1fd0)
++#define MMC_MC_DPC_SIG_MAX_SIZE		__stringify(0x0008)
++
++#define MMC_MC_DPL_OFFSET		__stringify(0x1fe8)
++#define MMC_MC_DPL_MAX_SIZE		__stringify(0x0018)
++#define MMC_MC_DPL_SIG_OFFSET		__stringify(0x1fd8)
++#define MMC_MC_DPL_SIG_MAX_SIZE		__stringify(0x0008)
++
++#define MMC_DTB_OFFSET			__stringify(0x1f00)
++#define MMC_DTB_MAX_SIZE		__stringify(0x00c8)
++
++#define XSPI_MC_FW_OFFSET		__stringify(0x0220000)
++#define XSPI_MC_FW_MAX_SIZE		__stringify(0x01c0000)
++#define XSPI_MC_FW_SIG_OFFSET		__stringify(0x03f9000)
++#define XSPI_MC_FW_SIG_MAX_SIZE		__stringify(0x0001000)
++
++#define XSPI_MC_DPC_OFFSET		__stringify(0x03fc000)
++#define XSPI_MC_DPC_MAX_SIZE		__stringify(0x0001000)
++#define XSPI_MC_DPC_SIG_OFFSET		__stringify(0x03fa000)
++#define XSPI_MC_DPC_SIG_MAX_SIZE	__stringify(0x0001000)
++
++#define XSPI_MC_DPL_OFFSET		__stringify(0x03fd000)
++#define XSPI_MC_DPL_MAX_SIZE		__stringify(0x0003000)
++#define XSPI_MC_DPL_SIG_OFFSET		__stringify(0x03fb000)
++#define XSPI_MC_DPL_SIG_MAX_SIZE	__stringify(0x0001000)
++
++#define XSPI_DTB_OFFSET			__stringify(0x03e0000)
++#define XSPI_DTB_MAX_SIZE		__stringify(0x0019000)
++#endif /* CONFIG_LX2160ACEX7_BOOTMEDIA_4M */
++
++#ifdef CONFIG_LX2160ACEX7_BOOTMEDIA_64M
+ /*
+  * Boot-Media Latout:
+  * - SD/eMMC MC offsets (in sectors):
+  *   - 0x3000: kernel header
+- *   - 0x3200: mc firmware header
+- *   - 0x3400: dpc header
++ *   - 0x3200: mc firmware signature
++ *   - 0x3400: dpc signature
+  *   - 0x5000: firmware
+  *   - 0x6800: dpl
+  *   - 0x7000: dpc
+@@ -95,14 +155,50 @@
+  *   - 0x8000: kernel
+  * - SPI offsets (in byte):
+  *   - 0x0600000: kernel header
+- *   - 0x0640000: mc firmware header
+- *   - 0x0680000: dpc header
++ *   - 0x0640000: mc firmware signature
++ *   - 0x0680000: dpc signature
+  *   - 0x0a00000: mc firmware
+- *   - 0x0e00000: dpc
+  *   - 0x0d00000: dpl
++ *   - 0x0e00000: dpc
+  *   - 0x0f00000: dtb
+  *   - 0x1000000: kernel
+  */
++#define MMC_MC_FW_OFFSET		__stringify(0x5000)
++#define MMC_MC_FW_MAX_SIZE		__stringify(0x1200)
++#define MMC_MC_FW_SIG_OFFSET		__stringify(0x3200)
++#define MMC_MC_FW_SIG_MAX_SIZE		__stringify(0x0020)
++
++#define MMC_MC_DPC_OFFSET		__stringify(0x7000)
++#define MMC_MC_DPC_MAX_SIZE		__stringify(0x0800)
++#define MMC_MC_DPC_SIG_OFFSET		__stringify(0x3400)
++#define MMC_MC_DPC_SIG_MAX_SIZE		__stringify(0x0020)
++
++#define MMC_MC_DPL_OFFSET		__stringify(0x6800)
++#define MMC_MC_DPL_MAX_SIZE		__stringify(0x0800)
++#define MMC_MC_DPL_SIG_OFFSET		__stringify(0x3600)
++#define MMC_MC_DPL_SIG_MAX_SIZE		__stringify(0x0020)
++
++#define MMC_DTB_OFFSET			__stringify(0x7800)
++#define MMC_DTB_MAX_SIZE		__stringify(0x0800)
++
++#define XSPI_MC_FW_OFFSET		__stringify(0x0a00000)
++#define XSPI_MC_FW_MAX_SIZE		__stringify(0x0300000)
++#define XSPI_MC_FW_SIG_OFFSET		__stringify(0x0640000)
++#define XSPI_MC_FW_SIG_MAX_SIZE		__stringify(0x0004000)
++
++#define XSPI_MC_DPC_OFFSET		__stringify(0x0e00000)
++#define XSPI_MC_DPC_MAX_SIZE		__stringify(0x0100000)
++#define XSPI_MC_DPC_SIG_OFFSET		__stringify(0x0680000)
++#define XSPI_MC_DPC_SIG_MAX_SIZE	__stringify(0x0004000)
++
++#define XSPI_MC_DPL_OFFSET		__stringify(0x0d00000)
++#define XSPI_MC_DPL_MAX_SIZE		__stringify(0x0100000)
++#define XSPI_MC_DPL_SIG_OFFSET		__stringify(0x06c0000)
++#define XSPI_MC_DPL_SIG_MAX_SIZE	__stringify(0x0004000)
++
++#define XSPI_DTB_OFFSET			__stringify(0x0f00000)
++#define XSPI_DTB_MAX_SIZE		__stringify(0x0100000)
++#endif /* CONFIG_LX2160ACEX7_BOOTMEDIA_64M */
+ 
+ /*
+  * Load Adresses (different from lx2160a_common.h):
+@@ -127,33 +223,35 @@
+ /* Initial environment variables */
+ #define XSPI_MC_INIT_CMD				\
+ 	"sf probe 0:0 && "				\
+-	"sf read 0x80640000 0x640000 0x80000 && "	\
+-	"sf read $fdt_addr_r 0xf00000 0x100000 && "	\
++	"sf read 0x80640000 " XSPI_MC_FW_SIG_OFFSET " " XSPI_MC_FW_SIG_MAX_SIZE " && "	\
++	"sf read 0x80680000 " XSPI_MC_DPC_SIG_OFFSET " " XSPI_MC_DPC_SIG_MAX_SIZE " && "	\
++	"sf read $fdt_addr_r " XSPI_DTB_OFFSET " " XSPI_DTB_MAX_SIZE " && "	\
+ 	"env exists secureboot && "			\
+ 	"esbc_validate 0x80640000 && "			\
+ 	"esbc_validate 0x80680000; "			\
+-	"sf read 0x80a00000 0xa00000 0x300000 && "	\
+-	"sf read 0x80e00000 0xe00000 0x100000; "	\
++	"sf read 0x80a00000 " XSPI_MC_FW_OFFSET " " XSPI_MC_FW_MAX_SIZE " && "	\
++	"sf read 0x80e00000 "XSPI_MC_DPC_OFFSET " " XSPI_MC_DPC_MAX_SIZE "; "	\
+ 	"fsl_mc start mc 0x80a00000 0x80e00000\0"
+ 
+ #define SD_MC_INIT_CMD				\
+-	"mmc read 0x80a00000 0x5000 0x1200;"	\
+-	"mmc read 0x80e00000 0x7000 0x800;"	\
+-	"mmc read $fdt_addr_r 0x7800 0x800;"	\
++	"mmc read 0x80a00000 " MMC_MC_FW_OFFSET " " MMC_MC_FW_MAX_SIZE ";"	\
++	"mmc read 0x80e00000 " MMC_MC_DPC_OFFSET " " MMC_MC_DPC_MAX_SIZE ";"	\
++	"mmc read $fdt_addr_r " MMC_DTB_OFFSET " " MMC_DTB_MAX_SIZE ";"	\
+ 	"env exists secureboot && "		\
+-	"mmc read 0x80640000 0x3200 0x20 && "	\
+-	"mmc read 0x80680000 0x3400 0x20 && "	\
++	"mmc read 0x80640000 " MMC_MC_FW_SIG_OFFSET " " MMC_MC_FW_SIG_MAX_SIZE " && "	\
++	"mmc read 0x80680000 " MMC_MC_DPC_SIG_OFFSET " " MMC_MC_DPC_SIG_MAX_SIZE " && "	\
+ 	"esbc_validate 0x80640000 && "		\
+ 	"esbc_validate 0x80680000 ;"		\
+ 	"fsl_mc start mc 0x80a00000 0x80e00000\0"
+ 
+ #define SD2_MC_INIT_CMD				\
+-	"mmc dev 1; mmc read 0x80a00000 0x5000 0x1200;"	\
+-	"mmc read 0x80e00000 0x7000 0x800;"	\
+-	"mmc read $fdt_addr_r 0x7800 0x800;"	\
++	"mmc dev 1; "	\
++	"mmc read 0x80a00000 " MMC_MC_FW_OFFSET " " MMC_MC_FW_MAX_SIZE ";"	\
++	"mmc read 0x80e00000 " MMC_MC_DPC_OFFSET " " MMC_MC_DPC_MAX_SIZE ";"	\
++	"mmc read $fdt_addr_r " MMC_DTB_OFFSET " " MMC_DTB_MAX_SIZE ";"	\
+ 	"env exists secureboot && "		\
+-	"mmc read 0x80640000 0x3200 0x20 && "	\
+-	"mmc read 0x80680000 0x3400 0x20 && "	\
++	"mmc read 0x80640000 " MMC_MC_FW_SIG_OFFSET " " MMC_MC_FW_SIG_MAX_SIZE " && "	\
++	"mmc read 0x80680000 " MMC_MC_DPC_SIG_OFFSET " " MMC_MC_DPC_SIG_MAX_SIZE " && "	\
+ 	"esbc_validate 0x80640000 && "		\
+ 	"esbc_validate 0x80680000 ;"		\
+ 	"fsl_mc start mc 0x80a00000 0x80e00000\0"
+@@ -207,20 +305,19 @@
+ 
+ #define XSPI_NOR_BOOTCOMMAND						\
+ 		"sf probe 0:0; "				\
+-		"sf read 0x806c0000 0x6c0000 0x40000; "		\
+-		"env exists mcinitcmd && env exists secureboot"	\
+-		" && esbc_validate 0x806c0000; "		\
+-		"sf read 0x80d00000 0xd00000 0x100000; "	\
+-		"env exists mcinitcmd && "			\
+-		"fsl_mc lazyapply dpl 0x80d00000; "		\
++		"sf read 0x80d00000 " XSPI_MC_DPL_OFFSET " " XSPI_MC_DPL_MAX_SIZE "; "	\
++		"env exists mcinitcmd && env exists secureboot "	\
++		" && sf read 0x806C0000 " XSPI_MC_DPL_SIG_OFFSET " " XSPI_MC_DPL_SIG_MAX_SIZE " "		\
++		"&& esbc_validate 0x806C0000;env exists mcinitcmd "	\
++		"&& fsl_mc lazyapply dpl 0x80d00000;"		\
+ 		"run distro_bootcmd;run xspi_bootcmd; "		\
+ 		"env exists secureboot && esbc_halt;"
+ 
+ #define SD_BOOTCOMMAND						\
+ 		"env exists mcinitcmd && mmcinfo; "		\
+-		"mmc read 0x80d00000 0x6800 0x800; "		\
++		"mmc read 0x80d00000 " MMC_MC_DPL_OFFSET " " MMC_MC_DPL_MAX_SIZE "; "		\
+ 		"env exists mcinitcmd && env exists secureboot "	\
+-		" && mmc read 0x806C0000 0x3600 0x20 "		\
++		" && mmc read 0x806C0000 " MMC_MC_DPL_SIG_OFFSET " " MMC_MC_DPL_SIG_MAX_SIZE " "		\
+ 		"&& esbc_validate 0x806C0000;env exists mcinitcmd "	\
+ 		"&& fsl_mc lazyapply dpl 0x80d00000;"		\
+ 		"run distro_bootcmd;run sd_bootcmd;"		\
+@@ -228,9 +325,9 @@
+ 
+ #define SD2_BOOTCOMMAND						\
+ 		"mmc dev 1; env exists mcinitcmd && mmcinfo; "	\
+-		"mmc read 0x80d00000 0x6800 0x800; "		\
++		"mmc read 0x80d00000 " MMC_MC_DPL_OFFSET " " MMC_MC_DPL_MAX_SIZE "; "		\
+ 		"env exists mcinitcmd && env exists secureboot "	\
+-		" && mmc read 0x806C0000 0x3600 0x20 "		\
++		" && mmc read 0x806C0000 " MMC_MC_DPL_SIG_OFFSET " " MMC_MC_DPL_SIG_MAX_SIZE " "		\
+ 		"&& esbc_validate 0x806C0000;env exists mcinitcmd "	\
+ 		"&& fsl_mc lazyapply dpl 0x80d00000;"		\
+ 		"run distro_bootcmd;run sd2_bootcmd;"		\
+-- 
+2.51.0
+

@@ -1,0 +1,220 @@
+From f5d4a28af475adfb95d4f618dc97bbb346e66c53 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 5 Apr 2026 20:40:24 +0200
+Subject: [PATCH] cmd: ds250dfx10: support accumulating multiple eye diagram
+ measurements
+
+Add support for repeating eye diagram capture and accumulating results
+by extra numeric argument for capture command.
+
+Further add extra checks to detect invalid eye diagrams.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ cmd/ds250dfx10.c | 98 +++++++++++++++++++++++++++++++++++++++++-------
+ 1 file changed, 85 insertions(+), 13 deletions(-)
+
+diff --git a/cmd/ds250dfx10.c b/cmd/ds250dfx10.c
+index 85054f8e373..ded3681bfbb 100644
+--- a/cmd/ds250dfx10.c
++++ b/cmd/ds250dfx10.c
+@@ -31,6 +31,7 @@ enum ds250dfx10_reg_type {
+ #define DS250DFX10_SER_EN			DS250DFX10_REG_CHANNEL,	0x1E,	4,	1
+ #define DS250DFX10_PFD_SEL_DATA_PRELCK		DS250DFX10_REG_CHANNEL,	0x1E,	5,	3
+ #define DS250DFX10_EOM_START			DS250DFX10_REG_CHANNEL,	0x24,	0,	1
++#define DS250DFX10_DFE_EQ_ERROR_NO_LOCK		DS250DFX10_REG_CHANNEL,	0x24,	6,	1
+ #define DS250DFX10_FAST_EOM			DS250DFX10_REG_CHANNEL,	0x24,	7,	1
+ #define DS250DFX10_EOM_DATA_HI			DS250DFX10_REG_CHANNEL,	0x25,	0,	8
+ #define DS250DFX10_EOM_DATA_LO			DS250DFX10_REG_CHANNEL,	0x26,	0,	8
+@@ -902,14 +903,15 @@ static int do_ds250dfx10_pttchk(struct cmd_tbl *cmdtp, int flag, int argc, char
+ 	}
+ }
+ 
+-static int do_ds250dfx10_eom_capture(void)
++static int do_ds250dfx10_eom_capture(bool accumulate)
+ {
+ 	int ret;
+ 	uint8_t val1;
+ 	uint16_t val2;
++	uint32_t val3;
+ 	const enum ds250dfx10_eom_vrange vrange = DS250DFX10_EOM_400MV;
+ 	const long unsigned int lock_timeout_ms = 1000;
+-	const long unsigned int eom_delay_ms = 500;
++	const long unsigned int eom_delay_ms = 1500;
+ 
+ 	priv->eom.vrange = DS250DFX10_EOM_VRANGE_MAX;
+ 
+@@ -920,17 +922,32 @@ static int do_ds250dfx10_eom_capture(void)
+ 	if (ret)
+ 		return ret;
+ 
+-	/* eye capture immediately after cdr lock is unreliable, add artificial delay */
+-	printf("waiting %lums ...", eom_delay_ms);
+-	ret = ds250dfx10_wait(eom_delay_ms);
++	if (!accumulate) {
++		/* eye capture immediately after cdr lock is unreliable, add artificial delay */
++		printf("waiting %lums ...", eom_delay_ms);
++		ret = ds250dfx10_wait(eom_delay_ms);
++		if (ret)
++			return ret;
++
++		puts(" starting eye diagram capture ...");
++	} else {
++		puts("repeating eye diagram capture ...");
++	}
++
++	/* clear cdr lock loss indication */
++	ret = ds250dfx10_get(DS250DFX10_CDR_LOCK_LOSS_INT, &val1);
++	if (ret)
++		return ret;
++
++	/* enable cdr lock loss indication */
++	ret = ds250dfx10_set(DS250DFX10_CDR_LOCK_LOSS_INT_EN, 1);
+ 	if (ret)
+ 		return ret;
+-	puts(" starting eye diagram capture ...");
+ 
+ 	/* disable lock monitoring */
+ 	ret = ds250dfx10_set(DS250DFX10_HV_LOCKMON_EN, 0);
+ 	if (ret)
+-		goto do_ds250dfx10_eom_lockmon;
++		goto do_ds250dfx10_eom_cdr_lock_int;
+ 
+ 	/* disable automatic vertical range scaling */
+ 	ret = ds250dfx10_set(DS250DFX10_VEO_SCALE, 0);
+@@ -941,7 +958,6 @@ static int do_ds250dfx10_eom_capture(void)
+ 	ret = ds250dfx10_set(DS250DFX10_EOM_SEL_VRANGE, vrange);
+ 	if (ret)
+ 		goto do_ds250dfx10_eom_vrange;
+-	priv->eom.vrange =
+ 
+ 	/* force enable eom */
+ 	ret = ds250dfx10_set(DS250DFX10_EOM_PD, 0);
+@@ -966,6 +982,24 @@ static int do_ds250dfx10_eom_capture(void)
+ 			goto do_ds250dfx10_eom_fast;
+ 	} while (val1);
+ 
++	/* check if dfe/eq state machine failed */
++	ret = ds250dfx10_get(DS250DFX10_DFE_EQ_ERROR_NO_LOCK, &val1);
++	if (ret) {
++		goto do_ds250dfx10_eom_fast;
++	} else if (val1) {
++		puts(" dfe/eq state machine failed.\n");
++		goto do_ds250dfx10_eom_fast;
++	}
++
++	/* check if cdr lock was lost during capture */
++	ret = ds250dfx10_get(DS250DFX10_CDR_LOCK_LOSS_INT, &val1);
++	if (ret) {
++		goto do_ds250dfx10_eom_fast;
++	} else if (val1) {
++		puts(" lost cdr lock.\n");
++		goto do_ds250dfx10_eom_fast;
++	}
++
+ 	/* skip first 4 invalid data bytes */
+ 	for (int i = 0; i < 4; i++) {
+ 		ret = ds250dfx10_read(DS250DFX10_EOM_DATA_HI, (uint8_t *)&val2, sizeof(val2));
+@@ -973,13 +1007,21 @@ static int do_ds250dfx10_eom_capture(void)
+ 			goto do_ds250dfx10_eom_fast;
+ 	}
+ 
++	/* in accumulate mode, add to existing values ... otherwise clear memory */
++	if (!accumulate)
++		memset(priv->eom.data, 0, sizeof(priv->eom.data));
++
+ 	for (int p = 0; p < 64; p++) {
+ 		for (int v = 0; v < 64; v++) {
+ 			ret = ds250dfx10_read(DS250DFX10_EOM_DATA_HI, (uint8_t *)&val2, sizeof(val2));
+ 			if (ret)
+ 				goto do_ds250dfx10_eom_fast;
+ 
+-			priv->eom.data[p][v] = le16_to_cpu(val2);
++			val3 = priv->eom.data[p][v] + le16_to_cpu(val2);
++			if (val3 >= 0xFFFF)
++				val3 = 0xFFFF;
++
++			priv->eom.data[p][v] = val3;
+ 		}
+ 	}
+ 	priv->eom.vrange = vrange;
+@@ -1002,6 +1044,10 @@ do_ds250dfx10_eom_lockmon:
+ 	/* (re-)enable lock monitoring */
+ 	ds250dfx10_set(DS250DFX10_HV_LOCKMON_EN, 0);
+ 
++do_ds250dfx10_eom_cdr_lock_int:
++	/* disable cdr lock loss indication */
++	ds250dfx10_set(DS250DFX10_CDR_LOCK_LOSS_INT_EN, 0);
++
+ 	return ret ? CMD_RET_FAILURE : CMD_RET_SUCCESS;
+ }
+ 
+@@ -1094,6 +1140,7 @@ static int do_ds250dfx10_eom_export(void)
+ static int do_ds250dfx10_eom(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+ {
+ 	int ret;
++	unsigned long val;
+ 
+ 	if (!priv->dev) {
+ 		puts("no device selected\n");
+@@ -1108,14 +1155,38 @@ static int do_ds250dfx10_eom(struct cmd_tbl *cmdtp, int flag, int argc, char *co
+ 		return CMD_RET_FAILURE;
+ 	}
+ 
+-	if (argc != 2)
++	if (argc < 2)
+ 		return CMD_RET_USAGE;
+ 
+ 	if (!(strcmp(argv[1], "capture"))) {
+-		ret = do_ds250dfx10_eom_capture();
++		if (argc > 3)
++			return CMD_RET_USAGE;
++
++		val = 1;
++		if (argc == 3) {
++			val = simple_strtoul(argv[2], NULL, 0);
++			if (!val || val > 256)
++				return -EINVAL;
++		}
++
++		for (int i = 0; i < val; i++) {
++			ret = do_ds250dfx10_eom_capture(!!i);
++			if (ret) {
++				puts(" failed.\n");
++				break;
++			}
++		}
++		if (val && !ret)
++			printf("completed %lu iterations.\n", val);
+ 	} else if (!(strcmp(argv[1], "show"))) {
++		if (argc > 2)
++			return CMD_RET_USAGE;
++
+ 		ret = do_ds250dfx10_eom_show();
+ 	} else if (!(strcmp(argv[1], "export"))) {
++		if (argc > 2)
++			return CMD_RET_USAGE;
++
+ 		ret = do_ds250dfx10_eom_export();
+ 	} else {
+ 		return CMD_RET_USAGE;
+@@ -1162,7 +1233,8 @@ U_BOOT_LONGHELP(ds250dfx10,
+ 	"ds250dfx10 pttchk detect                          - try detect current pattern\n"
+ 	"ds250dfx10 pttchk validate <duration>             - detect and validate current pattern for <duration> seconds\n"
+ 	"ds250dfx10 pttchk stop                            - stop pattern checker\n"
+-	"ds250dfx10 eom capture                            - capture eye diagram\n"
++	"ds250dfx10 eom capture [<iterations>]             - capture eye diagram\n"
++	"                                                  - <iterations> is integer indicating number of times to capture accumulating results, min. 1, max. 256\n"
+ 	"ds250dfx10 eom show                               - show eye diagram with vte compatible colours\n"
+ 	"ds250dfx10 eom export                             - export eye diagram in csv format to console\n"
+ 	"ds250dfx10 todo                                   - to be done\n");
+@@ -1172,5 +1244,5 @@ U_BOOT_CMD_WITH_SUBCMDS(ds250dfx10, "DS250DFx10 Retimer", ds250dfx10_help_text,
+ 	U_BOOT_SUBCMD_MKENT(chan, 2, 1, do_ds250dfx10_chan),
+ 	U_BOOT_SUBCMD_MKENT(pttgen, 2, 1, do_ds250dfx10_pttgen),
+ 	U_BOOT_SUBCMD_MKENT(pttchk, 3, 1, do_ds250dfx10_pttchk),
+-	U_BOOT_SUBCMD_MKENT(eom, 2, 1, do_ds250dfx10_eom),
++	U_BOOT_SUBCMD_MKENT(eom, 3, 1, do_ds250dfx10_eom),
+ 	U_BOOT_SUBCMD_MKENT(todo, 100, 1, do_ds250dfx10_todo));
+-- 
+2.51.0
+

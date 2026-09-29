@@ -1,0 +1,49 @@
+From 3b34c0d3bdf89e37b8174be2b036a55d823b7592 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 13 Aug 2026 12:26:48 +0300
+Subject: [PATCH 49/53] armv8: lx2160a: drop artificial reserved-memory address
+ space holes
+
+Early during LX2160A support, special purpose memory regions as segment
+for MC were reserved by fake dram banks and holes in the otherwise
+contiguous dram address space.
+
+This is no longer necessary and can be replaced by device-tree
+reserved-memory nodes that are also passed to OS.
+
+Drop the code hiding reserved memory so that full dram is reported.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ arch/arm/cpu/armv8/fsl-layerscape/cpu.c | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/fsl-layerscape/cpu.c b/arch/arm/cpu/armv8/fsl-layerscape/cpu.c
+index ac39f11e3b3..d75b51a5fa9 100644
+--- a/arch/arm/cpu/armv8/fsl-layerscape/cpu.c
++++ b/arch/arm/cpu/armv8/fsl-layerscape/cpu.c
+@@ -1546,11 +1546,16 @@ void efi_add_known_memory(void)
+ #endif
+ 		ram_start = gd->bd->bi_dram[i].start;
+ 		ram_size = gd->bd->bi_dram[i].size;
+-#ifdef CONFIG_RESV_RAM
+-		if (gd->arch.resv_ram >= ram_start &&
+-		    gd->arch.resv_ram < ram_start + ram_size)
+-			ram_size = gd->arch.resv_ram - ram_start;
+-#endif
++
++		/*
++		 * Announce the full bank. Reserved regions such as the MC DRAM
++		 * block are described by /reserved-memory in the device tree
++		 * and are carved out of the EFI memory map by
++		 * efi_carve_out_dt_rsv(). Truncating the bank at
++		 * gd->arch.resv_ram here would hide them from the OS
++		 * altogether, including the padding up to
++		 * CONFIG_SYS_MC_RSV_MEM_ALIGN which nothing else claims.
++		 */
+ 		efi_add_memory_map(ram_start, ram_size,
+ 				   EFI_CONVENTIONAL_MEMORY);
+ 	}
+-- 
+2.43.0
+
