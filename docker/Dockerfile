@@ -1,7 +1,7 @@
 FROM python:slim-bullseye
 
-# enable backports
-RUN printf "deb https://archive.debian.org/debian/ bullseye-backports main\n" >> /etc/apt/sources.list
+# custom apt sources list
+COPY sources.list /etc/apt/sources.list
 
 # retry at least 3 times to succeed on sketchy connections
 RUN printf 'Acquire::http { Proxy "%s"; };\n' $APTPROXY | tee -a /etc/apt/apt.conf.d/proxy
@@ -15,13 +15,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # install updates
 RUN set -e; \
-	dpkg-architecture --is arm64 || dpkg --add-architecture arm64; \
 	apt-get update; \
 	apt-get upgrade -y; \
 	:
 
 # Install packages
 RUN set -e; \
+	apt-get install -y --no-install-recommends dpkg-dev; \
+	dpkg-architecture --is arm64 || dpkg --add-architecture arm64; \
 	apt-get update; \
 	apt-get --no-install-recommends -y install \
 		acpica-tools bc bison build-essential ca-certificates cmake cpio debian-archive-keyring debootstrap device-tree-compiler dosfstools e2tools fakeroot fdisk file flex git kmod libncurses-dev libssl-dev libyaml-dev lzop make meson mtools ninja-build p7zip p7zip-full pandoc parted pkg-config rsync sudo tar u-boot-tools unzip wget xz-utils yamllint; \

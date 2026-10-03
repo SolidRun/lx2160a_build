@@ -1,0 +1,5 @@
+deb http://deb.debian.org/debian bullseye main
+deb http://deb.debian.org/debian bullseye-updates main
+# bullseye-security pool was removed from security.debian.org after EOL, use final snapshot
+deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20260901T000000Z bullseye-security main
+deb https://archive.debian.org/debian/ bullseye-backports main
