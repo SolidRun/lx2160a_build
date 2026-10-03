@@ -474,13 +474,15 @@ if [[ $DISTRO == ubuntu ]]; then
 
 	case "${UBUNTU_VERSION}" in
 		focal)
+			# EOL May 2025
 			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.5-base-arm64.tar.gz
 		;;
 		jammy)
+
 			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/ubuntu-base-22.04.5-base-arm64.tar.gz
 		;;
 		noble)
-			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.2-base-arm64.tar.gz
+			UBUNTU_BASE_URL=http://cdimage.ubuntu.com/ubuntu-base/releases/24.04.3/release/ubuntu-base-24.04.5-base-arm64.tar.gz
 		;;
 		*)
 			echo "Error: Unsupported Ubuntu Version \"\${UBUNTU_VERSION}\"! To proceed please add support to runme.sh."
@@ -521,6 +523,7 @@ echo "127.0.0.1 localhost" > /etc/hosts
 test -n "$APTPROXY" && printf 'Acquire::http { Proxy "%s"; }\n' $APTPROXY | tee -a /etc/apt/apt.conf.d/proxy || true
 
 apt-get update
+env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C apt-get dist-upgrade -y
 env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true LC_ALL=C LANGUAGE=C LANG=C \
 	apt-get install --no-install-recommends -y apt apt-utils ethtool fdisk htop i2c-tools ifupdown iproute2 iptables iputils-ping isc-dhcp-client kmod less libatomic1 lm-sensors locales net-tools network-manager ntpdate openssh-server pciutils procps psmisc python3 rng-tools sudo systemd-sysv tee-supplicant wget
 apt-get clean
