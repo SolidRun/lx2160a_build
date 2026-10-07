@@ -1,0 +1,73 @@
+From 95af152b1fc5ad7de477231447a3adb69c775af1 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 1 Feb 2026 14:00:48 +0200
+Subject: [PATCH] lx2160acex7: revert ddr configuration to lsdk-21.08 values
+
+Revert the DDR controller configuration options to the defaults used in
+LSDK-21.08 BSP.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c | 42 ++++++---------------
+ 1 file changed, 12 insertions(+), 30 deletions(-)
+
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c b/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
+index 2bd014a7e..0e9146b29 100644
+--- a/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
++++ b/plat/nxp/soc-lx2160a/lx2160acex7/ddr_init.c
+@@ -28,40 +28,22 @@
+ int ddr_board_options(struct ddr_info *priv)
+ {
+ 	struct memctl_opt *popts = &priv->opt;
+-	const struct ddr_conf *conf = &priv->conf;
+ 
++	popts->auto_self_refresh_en = 1;
++	popts->phy_atx_impedance = 30;
+ 	popts->vref_dimm = U(0x24);		/* range 1, 83.4% */
+-	popts->rtt_override = 0;
+ 	popts->rtt_park = U(240);
+-	popts->otf_burst_chop_en = 0;
+-	popts->burst_length = U(DDR_BL8);
+-	popts->trwt_override = U(1);
+-	popts->bstopre = U(0);			/* auto precharge */
++	popts->burst_length = DDR_BL8;
++	popts->trwt_override = 1;
++	popts->bstopre = 0;			/* auto precharge */
+ 	popts->addr_hash = 1;
+-
+-	/* Set ODT impedance on PHY side */
+-	switch (conf->cs_on_dimm[1]) {
+-	case 0xc:	/* Two slots dual rank */
+-	case 0x4:	/* Two slots single rank, not valid for interleaving */
+-		popts->trwt = U(0xf);
+-		popts->twrt = U(0x7);
+-		popts->trrt = U(0x7);
+-		popts->twwt = U(0x7);
+-		popts->vref_phy = U(0x6B);	/* 83.6% */
+-		popts->odt = U(60);
+-		popts->phy_tx_impedance = U(28);
+-		break;
+-	case 0:		/* One slot used */
+-	default:
+-		popts->trwt = U(0x3);
+-		popts->twrt = U(0x3);
+-		popts->trrt = U(0x3);
+-		popts->twwt = U(0x3);
+-		popts->vref_phy = U(0x60);	/* 75% */
+-		popts->odt = U(48);
+-		popts->phy_tx_impedance = U(28);
+-		break;
+-	}
++	popts->trwt = 0x3;
++	popts->twrt = 0x3;
++	popts->trrt = 0x3;
++	popts->twwt = 0x3;
++	popts->vref_phy = 0x60;	/* 75% */
++	popts->odt = U(48);
++	popts->phy_tx_impedance = U(48);
+ 
+ 	return 0;
+ }
+-- 
+2.43.0
+
