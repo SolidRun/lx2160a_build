@@ -1,0 +1,89 @@
+From 633142ae8a86811ea0e8bdc75b87fd3565acb210 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 13 Oct 2026 17:56:50 +0200
+Subject: [PATCH 57/57] mmc: fsl_esdhc: support card-detect gpio
+
+Many hardware designs skip native card-detect pin-functions in favour of
+gpio for increased flexibility. The gpio is described by standard dt
+cd-gpios property.
+
+Add support for this dt property: Request it in of_to_plat, and read
+from it get_cd callback.
+
+The property is optional, if unspecified continue reading card-detect hw
+register bit.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/mmc/fsl_esdhc.c | 27 ++++++++++++++++++++++++++-
+ 1 file changed, 26 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mmc/fsl_esdhc.c b/drivers/mmc/fsl_esdhc.c
+index e9393cd8945..8b93746abc9 100644
+--- a/drivers/mmc/fsl_esdhc.c
++++ b/drivers/mmc/fsl_esdhc.c
+@@ -96,7 +96,6 @@ struct fsl_esdhc_plat {
+  * Following is used when Driver Model is enabled for MMC
+  * @dev: pointer for the device
+  * @cd_gpio: gpio for card detection
+- * @wp_gpio: gpio for write protection
+  */
+ struct fsl_esdhc_priv {
+ 	struct fsl_esdhc *esdhc_regs;
+@@ -107,6 +106,9 @@ struct fsl_esdhc_priv {
+ 	struct mmc *mmc;
+ #endif
+ 	struct udevice *dev;
++#if CONFIG_IS_ENABLED(DM_GPIO)
++	struct gpio_desc cd_gpio;
++#endif
+ 	struct sdhci_adma_desc *adma_desc_table;
+ 	dma_addr_t dma_addr;
+ };
+@@ -797,6 +799,14 @@ static int esdhc_getcd_common(struct fsl_esdhc_priv *priv)
+ 	if (qixis_esdhc_detect_quirk())
+ 		return 1;
+ #endif
++
++	if (CONFIG_IS_ENABLED(DM_MMC)) {
++#if CONFIG_IS_ENABLED(DM_GPIO)
++		if (dm_gpio_is_valid(&priv->cd_gpio))
++			return dm_gpio_get_value(&priv->cd_gpio);
++#endif
++	}
++
+ 	if (esdhc_read32(&regs->prsstat) & PRSSTAT_CINS)
+ 		return 1;
+ 
+@@ -1006,6 +1016,20 @@ int fsl_esdhc_mmc_init(struct bd_info *bis)
+ 	return fsl_esdhc_initialize(bis, cfg);
+ }
+ #else /* DM_MMC */
++static int fsl_esdhc_of_to_plat(struct udevice *dev)
++{
++#if CONFIG_IS_ENABLED(DM_GPIO)
++	struct fsl_esdhc_priv *priv = dev_get_priv(dev);
++	int ret;
++
++	ret = gpio_request_by_name(dev, "cd-gpios", 0, &priv->cd_gpio, GPIOD_IS_IN);
++	if (ret && ret != -ENOENT)
++		return ret;
++#endif
++
++	return 0;
++}
++
+ static int fsl_esdhc_probe(struct udevice *dev)
+ {
+ 	struct mmc_uclass_priv *upriv = dev_get_uclass_priv(dev);
+@@ -1207,6 +1231,7 @@ U_BOOT_DRIVER(fsl_esdhc) = {
+ 	.name	= "fsl-esdhc-mmc",
+ 	.id	= UCLASS_MMC,
+ 	.of_match = fsl_esdhc_ids,
++	.of_to_plat = fsl_esdhc_of_to_plat,
+ 	.ops	= &fsl_esdhc_ops,
+ 	.bind	= fsl_esdhc_bind,
+ 	.probe	= fsl_esdhc_probe,
+-- 
+2.51.0
+

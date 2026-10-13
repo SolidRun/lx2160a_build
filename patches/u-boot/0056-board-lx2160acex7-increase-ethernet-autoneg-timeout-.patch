@@ -1,0 +1,36 @@
+From e8a3663d4670b19dd272aa5f58b2b38ead8fec13 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 13 Oct 2026 15:30:34 +0200
+Subject: [PATCH 56/57] board: lx2160acex7: increase ethernet autoneg timeout
+ to 15s
+
+The u-boot internal auto-negotiation timeout value of 4 seconds is too
+tight for some ethernet switches, especially NBase-T.
+
+Raise timeout to 15s.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ include/configs/lx2160acex7.h | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/include/configs/lx2160acex7.h b/include/configs/lx2160acex7.h
+index db0772e2c12..de995be7e86 100644
+--- a/include/configs/lx2160acex7.h
++++ b/include/configs/lx2160acex7.h
+@@ -72,6 +72,12 @@
+ #define CFG_SYS_LS_MC_DRAM_BLOCK_MIN_SIZE	(256UL * 1024 * 1024)
+ #endif
+ 
++/*
++ * Set ethernet autoneg timeout to 15s.
++ * The U-Boot default (4s) is too tight for some switches.
++ */
++#define PHY_ANEG_TIMEOUT 15000
++
+ /* USB */
+ 
+ #define COUNTER_FREQUENCY_REAL		(get_board_sys_clk() / 4)
+-- 
+2.51.0
+

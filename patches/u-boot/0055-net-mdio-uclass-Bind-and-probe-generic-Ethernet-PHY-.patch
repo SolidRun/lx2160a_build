@@ -1,0 +1,86 @@
+From d850efbd7640b598192a123a1582bd31cd057d16 Mon Sep 17 00:00:00 2001
+From: Roger Quadros <rogerq@kernel.org>
+Date: Tue, 5 Mar 2024 15:24:53 +0200
+Subject: [PATCH 55/57] net: mdio-uclass: Bind and probe generic Ethernet PHY
+ driver
+
+If DM_ETH_PHY is enabled then try to bind and probe the
+generic Ethernet PHY driver for each child of MDIO bus.
+
+This is to ensure that GPIO reset handling is done if available
+before MDIO bus driver scans for the PHYs.
+
+Signed-off-by: Roger Quadros <rogerq@kernel.org>
+---
+ net/mdio-uclass.c | 41 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 41 insertions(+)
+
+diff --git a/net/mdio-uclass.c b/net/mdio-uclass.c
+index 76530d34257..f2b46f3543f 100644
+--- a/net/mdio-uclass.c
++++ b/net/mdio-uclass.c
+@@ -6,6 +6,8 @@
+ 
+ #include <common.h>
+ #include <dm.h>
++#include <dm/lists.h>
++#include <eth_phy.h>
+ #include <log.h>
+ #include <malloc.h>
+ #include <miiphy.h>
+@@ -121,6 +123,42 @@ static int mdio_reset(struct mii_dev *mii_bus)
+ 	return dm_mdio_reset(mii_bus->priv);
+ }
+ 
++static int mdio_bind_phy_nodes(struct udevice *mdio_dev)
++{
++	ofnode mdio_node, phy_node;
++	struct udevice *phy_dev;
++	const char *node_name;
++	int ret;
++
++	mdio_node = dev_ofnode(mdio_dev);
++	if (!ofnode_valid(mdio_node)) {
++		dev_dbg(mdio_dev, "invalid ofnode for mdio_dev\n");
++		return -ENXIO;
++	}
++
++	ofnode_for_each_subnode(phy_node, mdio_node) {
++		node_name = ofnode_get_name(phy_node);
++		dev_dbg(mdio_dev, "* Found child node: '%s'\n", node_name);
++		ret = device_bind_driver_to_node(mdio_dev,
++						 "eth_phy_generic_drv",
++						 node_name, phy_node, &phy_dev);
++		if (ret) {
++			dev_dbg(mdio_dev, "  - Eth phy binding error: %d\n", ret);
++			continue;
++		}
++
++		dev_dbg(mdio_dev, "  - bound phy device: '%s'\n", node_name);
++		ret = device_probe(phy_dev);
++		if (ret) {
++			dev_dbg(mdio_dev, "Device '%s' probe failed\n", phy_dev->name);
++			device_unbind(phy_dev);
++			continue;
++		}
++	}
++
++	return 0;
++}
++
+ static int dm_mdio_post_probe(struct udevice *dev)
+ {
+ 	struct mdio_perdev_priv *pdata = dev_get_uclass_priv(dev);
+@@ -154,6 +192,9 @@ static int dm_mdio_post_probe(struct udevice *dev)
+ 		}
+ 	}
+ 
++	if (CONFIG_IS_ENABLED(DM_ETH_PHY))
++		mdio_bind_phy_nodes(dev);
++
+ 	return mdio_register(pdata->mii_bus);
+ }
+ 
+-- 
+2.51.0
+
