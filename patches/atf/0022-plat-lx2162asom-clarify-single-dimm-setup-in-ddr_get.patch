@@ -1,0 +1,41 @@
+From 2c514ec1374a2a8e9f8781899ac0cf6b0b2f4fce Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 18 Oct 2026 12:24:32 +0200
+Subject: [PATCH 22/22] plat: lx2162asom: clarify single dimm setup in
+ ddr_get_ddr_params
+
+ddr_get_ddr_params receives a pointer to one dimm_params structure,
+shared by all controllers. Copy into it directly instead of indexing it
+like an array, and reword the comments: dimm_in_use[0] enables the first
+slot on each enabled controller, and the return value is the mask of
+populated controllers.
+
+No functional change.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/soc-lx2160a/lx2162asom/ddr_init.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/plat/nxp/soc-lx2160a/lx2162asom/ddr_init.c b/plat/nxp/soc-lx2160a/lx2162asom/ddr_init.c
+index 917acceb2..9d789bb49 100644
+--- a/plat/nxp/soc-lx2160a/lx2162asom/ddr_init.c
++++ b/plat/nxp/soc-lx2160a/lx2162asom/ddr_init.c
+@@ -193,11 +193,11 @@ static const struct dimm_params static_dimm = {
+ int ddr_get_ddr_params(struct dimm_params *pdimm,
+ 		       struct ddr_conf *conf)
+ {
+-	// channel 1
++	// enable first slot (for each enabled controller)
+ 	conf->dimm_in_use[0] = 1;
+-	memcpy(&pdimm[0], &static_dimm, sizeof(struct dimm_params));
++	memcpy(pdimm, &static_dimm, sizeof(struct dimm_params));
+ 
+-	/* 1 module */
++	// channel 1
+ 	return 0x1;
+ }
+ #endif /* defined(CONFIG_DDR_NODIMM) */
+-- 
+2.51.0
+

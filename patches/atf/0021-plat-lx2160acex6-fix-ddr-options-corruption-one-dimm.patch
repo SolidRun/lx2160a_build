@@ -1,0 +1,81 @@
+From ab29f63071a7fb44761fe55e21c56b58c602bf61 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 18 Oct 2026 12:12:12 +0200
+Subject: [PATCH 21/22] plat: lx2160acex6: fix ddr options corruption, one dimm
+ per controller
+
+The dimm_params configuration structure passed to ddr_get_ddr_params
+function only has space for a single dimm description regardless of how
+many controllers there are.
+
+In plat_common_def.mk DDRC_NUM_DIMM is force set to 1 regardless what
+platform.mk said in case CONFIG_DDR_NODIMM was set.
+
+Remove the duplicate memcpy that tried to configure a second dimm, which
+instead quietly corrupted the next member of struct ddr_info, struct
+memctl_opt. Among others quad_rank_present and self_refresh_irq_en were
+overwritten with timing values, which selected 48 Ohm instead of 34 Ohm
+dram output drive strength and set stray bits in DDR_SDRAM_CFG_2.
+
+Also drop dimm_in_use[1]: it marks a second slot on each controller, not
+the second controller, and is ignored with DDRC_NUM_DIMM = 1.
+
+The DDRC_NUM_DIMM define is to be understood per controller and not per
+board. Set it to one in platform.mk, reflecting that the board only has
+two SPD EEPROMs and therefore exactly one dimm slot per controller.
+
+Reduce the list of eeprom i2c bus addresses accordingly to size two.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/soc-lx2160a/lx2160acex6/ddr_init.c  | 10 +++-------
+ plat/nxp/soc-lx2160a/lx2160acex6/platform.mk |  2 +-
+ 2 files changed, 4 insertions(+), 8 deletions(-)
+
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex6/ddr_init.c b/plat/nxp/soc-lx2160a/lx2160acex6/ddr_init.c
+index 6e2d3fc6c..7b8a576b1 100644
+--- a/plat/nxp/soc-lx2160a/lx2160acex6/ddr_init.c
++++ b/plat/nxp/soc-lx2160a/lx2160acex6/ddr_init.c
+@@ -129,15 +129,11 @@ static const struct dimm_params static_dimm = {
+ int ddr_get_ddr_params(struct dimm_params *pdimm,
+ 		       struct ddr_conf *conf)
+ {
+-	// channel 1
++	// enable first slot (for each enabled controller)
+ 	conf->dimm_in_use[0] = 1;
+-	memcpy(&pdimm[0], &static_dimm, sizeof(struct dimm_params));
++	memcpy(pdimm, &static_dimm, sizeof(struct dimm_params));
+ 
+ #if defined(CONFIG_DDR_NODIMM_CH2)
+-	// channel 2
+-	conf->dimm_in_use[1] = 1; // enable (module on) channel 2
+-	memcpy(&pdimm[1], &static_dimm, sizeof(struct dimm_params));
+-
+ 	/* 2 modules */
+ 	return 0x3;
+ #else
+@@ -200,7 +196,7 @@ int ddr_board_options(struct ddr_info *priv)
+ 
+ long long init_ddr(void)
+ {
+-	int spd_addr[] = { 0x51, 0x00, 0x53, 0x00 };
++	int spd_addr[] = { 0x51, 0x53 };
+ 	struct ddr_info info;
+ 	struct sysinfo sys;
+ 	long long dram_size;
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk b/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk
+index d01a41ea6..35ed8a844 100644
+--- a/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk
++++ b/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk
+@@ -13,7 +13,7 @@ NXP_COINED_BB	:=	no
+ 
+  # DDR Compilation Configs
+ NUM_OF_DDRC	:=	2
+-DDRC_NUM_DIMM	:=	2
++DDRC_NUM_DIMM	:=	1 # per controller
+ DDRC_NUM_CS	:=	4
+ DDR_ECC_EN	:=	yes
+  #enable address decoding feature
+-- 
+2.51.0
+
