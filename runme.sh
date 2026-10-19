@@ -1051,16 +1051,33 @@ do_populate_bootimg_64M() {
 	local IMG="$1"
 	local BOOTSOURCE="$2"
 
+	local PBL_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/atf/bl2.pbl)
 	if [[ ${BOOTSOURCE} == sdhc* ]]; then
 		# RCW+PBI+BL2 at 0x1000 (block 0x8)
+		if [ $PBL_SIZE -gt $((128*1024 - 8*512)) ]; then
+			echo "ERROR: PBL too large"
+			return 1
+		fi
 		dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
 	elif [ "${BOOTSOURCE}" = "xspi" ]; then
 		# RCW+PBI+BL2 at 0x0000000 (block 0x0000)
+		if [ $PBL_SIZE -gt $((128*1024)) ]; then
+			echo "ERROR: PBL too large"
+			return 1
+		fi
 		dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=images/${IMG} bs=512 seek=0 conv=notrunc
 	fi
 
 	# FIP (BL31+BL32+BL33) at 0x0100000 (block 0x800)
+	local FIP_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/atf/fip.bin)
+	if [ $FIP_SIZE -gt $((4*1024*1024)) ]; then
+		echo "ERROR: FIP too large"
+		return 1
+	fi
 	dd if=$ROOTDIR/images/tmp/atf/fip.bin of=images/${IMG} bs=512 seek=2048 conv=notrunc
+
+	# U-Boot environment at 0x0500000 (block 0x2800)
+	dd if=/dev/zero of=images/${IMG} bs=512 seek=10240 conv=notrunc count=128
 
 	# DDR PHY FIP at 0x0800000 (block 0x4000)
 	dd if=$ROOTDIR/images/tmp/atf/ddr_fip.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
@@ -1164,19 +1181,19 @@ do_populate_bootimg_4M() {
 
 	# DPAA2 DPC at 0x03fc000 (block 0x1fe0)
 	local DPC_SIZE=$(stat -c "%s" $ROOTDIR/build/mc-utils/config/${DPC})
-	if [ $DPC_SIZE -gt $((4*1024)) ]; then
+	if [ $DPC_SIZE -gt $((2*1024)) ]; then
 		echo "ERROR: DPC too large"
 		return 1
 	fi
 	dd if=$ROOTDIR/build/mc-utils/config/${DPC} of=images/${IMG} bs=512 seek=8160 conv=notrunc
 
-	# DPAA2 DPL at 0x03fd000 (block 0x1fe8)
+	# DPAA2 DPL at 0x03fc800 (block 0x1fe4)
 	local DPL_SIZE=$(stat -c "%s" $ROOTDIR/build/mc-utils/config/${DPL})
-	if [ $DPL_SIZE -gt $((12*1024)) ]; then
+	if [ $DPL_SIZE -gt $((14*1024)) ]; then
 		echo "ERROR: DPL too large"
 		return 1
 	fi
-	dd if=$ROOTDIR/build/mc-utils/config/${DPL} of=images/${IMG} bs=512 seek=8168 conv=notrunc
+	dd if=$ROOTDIR/build/mc-utils/config/${DPL} of=images/${IMG} bs=512 seek=8164 conv=notrunc
 
 	# no Kernel
 }

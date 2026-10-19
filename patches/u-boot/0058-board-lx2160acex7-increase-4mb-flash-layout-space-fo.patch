@@ -1,0 +1,73 @@
+From c6bc56a82497dfe5620945128c0583603f6a2f80 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 18 Oct 2026 17:44:18 +0200
+Subject: [PATCH] board: lx2160acex7: increase 4mb flash layout space for dpl
+
+On LX2160 DPL can easily grow beyond 12kB, while all currently known DPC
+are below 1.5kB.
+
+Shrink the DPC area from 4kB to 2kB, and increase DPL by the same, to
+14kB total.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ include/configs/lx2160acex7.h | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/include/configs/lx2160acex7.h b/include/configs/lx2160acex7.h
+index de995be7e86..20829141f16 100644
+--- a/include/configs/lx2160acex7.h
++++ b/include/configs/lx2160acex7.h
+@@ -100,7 +100,7 @@
+  *   - 0x1fd0: dpc signature
+  *   - 0x1fd8: dpl signature
+  *   - 0x1fe0: dpc
+- *   - 0x1fe8: dpl
++ *   - 0x1fe4: dpl
+  * - SPI offsets (in byte):
+  *   - 0x0220000: mc firmware
+  *   - 0x03e0000: dtb
+@@ -108,7 +108,7 @@
+  *   - 0x03fa000: dpc signature
+  *   - 0x03fb000: dpl signature
+  *   - 0x03fc000: dpc
+- *   - 0x03fd000: dpl
++ *   - 0x03fc800: dpl
+  */
+ #define MMC_MC_FW_OFFSET		__stringify(0x1100)
+ #define MMC_MC_FW_MAX_SIZE		__stringify(0x0e00)
+@@ -116,12 +116,12 @@
+ #define MMC_MC_FW_SIG_MAX_SIZE		__stringify(0x0008)
+ 
+ #define MMC_MC_DPC_OFFSET		__stringify(0x1fe0)
+-#define MMC_MC_DPC_MAX_SIZE		__stringify(0x0008)
++#define MMC_MC_DPC_MAX_SIZE		__stringify(0x0004)
+ #define MMC_MC_DPC_SIG_OFFSET		__stringify(0x1fd0)
+ #define MMC_MC_DPC_SIG_MAX_SIZE		__stringify(0x0008)
+ 
+-#define MMC_MC_DPL_OFFSET		__stringify(0x1fe8)
+-#define MMC_MC_DPL_MAX_SIZE		__stringify(0x0018)
++#define MMC_MC_DPL_OFFSET		__stringify(0x1fe4)
++#define MMC_MC_DPL_MAX_SIZE		__stringify(0x001c)
+ #define MMC_MC_DPL_SIG_OFFSET		__stringify(0x1fd8)
+ #define MMC_MC_DPL_SIG_MAX_SIZE		__stringify(0x0008)
+ 
+@@ -134,12 +134,12 @@
+ #define XSPI_MC_FW_SIG_MAX_SIZE		__stringify(0x0001000)
+ 
+ #define XSPI_MC_DPC_OFFSET		__stringify(0x03fc000)
+-#define XSPI_MC_DPC_MAX_SIZE		__stringify(0x0001000)
++#define XSPI_MC_DPC_MAX_SIZE		__stringify(0x0000800)
+ #define XSPI_MC_DPC_SIG_OFFSET		__stringify(0x03fa000)
+ #define XSPI_MC_DPC_SIG_MAX_SIZE	__stringify(0x0001000)
+ 
+-#define XSPI_MC_DPL_OFFSET		__stringify(0x03fd000)
+-#define XSPI_MC_DPL_MAX_SIZE		__stringify(0x0003000)
++#define XSPI_MC_DPL_OFFSET		__stringify(0x03fc800)
++#define XSPI_MC_DPL_MAX_SIZE		__stringify(0x0003800)
+ #define XSPI_MC_DPL_SIG_OFFSET		__stringify(0x03fb000)
+ #define XSPI_MC_DPL_SIG_MAX_SIZE	__stringify(0x0001000)
+ 
+-- 
+2.51.0
+
