@@ -1046,10 +1046,24 @@ fi
 MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/ | grep -v sha256sum | cut -f1`
 MC=`ls $ROOTDIR/build/qoriq-mc-binary/lx216?a/${MC}`
 
+# record a region in the flashrom layout file of the image being populated
+# LAYOUT must be set, no-op otherwise
+# usage: do_layout_add <name> <offset in 512-byte blocks> <size in bytes>
+do_layout_add() {
+	[ -n "${LAYOUT}" ] || return 0
+	local NAME="$1"
+	local START=$(($2 * 512))
+	local SIZE=$3
+
+	[ ${SIZE} -gt 0 ] || return 0
+	printf "%08x:%08x %s\n" ${START} $((START + SIZE - 1)) "${NAME}" >> "${LAYOUT}"
+}
+
 # shared function for placing artifacts in boot image
 do_populate_bootimg_64M() {
 	local IMG="$1"
 	local BOOTSOURCE="$2"
+	local LAYOUT="$3"
 
 	local PBL_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/atf/bl2.pbl)
 	if [[ ${BOOTSOURCE} == sdhc* ]]; then
@@ -1067,6 +1081,7 @@ do_populate_bootimg_64M() {
 		fi
 		dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=images/${IMG} bs=512 seek=0 conv=notrunc
 	fi
+	do_layout_add pbl 0 ${PBL_SIZE}
 
 	# FIP (BL31+BL32+BL33) at 0x0100000 (block 0x800)
 	local FIP_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/atf/fip.bin)
@@ -1075,38 +1090,48 @@ do_populate_bootimg_64M() {
 		return 1
 	fi
 	dd if=$ROOTDIR/images/tmp/atf/fip.bin of=images/${IMG} bs=512 seek=2048 conv=notrunc
+	do_layout_add fip 2048 ${FIP_SIZE}
 
 	# U-Boot environment at 0x0500000 (block 0x2800)
 	dd if=/dev/zero of=images/${IMG} bs=512 seek=10240 conv=notrunc count=128
+	do_layout_add env 10240 $((256*512))
 
 	# DDR PHY FIP at 0x0800000 (block 0x4000)
 	dd if=$ROOTDIR/images/tmp/atf/ddr_fip.bin of=images/${IMG} bs=512 seek=16384 conv=notrunc
+	do_layout_add ddr_fip 16384 $(stat -c "%s" $ROOTDIR/images/tmp/atf/ddr_fip.bin)
 
 	# Fuse header FIP at 0x0880000 (block 0x4400)
 	if [ "x$SECURE" == "xtrue" ]; then
 		dd if=$ROOTDIR/images/tmp/atf/fuse_fip.bin of=images/${IMG} bs=512 seek=17408 conv=notrunc
+		do_layout_add fuse_fip 17408 $(stat -c "%s" $ROOTDIR/images/tmp/atf/fuse_fip.bin)
 	fi
 
 	# DPAA2-MC at 0x0a00000 (block 0x5000)
 	dd if=${MC} of=images/${IMG} bs=512 seek=20480 conv=notrunc
+	do_layout_add mc 20480 $(stat -c "%s" ${MC})
 
 	# DPAA2 DPL at 0x0d00000 (block 0x6800)
 	dd if=$ROOTDIR/build/mc-utils/config/${DPL} of=images/${IMG} bs=512 seek=26624 conv=notrunc
+	do_layout_add dpl 26624 $(stat -c "%s" $ROOTDIR/build/mc-utils/config/${DPL})
 
 	# DPAA2 DPC at 0x0e00000 (block 0x7000)
 	dd if=$ROOTDIR/build/mc-utils/config/${DPC} of=images/${IMG} bs=512 seek=28672 conv=notrunc
+	do_layout_add dpc 28672 $(stat -c "%s" $ROOTDIR/build/mc-utils/config/${DPC})
 
 	# DTB at 0x0f00000 (block 0x7800)
 	dd if=$ROOTDIR/images/tmp/linux/boot/${DEFAULT_FDT_FILE} of=images/${IMG} bs=512 seek=30720 conv=notrunc
+	do_layout_add dtb 30720 $(stat -c "%s" $ROOTDIR/images/tmp/linux/boot/${DEFAULT_FDT_FILE})
 
 	# Kernel at 0x1000000 (block 0x8000)
 	dd if=$ROOTDIR/build/linux/kernel-lx2160acex7.itb of=images/${IMG} bs=512 seek=32768 conv=notrunc
+	do_layout_add kernel 32768 $(stat -c "%s" $ROOTDIR/build/linux/kernel-lx2160acex7.itb)
 }
 
 # shared function for placing artifacts in dense boot image 4mb size
 do_populate_bootimg_4M() {
 	local IMG="$1"
 	local BOOTSOURCE="$2"
+	local LAYOUT="$3"
 
 	local PBL_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/atf/bl2.pbl)
 	if [[ ${BOOTSOURCE} == sdhc* ]]; then
@@ -1124,6 +1149,7 @@ do_populate_bootimg_4M() {
 		fi
 		dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=images/${IMG} bs=512 seek=0 conv=notrunc
 	fi
+	do_layout_add pbl 0 ${PBL_SIZE}
 
 	# DDR PHY FIP at 0x0020000 (block 0x100)
 	local DDR_FIP_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/atf/ddr_fip.bin)
@@ -1132,6 +1158,7 @@ do_populate_bootimg_4M() {
 		return 1
 	fi
 	dd if=$ROOTDIR/images/tmp/atf/ddr_fip.bin of=images/${IMG} bs=512 seek=256 conv=notrunc
+	do_layout_add ddr_fip 256 ${DDR_FIP_SIZE}
 
 	# FIP (BL31+BL32+BL33) at 0x0040000 (block 0x200)
 	local FIP_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/atf/fip.bin)
@@ -1140,9 +1167,11 @@ do_populate_bootimg_4M() {
 		return 1
 	fi
 	dd if=$ROOTDIR/images/tmp/atf/fip.bin of=images/${IMG} bs=512 seek=512 conv=notrunc
+	do_layout_add fip 512 ${FIP_SIZE}
 
 	# U-Boot environment at 0x01F0000 (block 0xf80)
 	dd if=/dev/zero of=images/${IMG} bs=512 seek=3968 conv=notrunc count=128
+	do_layout_add env 3968 $((128*512))
 
 	# Fuse header FIP at 0x0200000 (block 0x1000)
 	if [ "x$SECURE" == "xtrue" ]; then
@@ -1152,6 +1181,7 @@ do_populate_bootimg_4M() {
 			return 1
 		fi
 		dd if=$ROOTDIR/images/tmp/atf/fuse_fip.bin of=images/${IMG} bs=512 seek=4096 conv=notrunc
+		do_layout_add fuse_fip 4096 ${FUSE_FIP_SIZE}
 	fi
 
 	# DPAA2-MC at 0x0220000 (block 0x1100)
@@ -1161,6 +1191,7 @@ do_populate_bootimg_4M() {
 		return 1
 	fi
 	dd if=${MC} of=images/${IMG} bs=512 seek=4352 conv=notrunc
+	do_layout_add mc 4352 ${MC_SIZE}
 
 	# DTB at 0x03e0000 (block 0x1f00)
 	local DTB_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/linux/boot/${DEFAULT_FDT_FILE})
@@ -1169,15 +1200,19 @@ do_populate_bootimg_4M() {
 		return 1
 	fi
 	dd if=$ROOTDIR/images/tmp/linux/boot/${DEFAULT_FDT_FILE} of=images/${IMG} bs=512 seek=7936 conv=notrunc
+	do_layout_add dtb 7936 ${DTB_SIZE}
 
 	# DPAA2-MC Signature at 0x03f9000 (block 0x1fc8)
 	dd if=/dev/zero of=images/${IMG} bs=512 seek=8136 conv=notrunc count=8
+	do_layout_add mc_sig 8136 $((8*512))
 
 	# DPAA2 DPC Signature at 0x03fa000 (block 0x1fd0)
 	dd if=/dev/zero of=images/${IMG} bs=512 seek=8144 conv=notrunc count=8
+	do_layout_add dpc_sig 8144 $((8*512))
 
 	# DPAA2 DPL Signature at 0x03fb000 (block 0x1fd8)
 	dd if=/dev/zero of=images/${IMG} bs=512 seek=8152 conv=notrunc count=8
+	do_layout_add dpl_sig 8152 $((8*512))
 
 	# DPAA2 DPC at 0x03fc000 (block 0x1fe0)
 	local DPC_SIZE=$(stat -c "%s" $ROOTDIR/build/mc-utils/config/${DPC})
@@ -1186,6 +1221,7 @@ do_populate_bootimg_4M() {
 		return 1
 	fi
 	dd if=$ROOTDIR/build/mc-utils/config/${DPC} of=images/${IMG} bs=512 seek=8160 conv=notrunc
+	do_layout_add dpc 8160 ${DPC_SIZE}
 
 	# DPAA2 DPL at 0x03fc800 (block 0x1fe4)
 	local DPL_SIZE=$(stat -c "%s" $ROOTDIR/build/mc-utils/config/${DPL})
@@ -1194,6 +1230,7 @@ do_populate_bootimg_4M() {
 		return 1
 	fi
 	dd if=$ROOTDIR/build/mc-utils/config/${DPL} of=images/${IMG} bs=512 seek=8164 conv=notrunc
+	do_layout_add dpl 8164 ${DPL_SIZE}
 
 	# no Kernel
 }
@@ -1205,7 +1242,7 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc1 ]]); then
 
 	IMG=${SOC,,}_rev${CPU_REVISION}_${MODULE,,}_${BOARD,,}_sd_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
 	cp --sparse=always $ROOTDIR/images/tmp/$ROOTFS.img images/${IMG}
-	do_populate_bootimg_${FLASH_SIZE} "${IMG}" sdhc
+	do_populate_bootimg_${FLASH_SIZE} "${IMG}" sdhc ""
 
 	IMAGES+=("images/${IMG}")
 fi
@@ -1217,7 +1254,7 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [[ ${BOOTSOURCE} == sdhc2 ]]); then
 
 	IMG=${SOC,,}_rev${CPU_REVISION}_${MODULE,,}_${BOARD,,}_emmc_${CPU_SPEED}_${BUS_SPEED}_${DDR_SPEED}_${SERDES}-${REPO_PREFIX}.img
 	cp --sparse=always $ROOTDIR/images/tmp/$ROOTFS.img images/${IMG}
-	do_populate_bootimg_${FLASH_SIZE} "${IMG}" sdhc
+	do_populate_bootimg_${FLASH_SIZE} "${IMG}" sdhc ""
 
 	IMAGES+=("images/${IMG}")
 fi
@@ -1234,9 +1271,13 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [ "${BOOTSOURCE}" = "xspi" ]); then
 	rm -rf $ROOTDIR/images/${XSPI_IMG}
 	truncate -s ${FLASH_SIZE} $ROOTDIR/images/${XSPI_IMG}
 
-	do_populate_bootimg_${FLASH_SIZE} "${XSPI_IMG}" xspi
+	XSPI_LYO="${XSPI_IMG%.img}.layout"
+	: > "${XSPI_LYO}"
+
+	do_populate_bootimg_${FLASH_SIZE} "${XSPI_IMG}" xspi "$ROOTDIR/images/${XSPI_LYO}"
 
 	IMAGES+=("images/${XSPI_IMG}")
+	IMAGES+=("images/${XSPI_LYO}")
 fi
 
 # generate auto boot image (sd + emmc + xspi)
@@ -1258,8 +1299,10 @@ if [ "${BOOTSOURCE}" = "auto" ]; then
 
 	if [ "${BOOTFLASH}" = "secondary" ]; then
 		e2cp -G 0 -O 0 $ROOTDIR/images/${XSPI_IMG} $ROOTDIR/images/tmp/boot.part:/xspi_backup.img
+		e2cp -G 0 -O 0 $ROOTDIR/images/${XSPI_LYO} $ROOTDIR/images/tmp/boot.part:/xspi_backup.layout
 	else
 		e2cp -G 0 -O 0 $ROOTDIR/images/${XSPI_IMG} $ROOTDIR/images/tmp/boot.part:/xspi.img
+		e2cp -G 0 -O 0 $ROOTDIR/images/${XSPI_LYO} $ROOTDIR/images/tmp/boot.part:/xspi.layout
 	fi
 
 	do_populate_bootimg_${FLASH_SIZE} "${IMG}" sdhc
