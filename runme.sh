@@ -1068,14 +1068,14 @@ do_populate_bootimg_64M() {
 	local PBL_SIZE=$(stat -c "%s" $ROOTDIR/images/tmp/atf/bl2.pbl)
 	if [[ ${BOOTSOURCE} == sdhc* ]]; then
 		# RCW+PBI+BL2 at 0x1000 (block 0x8)
-		if [ $PBL_SIZE -gt $((128*1024 - 8*512)) ]; then
+		if [ $PBL_SIZE -gt $((1024*1024 - 8*512)) ]; then
 			echo "ERROR: PBL too large"
 			return 1
 		fi
 		dd if=$ROOTDIR/images/tmp/atf/bl2.pbl of=images/${IMG} bs=512 seek=8 conv=notrunc
 	elif [ "${BOOTSOURCE}" = "xspi" ]; then
 		# RCW+PBI+BL2 at 0x0000000 (block 0x0000)
-		if [ $PBL_SIZE -gt $((128*1024)) ]; then
+		if [ $PBL_SIZE -gt $((1024*1024)) ]; then
 			echo "ERROR: PBL too large"
 			return 1
 		fi
