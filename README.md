@@ -90,6 +90,13 @@ A docker image providing a consistent build environment can be used as below:
 Due to the way podman performs user-id mapping, the root user inside the container (uid=0, gid=0) will be mapped to the user running podman (e.g. 1000:100).
 Therefore in order for the build directory to be owned by current user, `-u 0 -g 0` have to be passed to *docker run*.
 
+#### rootless Podman & SELinux
+
+Systems with selinux enabled may encounter misleading permission errors even while uid and gid inside container build environment are correct.
+In this case disable any selinux based confinement for the lx2160a_build container, giving the container exactly the same permissions the host user has.
+
+Add to docker cli: `docker run ... --security-opt label=disable ... lx2160a_build ...`
+
 ### Build Full Image from Source with host tools
 
 Simply running ./runme.sh will check for required tools, clone and build images and place results in images/ directory:
