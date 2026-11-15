@@ -338,13 +338,20 @@ echo "Building RCW"
 do_build_rcw
 
 do_build_uboot() {
+	local FRAGMENT=$ROOTDIR/images/tmp/uboot_runme_additions.config
+
+	# generate config fragment with build-time options,
+	# merged before kconfig resolves dependent defaults (e.g. ENV_OFFSET)
+	mkdir -p $(dirname $FRAGMENT)
+	: > $FRAGMENT
+	test -n "${DEFAULT_FDT_FILE}" && printf "CONFIG_DEFAULT_FDT_FILE=\"%s\"\n" "${DEFAULT_FDT_FILE}" >> $FRAGMENT || true
+	test -n "${UBOOT_FDT}" && printf "CONFIG_DEFAULT_DEVICE_TREE=\"%s\"\n" "${UBOOT_FDT}" >> $FRAGMENT || true
+	test -n "${UBOOT_ETHPRIME}" && printf "CONFIG_ETHPRIME=\"%s\"\n" "${UBOOT_ETHPRIME}" >> $FRAGMENT || true
+	printf "CONFIG_LX2160ACEX7_BOOTMEDIA_%s=y\n" "${FLASH_SIZE}" >> $FRAGMENT
+	printf "CONFIG_LX2160ACEX7_XSPI_SWAPPED_CS=%s\n" "${FLASH_SWAPPED}" >> $FRAGMENT || true
+
 	cd $ROOTDIR/build/u-boot
-	./scripts/kconfig/merge_config.sh configs/${UBOOT_DEFCONFIG} $ROOTDIR/configs/u-boot/lx2k_additions.config
-	test -n "${DEFAULT_FDT_FILE}" && printf "CONFIG_DEFAULT_FDT_FILE=\"%s\"\n" "${DEFAULT_FDT_FILE}" >> .config || true
-	test -n "${UBOOT_FDT}" && printf "CONFIG_DEFAULT_DEVICE_TREE=\"%s\"\n" "${UBOOT_FDT}" >> .config || true
-	test -n "${UBOOT_ETHPRIME}" && printf "CONFIG_ETHPRIME=\"%s\"\n" "${UBOOT_ETHPRIME}" >> .config || true
-	printf "CONFIG_LX2160ACEX7_BOOTMEDIA_%s=y\n" "${FLASH_SIZE}" >> .config
-	printf "CONFIG_LX2160ACEX7_XSPI_SWAPPED_CS=%s\n" "${FLASH_SWAPPED}" >> .config || true
+	./scripts/kconfig/merge_config.sh configs/${UBOOT_DEFCONFIG} $ROOTDIR/configs/u-boot/lx2k_additions.config $FRAGMENT
 
 	make olddefconfig
 	make -j${PARALLEL}
@@ -1272,7 +1279,7 @@ if ([ "${BOOTSOURCE}" = "auto" ] || [ "${BOOTSOURCE}" = "xspi" ]); then
 	truncate -s ${FLASH_SIZE} $ROOTDIR/images/${XSPI_IMG}
 
 	XSPI_LYO="${XSPI_IMG%.img}.layout"
-	: > "${XSPI_LYO}"
+	: > "$ROOTDIR/images/${XSPI_LYO}"
 
 	do_populate_bootimg_${FLASH_SIZE} "${XSPI_IMG}" xspi "$ROOTDIR/images/${XSPI_LYO}"
 
