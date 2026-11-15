@@ -1,0 +1,134 @@
+From f4834e2da6f0b49a316d4ddf365a342bd562fd73 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 3 Nov 2026 17:54:39 +0100
+Subject: [PATCH 43/48] net: dpaa2-mac: exit only the phys that dpaa2-mac
+ initialized
+
+The SerDes lanes, phys 0 .. num_lanes-1, are initialized and exited by
+the Lynx PCS (lynx_pcs_create() / lynx_pcs_destroy()); dpaa2-mac only
+initializes the remaining optional phys. dpaa2_mac_put_phys() however
+calls phy_exit() on all phys, so after dpaa2_mac_disconnect() the init
+count of each SerDes lane drops below zero. When the dpmac is connected
+again, for example by the dpaa2-switch after dpaa2-eth was unbound or by
+the standalone dpmac driver, phy_init() only brings the count back to
+zero without calling the init callback, and phy_power_on() warns
+"phy_power_on was called before phy_init". The Lynx 28G driver then
+treats the lane as unmanaged, e.g. its CDR lock check skips it.
+
+Every owner handing a dpmac over to the next one is expected to leave
+the phys exactly as it found them.
+
+Make dpaa2_mac_put_phys() mirror dpaa2_mac_get_phys(): exit only phys
+num_lanes .. num_phys-1, put all of them, and tolerate being called
+without phys. Also release partially acquired phys when
+dpaa2_mac_get_phys() fails, and put the phys when dpaa2_mac_connect()
+fails after having acquired them, so that no references remain on the
+dpmac for the next owner.
+
+This fixes the SerDes lane state after handing a dpmac from dpaa2-eth to
+dpaa2-switch or to the standalone dpmac driver, and back.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../net/ethernet/freescale/dpaa2/dpaa2-mac.c  | 41 +++++++++++++++----
+ 1 file changed, 34 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+index 512f4f561ba7..321729f8a6bf 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-mac.c
+@@ -393,8 +393,10 @@ static int dpaa2_mac_get_phys(struct dpaa2_mac *mac)
+ 
+ 	for (i = 0; i < mac->num_phys; i++) {
+ 		phy = devm_of_phy_get_by_index(dev, dn, i);
+-		if (IS_ERR(phy))
+-			return PTR_ERR(phy);
++		if (IS_ERR(phy)) {
++			err = PTR_ERR(phy);
++			goto err_put_phys;
++		}
+ 
+ 		mac->phys[i] = phy;
+ 	}
+@@ -407,10 +409,23 @@ static int dpaa2_mac_get_phys(struct dpaa2_mac *mac)
+ 	for (i = mac->num_lanes; i < mac->num_phys; i++) {
+ 		err = phy_init(mac->phys[i]);
+ 		if (err)
+-			return err;
++			goto err_phy_exit;
+ 	}
+ 
+ 	return 0;
++
++err_phy_exit:
++	while (i-- > mac->num_lanes)
++		phy_exit(mac->phys[i]);
++	i = mac->num_phys;
++err_put_phys:
++	while (i--)
++		devm_phy_put(dev, mac->phys[i]);
++	kfree(mac->phys);
++	mac->phys = NULL;
++	mac->num_phys = 0;
++
++	return err;
+ }
+ 
+ static void dpaa2_mac_put_phys(struct dpaa2_mac *mac)
+@@ -418,13 +433,22 @@ static void dpaa2_mac_put_phys(struct dpaa2_mac *mac)
+ 	struct device *dev = &mac->mc_dev->dev;
+ 	size_t i;
+ 
+-	for (i = 0; i < mac->num_phys; i++) {
++	if (!mac->phys)
++		return;
++
++	/* The SerDes lanes (PHYs 0 .. num_lanes-1) were initialized by the
++	 * PCS, which also exits them; exit only what dpaa2_mac_get_phys()
++	 * initialized itself.
++	 */
++	for (i = mac->num_lanes; i < mac->num_phys; i++)
+ 		phy_exit(mac->phys[i]);
++
++	for (i = 0; i < mac->num_phys; i++)
+ 		devm_phy_put(dev, mac->phys[i]);
+-	}
+ 
+ 	kfree(mac->phys);
+ 	mac->phys = NULL;
++	mac->num_phys = 0;
+ }
+ 
+ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+@@ -464,7 +488,8 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ 	     mac->if_mode == PHY_INTERFACE_MODE_RGMII_RXID ||
+ 	     mac->if_mode == PHY_INTERFACE_MODE_RGMII_TXID)) {
+ 		netdev_err(net_dev, "RGMII delay not supported\n");
+-		return -EINVAL;
++		err = -EINVAL;
++		goto err_put_phys;
+ 	}
+ 
+ 	if ((mac->attr.link_type == DPMAC_LINK_TYPE_PHY &&
+@@ -472,7 +497,7 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ 	    mac->attr.link_type == DPMAC_LINK_TYPE_BACKPLANE) {
+ 		err = dpaa2_pcs_create(mac, dpmac_node, mac->attr.id);
+ 		if (err)
+-			return err;
++			goto err_put_phys;
+ 	}
+ 
+ 	memset(&mac->phylink_config, 0, sizeof(mac->phylink_config));
+@@ -508,6 +533,8 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
+ 	phylink_destroy(mac->phylink);
+ err_pcs_destroy:
+ 	dpaa2_pcs_destroy(mac);
++err_put_phys:
++	dpaa2_mac_put_phys(mac);
+ 
+ 	return err;
+ }
+-- 
+2.53.0
+

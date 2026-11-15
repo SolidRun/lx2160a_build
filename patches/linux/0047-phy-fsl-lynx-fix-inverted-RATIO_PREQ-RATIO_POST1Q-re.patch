@@ -1,0 +1,34 @@
+From e2e535955ff07542b9f75908aaab4ee46418ce8a Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 14 Nov 2026 17:36:45 +0100
+Subject: [PATCH 47/48] phy: fsl-lynx: fix inverted RATIO_PREQ/RATIO_POST1Q
+ restriction message
+
+The check is ratio_post1q < ratio_preq, so it is the pre-cursor that would
+exceed the post-cursor, as worded on the net-phy-upstreaming branch of
+Vladimir Oltean and in NXP lf-6.12.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-xgkr-algorithm.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-xgkr-algorithm.c b/drivers/phy/freescale/phy-fsl-lynx-xgkr-algorithm.c
+index 74d52302cbf3..7bf0062e6a5e 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-xgkr-algorithm.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-xgkr-algorithm.c
+@@ -732,8 +732,8 @@ static bool lynx_check_tx_hw_restrictions(struct phy *phy, s32 ratio_post1q,
+ 
+ 	/* 5. ratio_post1q[4:0] >= ratio_preq[3:0] */
+ 	if (ratio_post1q < ratio_preq) {
+-		dev_dbg(dev, "RATIO_POST1Q(%d) would exceed RATIO_PREQ(%d)\n",
+-			ratio_post1q, ratio_preq);
++		dev_dbg(dev, "RATIO_PREQ(%d) would exceed RATIO_POST1Q(%d)\n",
++			ratio_preq, ratio_post1q);
+ 		return false;
+ 	}
+ 
+-- 
+2.53.0
+

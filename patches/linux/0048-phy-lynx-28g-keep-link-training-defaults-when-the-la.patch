@@ -1,0 +1,55 @@
+From 1c9d7cb6f61e49c05753ece4413fed231bf7be85 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sat, 14 Nov 2026 17:37:00 +0100
+Subject: [PATCH 48/48] phy: lynx-28g: keep link training defaults when the
+ lane mode is unchanged
+
+lynx_28g_set_link_mode() always created a new link training algorithm,
+which reads its default TX equalization from the lane registers. But
+lynx_28g_set_lane_mode() returns early when the lane mode does not change
+(e.g. 10GBase-KR -> 10GBase-KR on every link down/up), so the protocol
+configuration table is not reapplied, and the "defaults" become the
+coefficients left behind by the previous training session. Each training
+then starts from wherever the last one ended.
+
+Match the behaviour of lynx_28g_set_mode() on the net-phy-upstreaming
+branch of Vladimir Oltean (github.com/vladimiroltean/linux), which only
+creates the algorithm, and reads its defaults, when the lane mode actually
+changes.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index 7c053b40e3bd..cf8d54e2c397 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -1780,10 +1780,21 @@ static int lynx_28g_set_link_mode(struct phy *phy,
+ 				  enum ethtool_link_mode_bit_indices submode)
+ {
+ 	struct lynx_28g_lane *lane = phy_get_drvdata(phy);
++	enum lynx_28g_lane_mode lane_mode = link_mode_to_lane_mode(submode);
+ 	struct lynx_xgkr_algorithm *algorithm;
+ 	int err;
+ 
+-	err = lynx_28g_set_lane_mode(phy, link_mode_to_lane_mode(submode));
++	/* The link training algorithm captures its default TX equalization
++	 * from the registers, right after lynx_28g_set_lane_mode() programmed
++	 * them from the protocol configuration table. If the lane mode is not
++	 * changing, the table is not applied again, and the registers hold
++	 * whatever the previous training session left behind. Keep the
++	 * existing algorithm and its defaults in that case.
++	 */
++	if (lane_mode == lane->mode && lane->algorithm)
++		return 0;
++
++	err = lynx_28g_set_lane_mode(phy, lane_mode);
+ 	if (err)
+ 		return err;
+ 
+-- 
+2.53.0
+

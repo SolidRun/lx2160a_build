@@ -1,0 +1,47 @@
+From 91aaa78427bd7ccbd488230f2f645e2a0caad4f4 Mon Sep 17 00:00:00 2001
+From: Vladimir Oltean <vladimir.oltean@nxp.com>
+Date: Wed, 10 Jun 2026 14:34:13 +0300
+Subject: [PATCH 45/48] phy: fsl-lynx: fix BinM1 module requesting C(-1) update
+ in wrong direction
+
+Signed-off-by: Vladimir Oltean <vladimir.oltean@nxp.com>
+---
+ .../freescale/phy-fsl-lynx-xgkr-algorithm.c   | 19 ++++++-------------
+ 1 file changed, 6 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-xgkr-algorithm.c b/drivers/phy/freescale/phy-fsl-lynx-xgkr-algorithm.c
+index 7ac91be6fdff..e52c6bb82c50 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-xgkr-algorithm.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-xgkr-algorithm.c
+@@ -358,22 +358,15 @@ static bool lynx_xgkr_process_bin_m1(struct lynx_xgkr_algorithm *algorithm,
+ 			update->com1 = coef_update_opposite(prev_req_com1);
+ 		} else {
+ 			if (rts->prev_bin_m1_state == bin_m1_state) {
+-				if (bin_m1_state == BIN_LATE) {
+-					/* Late path, request Decrement c(-1) */
+-					update->com1 = COEF_UPD_DEC;
+-				} else {
+-					/* Early path, request Increment c(-1) */
++				if (bin_m1_state == BIN_LATE)
+ 					update->com1 = COEF_UPD_INC;
+-				}
+-			} else {
+-				/* according to: v1.0 */
+-				if (bin_m1_state == BIN_LATE) {
+-					/* request Decrement c(-1) */
++				else
+ 					update->com1 = COEF_UPD_DEC;
+-				} else {
+-					/* Hold C(-1) */
++			} else {
++				if (bin_m1_state == BIN_LATE)
++					update->com1 = COEF_UPD_INC;
++				else
+ 					update->com1 = COEF_UPD_HOLD;
+-				}
+ 			}
+ 		}
+ 	}
+-- 
+2.53.0
+

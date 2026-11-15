@@ -1,0 +1,110 @@
+From db6db60cabc260016e86bec7b9d091a71700c7fb Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 2 Nov 2026 14:59:20 +0100
+Subject: [PATCH 40/48] net: pcs: mtip_backplane: restart AN when no base page
+ is received
+
+After a failed link training attempt, the link partner may keep
+transmitting a 10GBASE-R signal for a while instead of DME pages. The
+AN/LT block then falls back to parallel detection on the PCS sync
+indication and parks: AN_STAT shows link status, but no page received
+and no AN complete. It stops transmitting its own base pages, the link
+partner never sees them, and neither side recovers. Only an AN restart
+gets out of this state.
+
+As long as the link mode is unresolved, auto-negotiation is expected to
+keep exchanging base pages until it either resolves a link mode or is
+restarted.
+
+Restart AN from the irqpoll thread when no base page was received for
+2 seconds since the last AN restart or base page, while the link mode
+is still unresolved and AN is not complete.
+
+This fixes 10GBASE-KR auto-negotiation getting permanently stuck after
+link training failures with an AMD V3000 (amd-xgbe) link partner, which
+previously only recovered by manually restarting AN.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/net/pcs/mtip_backplane.c | 29 +++++++++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
+
+diff --git a/drivers/net/pcs/mtip_backplane.c b/drivers/net/pcs/mtip_backplane.c
+index 1d2905012470..86452ba1d63a 100644
+--- a/drivers/net/pcs/mtip_backplane.c
++++ b/drivers/net/pcs/mtip_backplane.c
+@@ -131,6 +131,8 @@
+ 
+ #define MTIP_LT_TIMEOUT_MS		1000
+ #define MTIP_AN_TIMEOUT_MS		10000
++/* Restart AN if no base page was received for this long while unresolved */
++#define MTIP_AN_NO_PAGE_TIMEOUT_MS	2000
+ 
+ #define MTIP_MAX_NUM_SUBORDINATES	(MTIP_MAX_NUM_LANES - 1)
+ 
+@@ -186,6 +188,7 @@ enum an_restart_reason {
+ 	AN_RESTART_REASON_RECONFIG,
+ 	AN_RESTART_REASON_TIMEOUT_AN,
+ 	AN_RESTART_REASON_USER,
++	AN_RESTART_REASON_NO_PAGE,
+ };
+ 
+ enum state_reset_reason {
+@@ -234,6 +237,7 @@ struct mtip_backplane {
+ 	bool any_request_received;
+ 	unsigned long last_lt_done;
+ 	unsigned long last_an_restart;
++	unsigned long last_page_received;
+ 	struct mtip_irqpoll irqpoll;
+ 	struct kthread_worker *local_tx_lt_worker;
+ 	struct kthread_worker *remote_tx_lt_worker;
+@@ -796,6 +800,8 @@ static const char *mtip_an_restart_reason_str(enum an_restart_reason reason)
+ 		return "AN timeout workaround";
+ 	case AN_RESTART_REASON_USER:
+ 		return "requested by user";
++	case AN_RESTART_REASON_NO_PAGE:
++		return "no base page received";
+ 	default:
+ 		return "unknown";
+ 	}
+@@ -2030,6 +2036,7 @@ static void mtip_irqpoll_work(struct work_struct *work)
+ 		 * autoneg again. Avoid that.
+ 		 */
+ 		new_page = true;
++		priv->last_page_received = jiffies;
+ 
+ 		err = mtip_c73_page_received(priv, &an_restart_reason);
+ 		if (err)
+@@ -2078,6 +2085,28 @@ static void mtip_irqpoll_work(struct work_struct *work)
+ 		an_restart_reason = AN_RESTART_REASON_TIMEOUT_AN;
+ 	}
+ 
++	/* After a failed link training attempt, the AN/LT block can park in a
++	 * state where it neither transmits DME base pages nor completes AN
++	 * (AN_STAT shows link status but no page / no AN complete), typically
++	 * while the link partner still transmits a 10GBASE-R-like signal.
++	 * Nothing recovers from this except an AN restart, so do one if no
++	 * base page has been received for a while.
++	 */
++	if (!an_restart_reason && priv->an_enabled &&
++	    !priv->link_mode_resolved && !(val & MDIO_AN_STAT1_COMPLETE) &&
++	    time_after(jiffies, max(priv->last_an_restart,
++				    priv->last_page_received) +
++			       msecs_to_jiffies(MTIP_AN_NO_PAGE_TIMEOUT_MS))) {
++		dev_info(dev,
++			 "No C73 base page for %d ms (AN_CTRL 0x%x AN_STAT 0x%x LT_CTRL 0x%x LT_STAT 0x%x PCS_STAT1 0x%x BASER_STAT1 0x%x), restarting AN\n",
++			 MTIP_AN_NO_PAGE_TIMEOUT_MS, mtip_read_an(priv, AN_CTRL),
++			 val, mtip_read_lt(priv, LT_CTRL),
++			 mtip_read_lt(priv, LT_STAT),
++			 mtip_read_pcs(priv, MDIO_STAT1),
++			 mtip_read_pcs(priv, MDIO_PCS_10GBRT_STAT1));
++		an_restart_reason = AN_RESTART_REASON_NO_PAGE;
++	}
++
+ 	if (an_restart_reason) {
+ 		err = mtip_an_restart(priv, an_restart_reason);
+ 		if (err)
+-- 
+2.53.0
+

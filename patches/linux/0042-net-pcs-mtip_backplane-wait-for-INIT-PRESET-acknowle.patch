@@ -1,0 +1,130 @@
+From e09c511cfa058ec15808b6718fc2ac2f92846641 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 2 Nov 2026 15:10:26 +0100
+Subject: [PATCH 42/48] net: pcs: mtip_backplane: wait for INIT/PRESET
+ acknowledgement per C72
+
+After responding to an INIT or PRESET request, mtip_rx_c72_coef_update()
+waits for the whole LP coefficient update word to read zero. IEEE 802.3
+72.6.10.2.3.1 and 72.6.10.2.3.2 only require the requester to clear the
+INIT or PRESET control once no coefficient status reads not_updated.
+A link partner which follows that, but keeps other control bits set
+in the same word, makes the poll time out and link training fail with
+"LP did not revert to HOLD".
+
+Only increment/decrement requests are acknowledged by all taps going
+back to HOLD (72.6.10.2.3.3).
+
+Wait for the requested INIT or PRESET bit to clear for those requests,
+and keep waiting for HOLD on all taps for increment/decrement requests.
+
+This aligns the acknowledgement handling with mtip_rx_c72_wait_ack()
+from the upstream submission of this driver.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/net/pcs/mtip_backplane.c | 79 ++++++++++++++++++++++++++++----
+ 1 file changed, 69 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/net/pcs/mtip_backplane.c b/drivers/net/pcs/mtip_backplane.c
+index 108953a540b2..1728ede4f8dc 100644
+--- a/drivers/net/pcs/mtip_backplane.c
++++ b/drivers/net/pcs/mtip_backplane.c
+@@ -1322,6 +1322,73 @@ static int mtip_read_lt_lp_coef_if_not_ready(struct mtip_backplane *priv,
+ 	return mtip_read_lt(priv, LT_LP_COEF);
+ }
+ 
++/* If the control channel of a coefficient request had the INIT or the PRESET
++ * bit set, the requester acks the change when it clears the bit that was
++ * originally set.
++ */
++static int mtip_wait_lt_lp_init_preset_to_clear(struct mtip_backplane *priv,
++						const struct c72_coef_update *upd)
++{
++	int val;
++
++	val = mtip_read_lt(priv, LT_LP_COEF);
++	if (val < 0)
++		return val;
++
++	if (upd->init && !(val & LT_COEF_UPD_INIT))
++		return 1;
++
++	if (upd->preset && !(val & LT_COEF_UPD_PRESET))
++		return 1;
++
++	return 0;
++}
++
++static int mtip_rx_c72_wait_ack(struct mtip_backplane *priv,
++			        const struct c72_coef_update *upd)
++{
++	struct device *dev = &priv->mdiodev->dev;
++	int err, val;
++
++	/* 72.6.10.2.3.3 "Coefficient (k) update" states that when the update
++	 * requester sees the update status for a tap set to updated, maximum,
++	 * or minimum, the outgoing requests for that tap shall be set to hold.
++	 */
++	if (upd->com1 || upd->coz || upd->cop1) {
++		err = read_poll_timeout(mtip_read_lt, val,
++					val < 0 || LT_COEF_UPD_NOTHING(val),
++					MTIP_COEF_STAT_SLEEP_US,
++					MTIP_COEF_STAT_TIMEOUT_US,
++					false, priv, LT_LP_COEF);
++		if (err) {
++			dev_err(dev,
++				"LP did not revert to HOLD; LP_COEF = 0x%x\n",
++				val);
++			return err;
++		}
++
++		return val < 0 ? val : 0;
++	}
++
++	/* 72.6.10.2.3.1 "Preset" and 72.6.10.2.3.2 "Initialize" state that
++	 * when the update requester no longer sees any coefficient status
++	 * indicating not_updated, the outgoing preset (or initialize) control
++	 * shall be set to zero.
++	 */
++	err = read_poll_timeout(mtip_wait_lt_lp_init_preset_to_clear,
++				val, val, MTIP_COEF_STAT_SLEEP_US,
++				MTIP_COEF_STAT_TIMEOUT_US,
++				false, priv, upd);
++	if (err) {
++		dev_err(dev,
++			"LP did not clear its %s control request\n",
++			upd->init ? "init" : upd->preset ? "preset" : "(unknown)");
++		return err;
++	}
++
++	return val < 0 ? val : 0;
++}
++
+ static int mtip_rx_c72_coef_update(struct mtip_backplane *priv,
+ 				   struct c72_coef_update *upd,
+ 				   bool *rx_ready)
+@@ -1381,17 +1448,9 @@ static int mtip_rx_c72_coef_update(struct mtip_backplane *priv,
+ 	if (err < 0)
+ 		return err;
+ 
+-	err = read_poll_timeout(mtip_read_lt, val,
+-				val < 0 || LT_COEF_UPD_NOTHING(val),
+-				MTIP_COEF_STAT_SLEEP_US, MTIP_COEF_STAT_TIMEOUT_US,
+-				false, priv, LT_LP_COEF);
+-	if (err) {
+-		dev_err(dev, "LP did not revert to HOLD; LP_COEF = 0x%x\n",
+-			val);
++	err = mtip_rx_c72_wait_ack(priv, upd);
++	if (err)
+ 		return err;
+-	}
+-	if (val < 0)
+-		return val;
+ 
+ 	err = mtip_modify_lt(priv, LT_LD_STAT, LT_COEF_STAT_MASK,
+ 			     LT_COM1(COEF_STAT_NOT_UPDATED) |
+-- 
+2.53.0
+

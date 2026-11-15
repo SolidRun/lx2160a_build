@@ -1,0 +1,44 @@
+From 3f6dc352f72a089b22d187f450db8d99a6d61d8d Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 15 Oct 2026 23:10:16 +0200
+Subject: [PATCH 39/48] net: phy: mscc: don't disable polarity correction in
+ forced mdi modes
+
+Polarity correction and MDI-X are distinct features. MDI-X swaps pairs
+to correct for straight or crossover ethernet cables. Polarity
+correction swaps the polarity within a pair, which is permitted for
+1000BASE-T.
+
+vsc85xx_mdix_set currently disables polarity correction in both forced
+MDI and MDI-X modes, and only keeps it enabled in automatic mode.
+
+This breaks the link in forced MDI or MDI-X mode when the link partner
+has inverted polarity within a pair.
+
+Drop the polarity correction bit from vsc85xx_mdix_set so that it is
+unaffected by the MDI-X setting.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/net/phy/mscc/mscc_main.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/drivers/net/phy/mscc/mscc_main.c b/drivers/net/phy/mscc/mscc_main.c
+index 20c33c1a84c2..d30bfa344b39 100644
+--- a/drivers/net/phy/mscc/mscc_main.c
++++ b/drivers/net/phy/mscc/mscc_main.c
+@@ -210,11 +210,9 @@ static int vsc85xx_mdix_set(struct phy_device *phydev, u8 mdix)
+ 	reg_val = phy_read(phydev, MSCC_PHY_BYPASS_CONTROL);
+ 	if (mdix == ETH_TP_MDI || mdix == ETH_TP_MDI_X) {
+ 		reg_val |= (DISABLE_PAIR_SWAP_CORR_MASK |
+-			    DISABLE_POLARITY_CORR_MASK  |
+ 			    DISABLE_HP_AUTO_MDIX_MASK);
+ 	} else {
+ 		reg_val &= ~(DISABLE_PAIR_SWAP_CORR_MASK |
+-			     DISABLE_POLARITY_CORR_MASK  |
+ 			     DISABLE_HP_AUTO_MDIX_MASK);
+ 	}
+ 	rc = phy_write(phydev, MSCC_PHY_BYPASS_CONTROL, reg_val);
+-- 
+2.53.0
+

@@ -1,0 +1,42 @@
+From 141152501c55cef98be3f0d74c6068ca6ea94597 Mon Sep 17 00:00:00 2001
+From: Vladimir Oltean <vladimir.oltean@nxp.com>
+Date: Thu, 2 Jul 2026 16:53:38 +0300
+Subject: [PATCH 46/48] phy: lynx: disable RX_HAPPY module for KR link training
+
+It was observed on 25GBase-KR, with some short channesl that when the
+link partner starts with coefficient sets which are compliant to IEEE
+requirements for INIT (Rpre, Rpst), the RX_HAPPY module complains and
+requests a jump to PRESET coefficients.
+
+More investigation regarding the RX_HAPPY module is necessary. Until
+then, bypass the condition and allow just the BinLong/BinM1 modules to
+do the work.
+
+Signed-off-by: Vladimir Oltean <vladimir.oltean@nxp.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-xgkr-algorithm.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-xgkr-algorithm.c b/drivers/phy/freescale/phy-fsl-lynx-xgkr-algorithm.c
+index e52c6bb82c50..74d52302cbf3 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-xgkr-algorithm.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-xgkr-algorithm.c
+@@ -542,6 +542,7 @@ lynx_xgkr_train_remote_tx(struct lynx_xgkr_algorithm *algorithm,
+ 		return lynx_xgkr_remote_tx_request(rts, UPDATE_REQUESTER_INIT);
+ 	}
+ 
++#if 0
+ 	for (i = 0; i < TIMEOUT_RX_HAPPY; i++) {
+ 		is_rx_happy = lynx_xgkr_is_rx_happy(algorithm);
+ 		if (is_rx_happy)
+@@ -551,6 +552,7 @@ lynx_xgkr_train_remote_tx(struct lynx_xgkr_algorithm *algorithm,
+ 	if (!is_rx_happy)
+ 		return lynx_xgkr_process_bad_state(algorithm, remote_tx,
+ 						   BAD_STATE_RX_NOT_HAPPY);
++#endif
+ 
+ 	/* Move to BinLong/BinM1 modules */
+ 
+-- 
+2.53.0
+

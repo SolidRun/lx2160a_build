@@ -1,0 +1,45 @@
+From 75f84d199a53bb103d104ea2cab16c599daf322b Mon Sep 17 00:00:00 2001
+From: Vladimir Oltean <vladimir.oltean@nxp.com>
+Date: Mon, 8 Jun 2026 15:44:03 +0300
+Subject: [PATCH 41/48] net: pcs: mtip_backplane: ignore reserved bits in C72
+ update requests
+
+IEEE 802.3 clause 72 maps coefficient updates, INIT and PRESET to
+specific bits, but leaves several bits reserved.
+
+In mtip_rx_c72_wait_ack(), the code polls for LT_COEF_UPD_NOTHING (i.e.
+val == 0) to verify the Link Partner dropped its request. If the LP
+transmits a non-zero reserved bit (which is allowed/ignored by the
+standard), this poll will inevitably time out, failing Link Training.
+
+In mtip_rx_c72_coef_update(), if a reserved bit is set,
+LT_COEF_UPD_ANYTHING will endlessly trigger true, bombarding the state
+machine with bogus requests that get discarded.
+
+Redefine the macros to explicitly mask out reserved bits.
+
+Signed-off-by: Vladimir Oltean <vladimir.oltean@nxp.com>
+---
+ drivers/net/pcs/mtip_backplane.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/pcs/mtip_backplane.c b/drivers/net/pcs/mtip_backplane.c
+index 86452ba1d63a..108953a540b2 100644
+--- a/drivers/net/pcs/mtip_backplane.c
++++ b/drivers/net/pcs/mtip_backplane.c
+@@ -62,8 +62,10 @@
+ 					LT_COZ(COEF_UPD_HOLD) | \
+ 					LT_COP1(COEF_UPD_HOLD))
+ 
+-#define LT_COEF_UPD_ANYTHING(x)		((x) != 0)
+-#define LT_COEF_UPD_NOTHING(x)		((x) == 0)
++#define LT_COEF_UPD_VALID_MASK		(LT_COEF_UPD_MASK | LT_COEF_UPD_INIT | \
++					 LT_COEF_UPD_PRESET)
++#define LT_COEF_UPD_ANYTHING(x)		(((x) & LT_COEF_UPD_VALID_MASK) != 0)
++#define LT_COEF_UPD_NOTHING(x)		(((x) & LT_COEF_UPD_VALID_MASK) == 0)
+ 
+ #define LT_COEF_UPD_INIT		BIT(12)
+ #define LT_COEF_UPD_PRESET		BIT(13)
+-- 
+2.53.0
+

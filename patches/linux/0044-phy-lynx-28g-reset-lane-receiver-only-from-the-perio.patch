@@ -1,0 +1,95 @@
+From e97f6a3bac4156b8a0f669ef37aee9b3941269c2 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 4 Nov 2026 18:07:09 +0100
+Subject: [PATCH 44/48] phy: lynx-28g: reset lane receiver only from the
+ periodic cdr check
+
+lynx_28g_cdr_lock_check() resets the lane receiver whenever it finds the
+CDR unlocked. Besides the periodic cdr_check work it is also called from
+get_status(PHY_STATUS_CDR_LOCK) and from the RX equalizer snapshot code
+used by the 10GBase-KR link training algorithm.
+
+The backplane PCS driver polls PHY_STATUS_CDR_LOCK every 250 ms, so while
+waiting for C73 base pages each lane receiver was reset about 5 times
+per second. During link training an unlocked CDR is expected while the
+link partner steps through coefficients; resetting the receiver there
+restarts RX adaptation, and the following snapshots no longer reflect
+the requested coefficient change. The snapshot code also polls for CDR
+lock every 50 us, resetting the receiver on each attempt without giving
+it time to relock.
+
+Make lynx_28g_cdr_lock_check() a side-effect free query and move the
+receiver reset into lynx_28g_cdr_lock_check_work().
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ drivers/phy/freescale/phy-fsl-lynx-28g.c | 34 ++++++++++--------------
+ 1 file changed, 14 insertions(+), 20 deletions(-)
+
+diff --git a/drivers/phy/freescale/phy-fsl-lynx-28g.c b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+index c00a636338d0..7c053b40e3bd 100644
+--- a/drivers/phy/freescale/phy-fsl-lynx-28g.c
++++ b/drivers/phy/freescale/phy-fsl-lynx-28g.c
+@@ -979,24 +979,6 @@ static bool lynx_28g_cdr_lock_check(struct lynx_28g_lane *lane)
+ {
+ 	u32 rrstctl = lynx_28g_lane_read(lane, LNaRRSTCTL);
+ 
+-	if (rrstctl & LYNX_28G_LNaRRSTCTL_CDR_LOCK)
+-		return true;
+-
+-	/* Omit resetting the receiver unless the lane is up. Otherwise,
+-	 * if powered down, it won't complete the operation.
+-	 */
+-	if (!lane->init || !lane->powered_up)
+-		return false;
+-
+-	dev_dbg(&lane->phy->dev, "CDR unlocked, resetting lane receiver...\n");
+-
+-	lynx_28g_lane_rmw(lane, LNaRRSTCTL,
+-			  LYNX_28G_LNaRRSTCTL_RST_REQ,
+-			  LYNX_28G_LNaRRSTCTL_RST_REQ);
+-	do {
+-		rrstctl = lynx_28g_lane_read(lane, LNaRRSTCTL);
+-	} while (!(rrstctl & LYNX_28G_LNaRRSTCTL_RST_DONE));
+-
+ 	return !!(rrstctl & LYNX_28G_LNaRRSTCTL_CDR_LOCK);
+ }
+ 
+@@ -2080,6 +2062,7 @@ static void lynx_28g_cdr_lock_check_work(struct work_struct *work)
+ {
+ 	struct lynx_28g_priv *priv = work_to_lynx(work);
+ 	struct lynx_28g_lane *lane;
++	u32 rrstctl;
+ 	int i;
+ 
+ 	for (i = priv->info->first_lane; i < LYNX_28G_NUM_LANE; i++) {
+@@ -2087,12 +2070,23 @@ static void lynx_28g_cdr_lock_check_work(struct work_struct *work)
+ 
+ 		mutex_lock(&lane->phy->mutex);
+ 
+-		if (!lane->init || !lane->powered_up) {
++		/* Omit resetting the receiver unless the lane is up. Otherwise,
++		 * if powered down, it won't complete the operation.
++		 */
++		if (!lane->init || !lane->powered_up ||
++		    lynx_28g_cdr_lock_check(lane)) {
+ 			mutex_unlock(&lane->phy->mutex);
+ 			continue;
+ 		}
+ 
+-		lynx_28g_cdr_lock_check(lane);
++		dev_dbg(&lane->phy->dev, "CDR unlocked, resetting lane receiver...\n");
++
++		lynx_28g_lane_rmw(lane, LNaRRSTCTL,
++				  LYNX_28G_LNaRRSTCTL_RST_REQ,
++				  LYNX_28G_LNaRRSTCTL_RST_REQ);
++		do {
++			rrstctl = lynx_28g_lane_read(lane, LNaRRSTCTL);
++		} while (!(rrstctl & LYNX_28G_LNaRRSTCTL_RST_DONE));
+ 
+ 		mutex_unlock(&lane->phy->mutex);
+ 	}
+-- 
+2.53.0
+
