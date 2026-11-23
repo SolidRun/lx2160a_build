@@ -1,0 +1,183 @@
+From 449f65b5d98d250f3578012781d661c5dbef5ea7 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 22 Nov 2026 14:50:32 +0100
+Subject: [PATCH 23/26] plat: lx2160a: add secure watchdog from bl2 onwards
+
+Add option to start the TrustZone (Secure) watchdog in BL2 and never
+stop it. BL31 refreshes it at entry and then on each first-stage (WS0)
+interrupt. If EL3 hangs with interrupts masked, the second stage (WS1)
+resets the system.
+
+WS0 stays pending while EL3 runs and is taken when EL3 returns to a
+lower exception level, so EL3 must not run longer than half the timeout.
+WS0 is routed to the primary CPU only: while that core is powered off
+(e.g. PSCI CPU_OFF), the watchdog is not serviced and resets the system.
+
+The handler acknowledges the interrupt, as the EL3 dispatcher only
+reads its id. The dispatcher's per-interrupt message is lowered to
+verbose. The watchdog is stopped on system off.
+
+Platforms enable it by setting LX2160A_TZ_WDOG_TIMEOUT in their
+platform.mk to the time to reset in seconds, 0 (default) disables it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/common/setup/ls_interrupt_mgmt.c |  2 +-
+ plat/nxp/soc-lx2160a/aarch64/lx2160a.S    |  6 +++
+ plat/nxp/soc-lx2160a/soc.c                | 47 +++++++++++++++++++++++
+ plat/nxp/soc-lx2160a/soc.mk               | 12 ++++++
+ 4 files changed, 66 insertions(+), 1 deletion(-)
+
+diff --git a/plat/nxp/common/setup/ls_interrupt_mgmt.c b/plat/nxp/common/setup/ls_interrupt_mgmt.c
+index a81cb2b77..44ed00f74 100644
+--- a/plat/nxp/common/setup/ls_interrupt_mgmt.c
++++ b/plat/nxp/common/setup/ls_interrupt_mgmt.c
+@@ -37,7 +37,7 @@ static uint64_t ls_el3_interrupt_handler(uint32_t id, uint32_t flags,
+ 
+ 	intr_id = plat_ic_get_pending_interrupt_id();
+ 
+-	INFO("Interrupt recvd is %d\n", intr_id);
++	VERBOSE("Interrupt recvd is %d\n", intr_id);
+ 
+ 	handler = type_el3_interrupt_table[intr_id];
+ 	if (handler != NULL) {
+diff --git a/plat/nxp/soc-lx2160a/aarch64/lx2160a.S b/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
+index 67ade7b66..847cdd18b 100644
+--- a/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
++++ b/plat/nxp/soc-lx2160a/aarch64/lx2160a.S
+@@ -563,6 +563,12 @@ endfunc _soc_sys_reset
+  */
+ func _soc_sys_off
+ 
++#if LX2160A_TZ_WDOG_TIMEOUT > 0
++	/* stop the Secure Watchdog, it would reset the system */
++	ldr  x0, =NXP_WDOG2_TZ_ADDR
++	str  wzr, [x0]
++#endif
++
+ #if defined(CONFIG_LX2160A_S5_GPIO_ADDR) && defined(CONFIG_LX2160A_S5_GPIO)
+ 	/* assert s5 gpio */
+ 	mov x3, # CONFIG_LX2160A_S5_GPIO_ADDR
+diff --git a/plat/nxp/soc-lx2160a/soc.c b/plat/nxp/soc-lx2160a/soc.c
+index 1daa4e5c0..c42e6a6e1 100644
+--- a/plat/nxp/soc-lx2160a/soc.c
++++ b/plat/nxp/soc-lx2160a/soc.c
+@@ -14,6 +14,7 @@
+ #include <ccn.h>
+ #include <common/debug.h>
+ #include <dcfg.h>
++#include <drivers/arm/sbsa.h>
+ #ifdef I2C_INIT
+ #include <i2c.h>
+ #endif
+@@ -25,6 +26,7 @@
+ #endif
+ #include <nxp_smmu.h>
+ #include <nxp_timer.h>
++#include <plat/common/platform.h>
+ #include <plat_console.h>
+ #include <plat_gic.h>
+ #include <plat_tzc400.h>
+@@ -137,6 +139,22 @@ unsigned int plat_get_syscnt_freq2(void)
+ 	return counter_base_frequency;
+ }
+ 
++#if defined(IMAGE_BL2) && (LX2160A_TZ_WDOG_TIMEOUT > 0)
++/* Start SBSA watchdog, WS1 follows timeout_s after the explicit refresh */
++static void wdog_start(uintptr_t ctrl, uintptr_t refresh, unsigned int timeout_s)
++{
++	uint64_t wor = (uint64_t)plat_get_syscnt_freq2() * timeout_s / 2U;
++
++	if (wor > UINT32_MAX) {
++		wor = UINT32_MAX;
++	}
++
++	mmio_write_32(ctrl + SBSA_WDOG_WOR_LOW_OFFSET, (uint32_t)wor);
++	mmio_write_32(ctrl + SBSA_WDOG_WCS_OFFSET, SBSA_WDOG_WCS_EN);
++	mmio_write_32(refresh + SBSA_WDOG_WRR_OFFSET, SBSA_WDOG_WRR_REFRESH);
++}
++#endif
++
+ #ifdef IMAGE_BL2
+ 
+ #ifdef POLICY_FUSE_PROVISION
+@@ -326,6 +344,12 @@ void soc_early_init(void)
+ 	 * Initialize system level generic timer for Layerscape Socs.
+ 	 */
+ 	delay_timer_init(NXP_TIMER_ADDR);
++#if LX2160A_TZ_WDOG_TIMEOUT > 0
++	wdog_start(NXP_WDOG2_TZ_ADDR, NXP_WDOG1_TZ_ADDR,
++		   LX2160A_TZ_WDOG_TIMEOUT);
++	NOTICE("Secure Watchdog started with %us timeout\n",
++	       LX2160A_TZ_WDOG_TIMEOUT);
++#endif
+ 	i2c_init(NXP_I2C_ADDR);
+ 
+ #ifdef LX2160A_SOC_EARLY_INIT_EXTRA
+@@ -457,6 +481,12 @@ void soc_early_platform_setup2(void)
+ 	plat_console_init(NXP_CONSOLE_ADDR,
+ 			  NXP_UART_CLK_DIVIDER, NXP_CONSOLE_BAUDRATE);
+ #endif
++#if LX2160A_TZ_WDOG_TIMEOUT > 0
++	/* new window for BL31 and BL32 init, clears WS0 before GIC init */
++	mmio_write_32(NXP_WDOG1_TZ_ADDR + SBSA_WDOG_WRR_OFFSET,
++		      SBSA_WDOG_WRR_REFRESH);
++	NOTICE("Secure Watchdog serviced\n");
++#endif
+ }
+ 
+ void soc_platform_setup(void)
+@@ -546,12 +576,29 @@ static uint64_t wdog_interrupt_handler(uint32_t id, uint32_t flags,
+ }
+ #endif
+ 
++#if LX2160A_TZ_WDOG_TIMEOUT > 0
++static uint64_t sec_wdog_interrupt_handler(uint32_t id, uint32_t flags,
++					   void *handle, void *cookie)
++{
++	/* ls_el3_interrupt_handler only reads the pending id */
++	(void)plat_ic_acknowledge_interrupt();
++	mmio_write_32(NXP_WDOG1_TZ_ADDR + SBSA_WDOG_WRR_OFFSET,
++		      SBSA_WDOG_WRR_REFRESH);
++
++	return 0;
++}
++#endif
++
+ void soc_runtime_setup(void)
+ {
+ 
+ #ifdef NXP_WDOG_RESTART
+ 	request_intr_type_el3(BL31_NS_WDOG_WS1, wdog_interrupt_handler);
+ #endif
++#if LX2160A_TZ_WDOG_TIMEOUT > 0
++	/* keep running, serviced on WS0 while EL3 can take interrupts */
++	request_intr_type_el3(BL31_WDOG_SEC, sec_wdog_interrupt_handler);
++#endif
+ }
+ #endif
+ 
+diff --git a/plat/nxp/soc-lx2160a/soc.mk b/plat/nxp/soc-lx2160a/soc.mk
+index 4e6e58e48..127190f96 100644
+--- a/plat/nxp/soc-lx2160a/soc.mk
++++ b/plat/nxp/soc-lx2160a/soc.mk
+@@ -195,3 +195,15 @@ $(eval $(call add_define_val,CONFIG_LX2160_FLUSH_IIC_MUX,"$(LX2160_FLUSH_IIC_MUX
+ ifeq (${LX2160A_SOC_EARLY_INIT_EXTRA}, yes)
+ $(eval $(call add_define,LX2160A_SOC_EARLY_INIT_EXTRA))
+ endif
++
++# TrustZone watchdog started in BL2 soc_early_init and never stopped:
++# refreshed once at BL31 entry, then by BL31 on each WS0 interrupt, which
++# EL3 can only take while not running itself. Timeout in seconds until
++# hardware reset request (WS1), 0 = disabled.
++LX2160A_TZ_WDOG_TIMEOUT ?= 0
++ifneq (${LX2160A_TZ_WDOG_TIMEOUT}, 0)
++ifneq (${LS_EL3_INTERRUPT_HANDLER}, yes)
++$(error LX2160A_TZ_WDOG_TIMEOUT requires LS_EL3_INTERRUPT_HANDLER)
++endif
++endif
++$(eval $(call add_define_val,LX2160A_TZ_WDOG_TIMEOUT,${LX2160A_TZ_WDOG_TIMEOUT}))
+-- 
+2.53.0
+

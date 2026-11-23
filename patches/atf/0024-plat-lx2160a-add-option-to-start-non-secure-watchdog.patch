@@ -1,0 +1,73 @@
+From 7ea11ba6b9e462a3d4737f2e0852b5b08d5f62f1 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Sun, 22 Nov 2026 14:52:32 +0100
+Subject: [PATCH 24/26] plat: lx2160a: add option to start non-secure watchdog
+ before bl33
+
+Add option to start the non-secure watchdog in BL31 right before handing
+over to BL33, so that a hang in BL33 before it takes over the non-secure
+watchdog leads to a reset. The Secure watchdog does not cover this, it
+is serviced by EL3 interrupts while BL33 runs.
+
+Expiry is handled by BL31 wdog_interrupt_handler requesting a reset,
+which requires NXP_WDOG_RESTART.
+
+Platforms enable it by setting LX2160A_NS_WDOG_TIMEOUT in their
+platform.mk to the time to reset in seconds, 0 (default) disables it.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/soc-lx2160a/soc.c  |  9 ++++++++-
+ plat/nxp/soc-lx2160a/soc.mk | 11 +++++++++++
+ 2 files changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/plat/nxp/soc-lx2160a/soc.c b/plat/nxp/soc-lx2160a/soc.c
+index c42e6a6e1..f4f065534 100644
+--- a/plat/nxp/soc-lx2160a/soc.c
++++ b/plat/nxp/soc-lx2160a/soc.c
+@@ -139,7 +139,8 @@ unsigned int plat_get_syscnt_freq2(void)
+ 	return counter_base_frequency;
+ }
+ 
+-#if defined(IMAGE_BL2) && (LX2160A_TZ_WDOG_TIMEOUT > 0)
++#if (defined(IMAGE_BL2) && (LX2160A_TZ_WDOG_TIMEOUT > 0)) || \
++    (defined(IMAGE_BL31) && (LX2160A_NS_WDOG_TIMEOUT > 0))
+ /* Start SBSA watchdog, WS1 follows timeout_s after the explicit refresh */
+ static void wdog_start(uintptr_t ctrl, uintptr_t refresh, unsigned int timeout_s)
+ {
+@@ -595,6 +596,12 @@ void soc_runtime_setup(void)
+ #ifdef NXP_WDOG_RESTART
+ 	request_intr_type_el3(BL31_NS_WDOG_WS1, wdog_interrupt_handler);
+ #endif
++#if LX2160A_NS_WDOG_TIMEOUT > 0
++	wdog_start(NXP_WDOG2_NS_ADDR, NXP_WDOG1_NS_ADDR,
++		   LX2160A_NS_WDOG_TIMEOUT);
++	NOTICE("Watchdog started with %us timeout\n",
++	       LX2160A_NS_WDOG_TIMEOUT);
++#endif
+ #if LX2160A_TZ_WDOG_TIMEOUT > 0
+ 	/* keep running, serviced on WS0 while EL3 can take interrupts */
+ 	request_intr_type_el3(BL31_WDOG_SEC, sec_wdog_interrupt_handler);
+diff --git a/plat/nxp/soc-lx2160a/soc.mk b/plat/nxp/soc-lx2160a/soc.mk
+index 127190f96..2efe70fb3 100644
+--- a/plat/nxp/soc-lx2160a/soc.mk
++++ b/plat/nxp/soc-lx2160a/soc.mk
+@@ -207,3 +207,14 @@ $(error LX2160A_TZ_WDOG_TIMEOUT requires LS_EL3_INTERRUPT_HANDLER)
+ endif
+ endif
+ $(eval $(call add_define_val,LX2160A_TZ_WDOG_TIMEOUT,${LX2160A_TZ_WDOG_TIMEOUT}))
++
++# Non-secure watchdog started by BL31 before handing over to BL33, so BL33
++# finds it running. Timeout in seconds until reset by BL31
++# wdog_interrupt_handler (WS1), 0 = disabled.
++LX2160A_NS_WDOG_TIMEOUT ?= 0
++ifneq (${LX2160A_NS_WDOG_TIMEOUT}, 0)
++ifneq (${NXP_WDOG_RESTART}, yes)
++$(error LX2160A_NS_WDOG_TIMEOUT requires NXP_WDOG_RESTART)
++endif
++endif
++$(eval $(call add_define_val,LX2160A_NS_WDOG_TIMEOUT,${LX2160A_NS_WDOG_TIMEOUT}))
+-- 
+2.53.0
+

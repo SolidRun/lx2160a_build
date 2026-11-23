@@ -1,0 +1,65 @@
+From d723f1d9d35e635bec4ef7e70ba24eaecf291afb Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 18 Nov 2026 15:21:34 +0100
+Subject: [PATCH 25/26] drivers: nxp: ddr: poll phy mailbox in 10us steps
+
+get_mail() slept 10 ms per poll while waiting for a message and 1 ms
+while waiting for the ack. When the PHY is slower than the first poll,
+every message costs a full 10 ms, e.g. 139 s of training output at
+1200 MT/s instead of under 10 s.
+
+Poll every 10 us instead, keeping the 5 s and 0.5 s timeouts.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/nxp/ddr/phy-gen2/phy.c | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/nxp/ddr/phy-gen2/phy.c b/drivers/nxp/ddr/phy-gen2/phy.c
+index 2006c04e8..13b67894f 100644
+--- a/drivers/nxp/ddr/phy-gen2/phy.c
++++ b/drivers/nxp/ddr/phy-gen2/phy.c
+@@ -30,7 +30,10 @@
+ #endif
+ #include "pie.h"
+ 
+-#define TIMEOUTDEFAULT 500
++/* PHY mailbox polling: 10 us steps, 5 s for a message, 0.5 s for the ack */
++#define MAIL_POLL_US		10U
++#define MAIL_TIMEOUT		(5000000 / MAIL_POLL_US)
++#define MAIL_ACK_TIMEOUT	(500000 / MAIL_POLL_US)
+ #define MAP_PHY_ADDR(pstate, n, instance, offset, c) \
+ 		((((pstate * n) + instance + c) << 12) + offset)
+ 
+@@ -1956,11 +1959,11 @@ static uint32_t get_mail(uint16_t *phy, int stream)
+ 	int timeout;
+ 	uint32_t mail = 0U;
+ 
+-	timeout = TIMEOUTDEFAULT;
++	timeout = MAIL_TIMEOUT;
+ 	while (((--timeout) != 0) &&
+ 	       ((phy_io_read16(phy, t_apbonly | csr_uct_shadow_regs)
+ 		& uct_write_prot_shadow_mask) != 0)) {
+-		mdelay(10);
++		udelay(MAIL_POLL_US);
+ 	}
+ 	if (timeout == 0) {
+ 		ERROR("Timeout getting mail from PHY\n");
+@@ -1977,11 +1980,11 @@ static uint32_t get_mail(uint16_t *phy, int stream)
+ 	/* Ack */
+ 	phy_io_write16(phy, t_apbonly | csr_dct_write_prot, 0);
+ 
+-	timeout = TIMEOUTDEFAULT;
++	timeout = MAIL_ACK_TIMEOUT;
+ 	while (((--timeout) != 0) &&
+ 	       ((phy_io_read16(phy, t_apbonly | csr_uct_shadow_regs)
+ 		 & uct_write_prot_shadow_mask) == 0)) {
+-		mdelay(1);
++		udelay(MAIL_POLL_US);
+ 	}
+ 	if (timeout == 0) {
+ 		ERROR("Timeout ack PHY mail\n");
+-- 
+2.53.0
+

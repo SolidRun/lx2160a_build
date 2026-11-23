@@ -1,0 +1,76 @@
+From 31983851e52158909771af5bb05bd1fd22427638 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Mon, 23 Nov 2026 14:02:47 +0100
+Subject: [PATCH 26/26] plat: lx2160acex6/7, lx2162asom: enable el3 watchdog,
+ and el2 wd early
+
+Enable the Secure watchdog from BL2 on and start the non-secure watchdog
+before handing over to U-Boot on the SolidRun LX2160A CEX6, CEX7 and
+LX2162A SoM, so that a hang anywhere in boot resets the board.
+
+The timeout of 30s matches U-Boot (timeout-sec in fsl-lx2160a.dtsi),
+which takes over the non-secure watchdog (CONFIG_WDT_SBSA), as does
+Linux later (CONFIG_ARM_SBSA_WATCHDOG).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ plat/nxp/soc-lx2160a/lx2160acex6/platform.mk | 6 ++++++
+ plat/nxp/soc-lx2160a/lx2160acex7/platform.mk | 6 ++++++
+ plat/nxp/soc-lx2160a/lx2162asom/platform.mk  | 6 ++++++
+ 3 files changed, 18 insertions(+)
+
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk b/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk
+index 35ed8a844..7cdc7d61b 100644
+--- a/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk
++++ b/plat/nxp/soc-lx2160a/lx2160acex6/platform.mk
+@@ -35,6 +35,12 @@ LX2160_FLUSH_IIC := 1,
+ # I2C Mux Flushing: IIC1: PCA9547@77: Channel 0 (SPD EEPROM)
+ LX2160_FLUSH_IIC_MUX := { 1, 0x77, 0x01 },
+ 
++# Watchdog without gap: Secure watchdog from BL2 on, non-secure started
++# before U-Boot with the same timeout as U-Boot (timeout-sec in
++# fsl-lx2160a.dtsi)
++LX2160A_TZ_WDOG_TIMEOUT	:= 30
++LX2160A_NS_WDOG_TIMEOUT	:= 30
++
+ # DDR Errata
+ ERRATA_DDR_A011396	:= 1
+ ERRATA_DDR_A050450	:= 1
+diff --git a/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk b/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
+index 998b62596..2803c4d5f 100644
+--- a/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
++++ b/plat/nxp/soc-lx2160a/lx2160acex7/platform.mk
+@@ -29,6 +29,12 @@ LX2160_FLUSH_IIC := 1,
+ # I2C Mux Flushing: IIC1: PCA9547@77: Channel 0 (SPD EEPROM)
+ LX2160_FLUSH_IIC_MUX := { 1, 0x77, 0x01 },
+ 
++# Watchdog without gap: Secure watchdog from BL2 on, non-secure started
++# before U-Boot with the same timeout as U-Boot (timeout-sec in
++# fsl-lx2160a.dtsi)
++LX2160A_TZ_WDOG_TIMEOUT	:= 30
++LX2160A_NS_WDOG_TIMEOUT	:= 30
++
+ # DDR Errata
+ ERRATA_DDR_A011396	:= 1
+ ERRATA_DDR_A050450	:= 1
+diff --git a/plat/nxp/soc-lx2160a/lx2162asom/platform.mk b/plat/nxp/soc-lx2160a/lx2162asom/platform.mk
+index c1ba077e9..d32594763 100644
+--- a/plat/nxp/soc-lx2160a/lx2162asom/platform.mk
++++ b/plat/nxp/soc-lx2160a/lx2162asom/platform.mk
+@@ -29,6 +29,12 @@ CONFIG_DDR_NODIMM	:=	0
+ # I2C Bus Flushing: IIC1 (SPD EEPROM)
+ LX2160_FLUSH_IIC := 1,
+ 
++# Watchdog without gap: Secure watchdog from BL2 on, non-secure started
++# before U-Boot with the same timeout as U-Boot (timeout-sec in
++# fsl-lx2160a.dtsi)
++LX2160A_TZ_WDOG_TIMEOUT	:= 30
++LX2160A_NS_WDOG_TIMEOUT	:= 30
++
+ # DDR Errata
+ ERRATA_DDR_A011396	:= 1
+ ERRATA_DDR_A050450	:= 1
+-- 
+2.53.0
+
