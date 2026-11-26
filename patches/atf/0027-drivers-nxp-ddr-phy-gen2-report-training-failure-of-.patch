@@ -1,0 +1,51 @@
+From df17d9639c2ba67a34bbfe80a87ed54928fdad84 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 25 Nov 2026 13:25:01 +0100
+Subject: [PATCH] drivers: nxp: ddr: phy-gen2: report training failure of any
+ phy
+
+g_exec_fw() returned the result of the last PHY only, so with two
+controllers a failed training on the first PHY was hidden when the
+second one passed, and boot continued on untrained memory.
+
+Return the first error instead, and name the failing PHY and stage.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/nxp/ddr/phy-gen2/phy.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/nxp/ddr/phy-gen2/phy.c b/drivers/nxp/ddr/phy-gen2/phy.c
+index 13b67894f..20fd32d70 100644
+--- a/drivers/nxp/ddr/phy-gen2/phy.c
++++ b/drivers/nxp/ddr/phy-gen2/phy.c
+@@ -2148,7 +2148,7 @@ static int wait_fw_done(uint16_t *phy, int train2d)
+ 
+ static int g_exec_fw(uint16_t **phy_ptr, int train2d, struct input *input)
+ {
+-	int ret = -EINVAL;
++	int ret = -EINVAL, err = 0;
+ 	int i;
+ 	uint16_t *phy;
+ 
+@@ -2179,8 +2179,15 @@ static int g_exec_fw(uint16_t **phy_ptr, int train2d, struct input *input)
+ 			ERROR("Wait timed out: Firmware execution on PHY %d\n",
+ 			      i);
+ 		}
++		if (ret != 0) {
++			ERROR("%s training failed on PHY %d (%d)\n",
++			      train2d ? "2D" : "1D", i, ret);
++			if (err == 0) {
++				err = ret;	/* a later PHY must not hide it */
++			}
++		}
+ 	}
+-	return ret;
++	return (err != 0) ? err : ret;
+ }
+ 
+ static inline int send_fw(uint16_t *phy,
+-- 
+2.53.0
+
