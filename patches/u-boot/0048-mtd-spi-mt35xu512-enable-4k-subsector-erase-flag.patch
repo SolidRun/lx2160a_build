@@ -1,0 +1,36 @@
+From 198f2c0d2ce4c87a698a68bcc4d42a1c45cba2ba Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 26 Nov 2026 16:32:51 +0100
+Subject: [PATCH 48/49] mtd: spi: mt35xu512: enable 4k subsector erase flag
+
+The MT35xU512 spi flashes support 4k sector erase commands.
+
+Add the flag allowing their usage.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ drivers/mtd/spi/spi-nor-ids.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mtd/spi/spi-nor-ids.c b/drivers/mtd/spi/spi-nor-ids.c
+index ed2ced46cd0..9e5765ec493 100644
+--- a/drivers/mtd/spi/spi-nor-ids.c
++++ b/drivers/mtd/spi/spi-nor-ids.c
+@@ -336,12 +336,12 @@ const struct flash_info spi_nor_ids[] = {
+ 	{ INFO("mt25ql02g",   0x20ba22, 0, 64 * 1024, 4096, SECT_4K | USE_FSR | SPI_NOR_QUAD_READ | NO_CHIP_ERASE | SPI_NOR_4B_OPCODES) },
+ #ifdef CONFIG_SPI_FLASH_MT35XU
+ 	{ INFO("mt35xl512aba", 0x2c5a1a, 0,  128 * 1024,  512, USE_FSR | SPI_NOR_OCTAL_READ | SPI_NOR_4B_OPCODES | SPI_NOR_OCTAL_DTR_READ) },
+-	{ INFO("mt35xu512aba", 0x2c5b1a, 0,  128 * 1024,  512, USE_FSR | SPI_NOR_OCTAL_READ | SPI_NOR_4B_OPCODES | SPI_NOR_OCTAL_DTR_READ | SPI_NOR_OCTAL_DTR_PP) },
++	{ INFO("mt35xu512aba", 0x2c5b1a, 0,  128 * 1024,  512, SECT_4K | USE_FSR | SPI_NOR_OCTAL_READ | SPI_NOR_4B_OPCODES | SPI_NOR_OCTAL_DTR_READ | SPI_NOR_OCTAL_DTR_PP) },
+ 	{ INFO6("mt35xu01gaba", 0x2c5b1b, 0x104100, 128 * 1024,  1024, SECT_4K | USE_FSR | SPI_NOR_OCTAL_READ | SPI_NOR_4B_OPCODES | SPI_NOR_OCTAL_DTR_READ | SPI_NOR_OCTAL_DTR_PP | NO_CHIP_ERASE) },
+ #else
+ 	/* for platforms that didn't enable DTR read */
+ 	{ INFO("mt35xl512aba", 0x2c5a1a, 0,  128 * 1024,  512, USE_FSR | SPI_NOR_OCTAL_READ | SPI_NOR_4B_OPCODES) },
+-	{ INFO("mt35xu512aba", 0x2c5b1a, 0,  128 * 1024,  512, USE_FSR | SPI_NOR_OCTAL_READ | SPI_NOR_4B_OPCODES) },
++	{ INFO("mt35xu512aba", 0x2c5b1a, 0,  128 * 1024,  512, SECT_4K | USE_FSR | SPI_NOR_OCTAL_READ | SPI_NOR_4B_OPCODES) },
+ 	{ INFO6("mt35xu01g",  0x2c5b1b, 0x104100, 128 * 1024,  1024, SECT_4K | USE_FSR | SPI_NOR_OCTAL_READ | SPI_NOR_4B_OPCODES | NO_CHIP_ERASE) },
+ #endif /* CONFIG_SPI_FLASH_MT35XU */
+ 	{ INFO("mt35xu02g",  0x2c5b1c, 0, 128 * 1024,  2048, USE_FSR | SPI_NOR_OCTAL_READ | SPI_NOR_4B_OPCODES) },
+-- 
+2.53.0
+

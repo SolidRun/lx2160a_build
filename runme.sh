@@ -1099,8 +1099,8 @@ do_populate_bootimg_64M() {
 	dd if=$ROOTDIR/images/tmp/atf/fip.bin of=images/${IMG} bs=512 seek=2048 conv=notrunc
 	do_layout_add fip 2048 ${FIP_SIZE}
 
-	# U-Boot environment at 0x0500000 (block 0x2800)
-	dd if=/dev/zero of=images/${IMG} bs=512 seek=10240 conv=notrunc count=128
+	# U-Boot environment at 0x0500000 (block 0x2800), redundant copy at 0x0510000 (block 0x2880)
+	dd if=/dev/zero of=images/${IMG} bs=512 seek=10240 conv=notrunc count=256
 	do_layout_add env 10240 $((256*512))
 
 	# DDR PHY FIP at 0x0800000 (block 0x4000)
