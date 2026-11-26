@@ -1,0 +1,66 @@
+From e760ed3ada98faa7d57e516145a59e9e1f65ef2c Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Thu, 26 Nov 2026 15:25:21 +0100
+Subject: [PATCH] lib: optee: patch dt node status property based on runtime
+ status
+
+The OS DTB may or may not specify an existing optee node with status set
+disabled. U-Boot is supposed to patch the DTB at runtime based on
+whether or not optee is running.
+
+Add patching the status property to reflect actual runtime status based
+on probe of u-boot optee driver.
+
+This fixes linux probe of optee driver on LX2160A based boards, where
+upstream includes the optee dt node preset disabled.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ lib/optee/optee.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/lib/optee/optee.c b/lib/optee/optee.c
+index bfdce258a38..c18fa5a48d0 100644
+--- a/lib/optee/optee.c
++++ b/lib/optee/optee.c
+@@ -8,7 +8,9 @@
+ #include <image.h>
+ #include <log.h>
+ #include <malloc.h>
++#include <dm/device.h>
+ #include <dm/ofnode.h>
++#include <dm/uclass.h>
+ #include <linux/ioport.h>
+ #include <linux/libfdt.h>
+ #include <tee/optee.h>
+@@ -66,6 +68,7 @@ error:
+ #if defined(CONFIG_OF_LIBFDT)
+ static int optee_copy_firmware_node(ofnode node, void *fdt_blob)
+ {
++	struct udevice *dev;
+ 	int offs, ret, len;
+ 	const void *prop;
+ 
+@@ -110,6 +113,19 @@ static int optee_copy_firmware_node(ofnode node, void *fdt_blob)
+ 	if (ret < 0)
+ 		return ret;
+ 
++	/*
++	 * patch optee dt status property based on runtime status,
++	 * i.e. uboot driver probed
++	 */
++	if (CONFIG_IS_ENABLED(OPTEE)) {
++		ret = uclass_get_device_by_driver(UCLASS_TEE,
++						  DM_DRIVER_GET(optee), &dev);
++		ret = fdt_setprop_string(fdt_blob, offs, "status",
++					 ret ? "disabled" : "okay");
++		if (ret < 0)
++			return ret;
++	}
++
+ 	return 0;
+ }
+ 
+-- 
+2.53.0
+
